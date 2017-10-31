@@ -15,51 +15,63 @@ import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.*;
 import stroom.query.common.v2.*;
+import stroom.query.elastic.hibernate.ElasticIndexConfig;
+import stroom.query.elastic.hibernate.ElasticIndexConfigService;
 import stroom.query.elastic.store.ElasticStore;
 import stroom.util.shared.HasTerminate;
 
+import javax.inject.Inject;
 import javax.ws.rs.core.Response;
 import java.util.*;
 import java.util.concurrent.Future;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class QueryResourceImpl implements QueryResource {
     private static final Logger LOGGER = LoggerFactory.getLogger(QueryResourceImpl.class);
 
     private final TransportClient client;
+    private final ElasticIndexConfigService elasticIndexConfigService;
 
-    public QueryResourceImpl(final TransportClient client) {
+    @Inject
+    public QueryResourceImpl(final TransportClient client,
+                             final ElasticIndexConfigService elasticIndexConfigService) {
         this.client = client;
+        this.elasticIndexConfigService = elasticIndexConfigService;
     }
 
     @Override
-    public Response getDataSource(DocRef docRef) {
+    public Response getDataSource(final DocRef docRef) {
+        LOGGER.info("Getting Data Source for DocRef: " + docRef);
+
+        final Optional<ElasticIndexConfig> elasticIndexConfigO = elasticIndexConfigService.get(docRef);
+
+        if (!elasticIndexConfigO.isPresent()) {
+            return Response.noContent().build();
+        }
+
+        final ElasticIndexConfig elasticIndexConfig = elasticIndexConfigO.get();
+
+        LOGGER.info("Found Elastic Config!" + elasticIndexConfig);
 
         try {
             final List<DataSourceField> fields = new ArrayList<>();
 
             Future<GetFieldMappingsResponse> fieldMappings = client.admin().indices()
                     .getFieldMappings(new GetFieldMappingsRequest()
-                            .indices("shakespeare")
-                            .types("line")
+                            .indices(elasticIndexConfig.getIndexName())
+                            .types(elasticIndexConfig.getIndexedType())
                             .fields("*"));
 
             final GetFieldMappingsResponse response = fieldMappings.get();
 
             response.mappings().forEach((index, stringMapMap) -> {
-                LOGGER.info("Index: " + index);
-
                 stringMapMap.forEach((type, stringFieldMappingMetaDataMap) -> {
-                    LOGGER.info("\tType: " + type);
                     stringFieldMappingMetaDataMap.forEach((fieldName, fieldMappingMetaData) -> {
-                        LOGGER.info("\t\tField Name: " + fieldName);
                         fieldMappingMetaData.sourceAsMap().forEach((fieldNameAgain, meta) -> {
                             if (meta instanceof Map) {
                                 final Map<?, ?> metaAsMap = (Map) meta;
                                 metaAsMap.forEach((metaProp, metaPropValue) -> {
-                                    LOGGER.info("\t\t\t" + metaProp + ": " + metaPropValue);
                                     final DataSourceField dataSourceField = new DataSourceField(
                                             DataSourceField.DataSourceFieldType.FIELD,
                                             fieldName,
@@ -77,7 +89,6 @@ public class QueryResourceImpl implements QueryResource {
                                     fields.add(dataSourceField);
                                 });
                             }
-
                         });
                     });
                 });
@@ -94,12 +105,20 @@ public class QueryResourceImpl implements QueryResource {
     }
 
     @Override
-    public Response search(SearchRequest request) {
+    public Response search(final SearchRequest request) {
+        final Optional<ElasticIndexConfig> elasticIndexConfigO = elasticIndexConfigService.get(request.getQuery().getDataSource());
+
+        if (!elasticIndexConfigO.isPresent()) {
+            return Response.noContent().build();
+        }
+
+        final ElasticIndexConfig elasticIndexConfig = elasticIndexConfigO.get();
+
         final QueryBuilder elasticQuery = getQuery(request.getQuery().getExpression());
 
         org.elasticsearch.action.search.SearchResponse response = client
-                .prepareSearch("shakespeare")
-                .setTypes("line")
+                .prepareSearch(elasticIndexConfig.getIndexName())
+                .setTypes(elasticIndexConfig.getIndexedType())
                 .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
                 .setQuery(elasticQuery)
                 .get();
@@ -131,6 +150,10 @@ public class QueryResourceImpl implements QueryResource {
     }
 
     private QueryBuilder getQuery(final ExpressionItem item) {
+        if (!item.enabled()) {
+            return null;
+        }
+
         if (item instanceof ExpressionTerm) {
             final ExpressionTerm term = (ExpressionTerm) item;
 
@@ -200,6 +223,7 @@ public class QueryResourceImpl implements QueryResource {
             final BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
             operator.getChildren().stream()
                     .map(this::getQuery)
+                    .filter(Objects::nonNull)
                     .forEach(queryBuilder -> consumer.accept(boolQuery, queryBuilder));
             return boolQuery;
         }

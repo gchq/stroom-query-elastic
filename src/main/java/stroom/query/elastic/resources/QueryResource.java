@@ -1,5 +1,6 @@
 package stroom.query.elastic.resources;
 
+import io.dropwizard.hibernate.UnitOfWork;
 import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.QueryKey;
 import stroom.query.api.v2.SearchRequest;
@@ -18,17 +19,20 @@ public interface QueryResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/dataSource")
+    @UnitOfWork
     Response getDataSource(DocRef docRef);
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/search")
+    @UnitOfWork
     Response search(SearchRequest request);
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/destroy")
+    @UnitOfWork
     Response destroy(QueryKey queryKey);
 }

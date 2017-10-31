@@ -4,10 +4,13 @@ import io.dropwizard.Application;
 import io.dropwizard.Configuration;
 import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.SubstitutingSourceProvider;
+import io.dropwizard.db.DataSourceFactory;
+import io.dropwizard.hibernate.HibernateBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
 import stroom.query.elastic.health.QueryHealthCheck;
+import stroom.query.elastic.hibernate.ElasticIndexConfig;
 import stroom.query.elastic.resources.AuditedQueryResourceImpl;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 
@@ -17,6 +20,13 @@ import java.util.EnumSet;
 import java.util.Map;
 
 public class App extends Application<Config> {
+
+    private final HibernateBundle<Config> hibernateBundle = new HibernateBundle<Config>(ElasticIndexConfig.class) {
+        @Override
+        public DataSourceFactory getDataSourceFactory(Config configuration) {
+            return configuration.getDataSourceFactory();
+        }
+    };
 
     public TransportClientBundle<Config> transportClientBundle = new TransportClientBundle<Config>() {
 
@@ -38,11 +48,9 @@ public class App extends Application<Config> {
     @Override
     public void run(final Config configuration, final Environment environment) throws Exception {
 
-
         environment.healthChecks().register("Elastic", new QueryHealthCheck(transportClientBundle.getTransportClient()));
-
         environment.jersey().register(AuditedQueryResourceImpl.class);
-        environment.jersey().register(new Module(transportClientBundle.getTransportClient()));
+        environment.jersey().register(new Module(transportClientBundle.getTransportClient(), hibernateBundle.getSessionFactory()));
 
         configureCors(environment);
     }
@@ -58,6 +66,7 @@ public class App extends Application<Config> {
                 new EnvironmentVariableSubstitutor(false)));
 
         bootstrap.addBundle(this.transportClientBundle);
+        bootstrap.addBundle(this.hibernateBundle);
 
     }
 
