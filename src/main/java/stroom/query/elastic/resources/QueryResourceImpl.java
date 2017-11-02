@@ -14,6 +14,7 @@ import stroom.dashboard.expression.v1.FieldIndexMap;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.*;
+import stroom.query.audit.QueryResource;
 import stroom.query.common.v2.*;
 import stroom.query.elastic.hibernate.ElasticIndexConfig;
 import stroom.query.elastic.hibernate.ElasticIndexConfigService;

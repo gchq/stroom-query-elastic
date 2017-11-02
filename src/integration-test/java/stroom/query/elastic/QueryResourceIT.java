@@ -5,17 +5,25 @@ import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import io.dropwizard.testing.junit.DropwizardAppRule;
+import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.*;
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.*;
+import stroom.query.audit.FifoLogbackAppender;
 
 import javax.ws.rs.core.MediaType;
+import java.io.File;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -28,12 +36,48 @@ import static org.junit.Assert.fail;
 public class QueryResourceIT {
     private static final Logger LOGGER = LoggerFactory.getLogger(QueryResourceIT.class);
 
+    private static final String TEST_DB_FILENAME = "test.db";
+    private static final DocRef ELASTIC_INDEX_DOC_REF = new DocRef.Builder()
+            .uuid(UUID.randomUUID().toString())
+            .name("Test Elastic")
+            .type("ElasticIndex")
+            .build();
+
+    @ClassRule
+    public static final TestRule initialiseDb = (statement, description) -> {
+        LOGGER.info("Setting up Test Database");
+
+        if (new File(TEST_DB_FILENAME).delete()) {
+            LOGGER.info("Found an existing test database, deleted it");
+        }
+
+        try {
+            final String sql = IOUtils.toString(QueryResourceIT.class.getClassLoader().getResourceAsStream("initDatabase.sql"));
+            final Connection connection = DriverManager.getConnection(String.format("jdbc:sqlite:%s", TEST_DB_FILENAME));
+            final java.sql.Statement stmt = connection.createStatement();
+            stmt.execute(sql);
+            stmt.close();
+
+
+            final PreparedStatement pstmt = connection.prepareStatement("INSERT INTO ELASTIC_INDEX (UUID, INDEX_NAME, INDEXED_TYPE) VALUES (?, ?, ?)");
+            pstmt.setString(1, ELASTIC_INDEX_DOC_REF.getUuid());
+            pstmt.setString(2, "shakespeare");
+            pstmt.setString(3, "line");
+            pstmt.execute();
+
+            connection.close();
+        } catch (IOException | SQLException e) {
+            e.printStackTrace();
+            fail(e.getLocalizedMessage());
+        }
+
+        return statement;
+    };
+
     @ClassRule
     public static final DropwizardAppRule<Config> appRule = new DropwizardAppRule<>(App.class, resourceFilePath("config.yml"));
 
     private static String queryUrl;
-
-    private static KafkaAuditTestConsumer kafkaTestConsumer;
 
     private static final com.fasterxml.jackson.databind.ObjectMapper jacksonObjectMapper =
             new com.fasterxml.jackson.databind.ObjectMapper();
@@ -52,11 +96,9 @@ public class QueryResourceIT {
 
     @BeforeClass
     public static void setupClass() {
+
         int appPort = appRule.getLocalPort();
-
-        queryUrl = "http://localhost:" + appPort + "/elasticQuery/v1";
-
-        kafkaTestConsumer = new KafkaAuditTestConsumer();
+        queryUrl = "http://localhost:" + appPort + "/queryApi/v1";
 
         Unirest.setObjectMapper(new com.mashape.unirest.http.ObjectMapper() {
             private com.fasterxml.jackson.databind.ObjectMapper jacksonObjectMapper
@@ -78,30 +120,15 @@ public class QueryResourceIT {
                 }
             }
         });
-
-        kafkaTestConsumer.getRecords(1);
-    }
-
-    @AfterClass
-    public static void afterClass() {
-        kafkaTestConsumer.close();
     }
 
     @Before
     public void beforeTest() {
-    }
-
-    @After
-    public void afterTest() {
-        kafkaTestConsumer.commitSync();
+        FifoLogbackAppender.popLogs();
     }
 
     private void checkAuditLogs(final int expected) {
-        final List<ConsumerRecord<String, String>> records = kafkaTestConsumer.getRecords(expected);
-
-        for (ConsumerRecord<String, String> record : records) {
-            //LOGGER.info(String.format("offset = %d, key = %s, value = %s%n", record.offset(), record.key(), record.value()));
-        }
+        final List<Object> records = FifoLogbackAppender.popLogs();
 
         LOGGER.info(String.format("Expected %d records, received %d", expected, records.size()));
 
@@ -123,7 +150,7 @@ public class QueryResourceIT {
 
     @Test
     public void testGetDataSource() {
-        final DataSource result = getDataSource();
+        final DataSource result = getDataSource(ELASTIC_INDEX_DOC_REF);
 
         final Set<String> resultFieldNames = result.getFields().stream()
                 .map(DataSourceField::getName)
@@ -134,13 +161,15 @@ public class QueryResourceIT {
         checkAuditLogs(1);
     }
 
-    private DataSource getDataSource() {
+    private DataSource getDataSource(final DocRef docRef) {
         DataSource result = null;
 
         try {
             final HttpResponse<String> response = Unirest
                     .post(getQueryDataSourceUrl())
                     .header("accept", MediaType.APPLICATION_JSON)
+                    .header("Content-Type", MediaType.APPLICATION_JSON)
+                    .body(docRef)
                     .asString();
 
             assertEquals(HttpStatus.SC_OK, response.getStatus());

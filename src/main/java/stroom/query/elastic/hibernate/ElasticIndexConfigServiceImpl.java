@@ -24,13 +24,14 @@ public class ElasticIndexConfigServiceImpl implements ElasticIndexConfigService 
             return null;
         }
 
-        final Session session = database.getCurrentSession();
-        final CriteriaBuilder cb = database.getCurrentSession().getCriteriaBuilder();
+        try (final Session session = database.openSession()) {
+            final CriteriaBuilder cb = session.getCriteriaBuilder();
 
-        final CriteriaQuery<ElasticIndexConfig> cq = cb.createQuery(ElasticIndexConfig.class);
-        final Root<ElasticIndexConfig> root = cq.from(ElasticIndexConfig.class);
-        cq.where(cb.equal(root.get(ElasticIndexConfig.UUID), docRef.getUuid()));
+            final CriteriaQuery<ElasticIndexConfig> cq = cb.createQuery(ElasticIndexConfig.class);
+            final Root<ElasticIndexConfig> root = cq.from(ElasticIndexConfig.class);
+            cq.where(cb.equal(root.get(ElasticIndexConfig.UUID), docRef.getUuid()));
 
-        return session.createQuery(cq).getResultList().stream().findFirst();
+            return session.createQuery(cq).getResultList().stream().findFirst();
+        }
     }
 }

@@ -11,10 +11,10 @@ server:
       port: ${ADMIN_CONNEXTOR_PORT:- 8300}
 
 database:
-  driverClass: com.mysql.jdbc.Driver
-  user: ${DB_USER:- stroomuser}
-  password: ${DB_PASSWORD:- stroompassword1}
-  url: ${DB_URL:- jdbc:mysql://localhost:3307/stroom?useUnicode=yes&characterEncoding=UTF-8}
+  driverClass: org.sqlite.JDBC
+  user: testUser
+  password: testPassword
+  url: jdbc:sqlite:test.db
   properties:
     charSet: UTF-8
     hibernate.dialect: org.hibernate.dialect.MySQLInnoDBDialect
@@ -31,10 +31,7 @@ logging:
     "AUDIT":
       level: INFO
       appenders:
-        - type: kafka
-          topic: audit
-          producerConfig:
-           - bootstrap.servers=localhost:9092
+        - type: fifo
   appenders:
     - type: console
       logFormat: "%-6level [%d{HH:mm:ss.SSS}] [%t] %logger{5} - %X{code} %msg %n"

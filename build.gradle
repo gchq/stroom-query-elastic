@@ -206,9 +206,14 @@ tasks.withType(Test) {
 
 dependencies {
     compile urlDependencies.get(urlLibs.eventLogging)
-    compile urlDependencies.get(urlLibs.stroomQueryApi)
-    compile urlDependencies.get(urlLibs.stroomQueryCommon)
+    //compile urlDependencies.get(urlLibs.stroomQueryApi)
+    //compile urlDependencies.get(urlLibs.stroomQueryCommon)
     compile urlDependencies.get(urlLibs.stroomExpression)
+
+    compile "stroom:stroom-query-api:JOE"
+    compile "stroom:stroom-query-common:JOE"
+    compile "stroom:stroom-query-audit:JOE"
+
     compile deps.kafka
     compile deps.dropwizard_core
     compile deps.slf4j
@@ -227,8 +232,11 @@ dependencies {
 
     testCompile testDeps.junit
     testCompile testDeps.assertj
+    testCompile 'org.apache.directory.studio:org.apache.commons.io:2.4'
 
     integrationTestCompile testDeps.dropwizard_testing
     integrationTestCompile testDeps.moshi
     integrationTestCompile testDeps.unirest
+
+    integrationTestRuntime 'org.xerial:sqlite-jdbc:3.20.1'
 }
