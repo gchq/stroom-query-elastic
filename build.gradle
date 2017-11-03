@@ -237,6 +237,7 @@ dependencies {
     integrationTestCompile testDeps.dropwizard_testing
     integrationTestCompile testDeps.moshi
     integrationTestCompile testDeps.unirest
+    integrationTestCompile 'org.flywaydb:flyway-core:4.2.0'
 
     integrationTestRuntime 'org.xerial:sqlite-jdbc:3.20.1'
 }

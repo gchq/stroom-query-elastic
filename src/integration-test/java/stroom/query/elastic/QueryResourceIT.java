@@ -5,11 +5,20 @@ import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import io.dropwizard.testing.junit.DropwizardAppRule;
-import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
+import org.elasticsearch.action.admin.indices.get.GetIndexRequest;
+import org.elasticsearch.action.admin.indices.get.GetIndexRequestBuilder;
+import org.elasticsearch.action.bulk.BulkRequestBuilder;
+import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.IndexNotFoundException;
+import org.elasticsearch.transport.client.PreBuiltTransportClient;
+import org.flywaydb.core.Flyway;
 import org.junit.*;
 import org.junit.rules.TestRule;
-import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.datasource.api.v2.DataSource;
@@ -20,11 +29,10 @@ import stroom.query.audit.FifoLogbackAppender;
 import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.List;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -37,11 +45,17 @@ public class QueryResourceIT {
     private static final Logger LOGGER = LoggerFactory.getLogger(QueryResourceIT.class);
 
     private static final String TEST_DB_FILENAME = "test.db";
+    private static final String TEST_DB_URL = String.format("jdbc:sqlite:%s", TEST_DB_FILENAME);
     private static final DocRef ELASTIC_INDEX_DOC_REF = new DocRef.Builder()
-            .uuid(UUID.randomUUID().toString())
-            .name("Test Elastic")
-            .type("ElasticIndex")
+            .uuid("36b4aa5c-79b6-4735-b3e4-a87deb0fd808") // must match the migration script that creates the data
+            .name("Dont Care")
+            .type("Used by Stroom, but not this app")
             .build();
+    private static final String INDEX_NAME = "shakespeare";
+    private static final String INDEXED_TYPE = "line";
+    private static final String ELASTIC_DATA_FILE = "elastic/shakespeare.json";
+    private static final String ELASTIC_MAPPINGS_FILE = "elastic/shakespeare.mappings.json";
+    private static final String CLUSTER_NAME = "docker-cluster"; // must match the created elastic search
 
     @ClassRule
     public static final TestRule initialiseDb = (statement, description) -> {
@@ -51,28 +65,22 @@ public class QueryResourceIT {
             LOGGER.info("Found an existing test database, deleted it");
         }
 
-        try {
-            final String sql = IOUtils.toString(QueryResourceIT.class.getClassLoader().getResourceAsStream("initDatabase.sql"));
-            final Connection connection = DriverManager.getConnection(String.format("jdbc:sqlite:%s", TEST_DB_FILENAME));
-            final java.sql.Statement stmt = connection.createStatement();
-            stmt.execute(sql);
-            stmt.close();
-
-
-            final PreparedStatement pstmt = connection.prepareStatement("INSERT INTO ELASTIC_INDEX (UUID, INDEX_NAME, INDEXED_TYPE) VALUES (?, ?, ?)");
-            pstmt.setString(1, ELASTIC_INDEX_DOC_REF.getUuid());
-            pstmt.setString(2, "shakespeare");
-            pstmt.setString(3, "line");
-            pstmt.execute();
-
-            connection.close();
-        } catch (IOException | SQLException e) {
-            e.printStackTrace();
-            fail(e.getLocalizedMessage());
-        }
+        final Flyway flyway = new Flyway();
+        flyway.setDataSource(TEST_DB_URL, "testUser", "testPassword");
+        flyway.migrate();
 
         return statement;
     };
+
+    @ClassRule
+    public static final TestRule initialiseElastic = new ElasticIndexRule()
+            .hostname("localhost")
+            .port(9300)
+            .testDataFile(ELASTIC_DATA_FILE)
+            .clusterName(CLUSTER_NAME)
+            .indexName(INDEX_NAME)
+            .indexedType(INDEXED_TYPE)
+            .mappingsFile(ELASTIC_MAPPINGS_FILE);
 
     @ClassRule
     public static final DropwizardAppRule<Config> appRule = new DropwizardAppRule<>(App.class, resourceFilePath("config.yml"));
@@ -138,8 +146,8 @@ public class QueryResourceIT {
     @Test
     public void testSearch() {
         final ExpressionOperator speakerFinder = new ExpressionOperator.Builder(ExpressionOperator.Op.AND)
-                .addTerm("speaker", ExpressionTerm.Condition.EQUALS, "KING")
-                .addTerm("text_entry", ExpressionTerm.Condition.CONTAINS, "these")
+                .addTerm("speaker", ExpressionTerm.Condition.EQUALS, "SOMERSET")
+                .addTerm("Henry", ExpressionTerm.Condition.CONTAINS, "Henry")
                 .build();
 
         querySearch(speakerFinder);
@@ -192,7 +200,7 @@ public class QueryResourceIT {
             final String queryKey = UUID.randomUUID().toString();
             final SearchRequest request = new SearchRequest.Builder()
                     .query()
-                        .dataSource("docRefName", UUID.randomUUID().toString(), "docRefType")
+                        .dataSource(ELASTIC_INDEX_DOC_REF)
                         .expression(expressionOperator)
                         .end()
                     .key(queryKey)
