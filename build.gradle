@@ -155,20 +155,20 @@ urlDependencies {
 jar {
     manifest {
         attributes(
-                "Implementation-Title": "Stroom Annotations Service",
+                "Implementation-Title": "Stroom Query Elastic Service",
                 "Implementation-Version": version,
-                "Main-Class" : "stroom.annotations.service.App"
+                "Main-Class" : "stroom.query.elastic.App"
         )
     }
 
-    archiveName 'stroom-annotations-service.jar'
+    archiveName 'stroom-query-elastic.jar'
 }
 
 shadowJar {
     // Allows us to build fat jars with lots of files
     zip64 true
     mergeServiceFiles()
-    archiveName 'stroom-annotations-service-all.jar'
+    archiveName 'stroom-query-elastic-all.jar'
 }
 
 sourceSets {

@@ -16,10 +16,10 @@
 
 FROM openjdk:8-alpine
 
-WORKDIR /usr/stroom-annotations-service
+WORKDIR /usr/stroom-query-elastic
 
-ADD ./build/libs/stroom-annotations-service-all.jar /usr/stroom-annotations-service/stroom-annotations-service-all.jar
-ADD ./config.yml /usr/stroom-annotations-service/config.yml
+ADD ./build/libs/stroom-query-elastic-all.jar /usr/stroom-query-elastic/stroom-query-elastic-all.jar
+ADD ./config.yml /usr/stroom-query-elastic/config.yml
 ADD ./wait-for-it/wait-for-it_busybox.sh wait-for-it_busybox.sh
 
 # update alpine and install Bash as it is not in alpine by default
@@ -33,4 +33,4 @@ RUN echo "http_proxy: $http_proxy" && \
 
 EXPOSE 8081
 
-CMD java -jar stroom-annotations-service-all.jar server config.yml
+CMD java -jar stroom-query-elastic-all.jar server config.yml
