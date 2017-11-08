@@ -102,11 +102,10 @@ public class QueryResourceIT {
 
             // Delete existing index
             final String indexUrl = String.format("http://%s:%d/%s", LOCALHOST, ELASTIC_HTTP_PORT, INDEX_NAME);
-            final HttpResponse<String> deleteResponse = Unirest
+            Unirest
                     .delete(indexUrl)
                     .header("Content-Type", ND_JSON)
-                    .asString();
-            assertEquals(deleteResponse.getStatus(), HttpStatus.SC_OK);
+                    .asString(); // response may be 404 if first time run
 
             // Create index with mappings
             final String mappingsJson = IOUtils.toString(classLoader.getResourceAsStream(ELASTIC_DATA_MAPPINGS_FULL_FILE));
@@ -116,7 +115,7 @@ public class QueryResourceIT {
                     .header("Content-Type", ND_JSON)
                     .body(mappingsJson)
                     .asString();
-            assertEquals(createMappingsResponse.getStatus(), HttpStatus.SC_OK);
+            assertEquals(HttpStatus.SC_OK, createMappingsResponse.getStatus());
 
             // Post Data
             final String dataJson = IOUtils.toString(classLoader.getResourceAsStream(ELASTIC_DATA_FILE));
@@ -127,7 +126,7 @@ public class QueryResourceIT {
                     .header("Content-Type", ND_JSON)
                     .body(dataJson)
                     .asString();
-            assertEquals(putDataResponse.getStatus(), HttpStatus.SC_OK);
+            assertEquals(HttpStatus.SC_OK, putDataResponse.getStatus());
 
             final HttpResponse<String> response = Unirest
                     .post(explorerActionUrl)
@@ -139,7 +138,7 @@ public class QueryResourceIT {
                             .indexedType(INDEXED_TYPE)
                             .build())
                     .asString();
-            assertEquals(response.getStatus(), HttpStatus.SC_OK);
+            assertEquals(HttpStatus.SC_OK, response.getStatus());
         } catch (Exception e) {
             LOGGER.error("Could not create index config", e);
             fail(e.getLocalizedMessage());

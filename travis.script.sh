@@ -4,7 +4,7 @@
 set -e
 
 #TODO: Update this build file to support CRON jobs.
-./gradlew -Pversion=$TRAVIS_TAG clean build shadowJar downloadUrlDependencies
+./gradlew -Pversion=$TRAVIS_TAG downloadUrlDependencies clean build shadowJar
 
 if [ -n "$TRAVIS_TAG" ]; then
     echo "Travis Tag is Set, Sending to Docker"

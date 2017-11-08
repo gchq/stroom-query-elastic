@@ -100,7 +100,6 @@ ext.deps = [
     elasticSearch: "org.elasticsearch.client:transport:$versions.elasticSearch",
     dropwizard_core: "io.dropwizard:dropwizard-core:$versions.dropwizard",
     dropwizard_auth: "io.dropwizard:dropwizard-auth:$versions.dropwizard",
-    dropwizard_hibernate: "io.dropwizard:dropwizard-hibernate:$versions.dropwizard",
     dropwizard_auth_jwt: "com.github.toastshaman:dropwizard-auth-jwt:1.0.2-0",
     flyway_core: "org.flywaydb:flyway-core:4.0.3",
     bcrypt: 'de.svenkubiak:jBCrypt:0.4.1',
@@ -217,7 +216,6 @@ dependencies {
     compile deps.slf4j
     compile deps.dropwizard_auth
     compile deps.dropwizard_auth_jwt
-    compile deps.dropwizard_hibernate
     compile deps.bcrypt
     compile deps.jose4j
     compile deps.slf4j
@@ -235,7 +233,4 @@ dependencies {
     integrationTestCompile testDeps.dropwizard_testing
     integrationTestCompile testDeps.moshi
     integrationTestCompile testDeps.unirest
-    integrationTestCompile 'org.flywaydb:flyway-core:4.2.0'
-
-    integrationTestRuntime 'org.xerial:sqlite-jdbc:3.20.1'
 }
