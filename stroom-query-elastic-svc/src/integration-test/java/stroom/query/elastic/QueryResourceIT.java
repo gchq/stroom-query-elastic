@@ -1,7 +1,6 @@
 package stroom.query.elastic;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.common.io.Resources;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
@@ -9,7 +8,6 @@ import io.dropwizard.testing.junit.DropwizardAppRule;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
 import org.junit.*;
-import org.junit.rules.TestRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.datasource.api.v2.DataSource;
@@ -19,13 +17,12 @@ import stroom.query.audit.FifoLogbackAppender;
 import stroom.query.elastic.hibernate.ElasticIndexConfig;
 
 import javax.ws.rs.core.MediaType;
-import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
@@ -51,7 +48,9 @@ public class QueryResourceIT {
     public static final DropwizardAppRule<Config> appRule = new DropwizardAppRule<>(App.class, resourceFilePath("config.yml"));
 
     private static String queryUrl;
-    private static String explorerActionUrl;
+    private static String rawExplorerActionUrl;
+    private static Function<String, String> explorerActionUrl = (uuid) ->
+            String.format("%s/%s", rawExplorerActionUrl, uuid);
 
     private static final com.fasterxml.jackson.databind.ObjectMapper jacksonObjectMapper =
             new com.fasterxml.jackson.databind.ObjectMapper();
@@ -73,7 +72,7 @@ public class QueryResourceIT {
 
         int appPort = appRule.getLocalPort();
         queryUrl = String.format("http://%s:%d/queryApi/v1", LOCALHOST, appPort);
-        explorerActionUrl = String.format("http://%s:%d/explorerAction/v1", LOCALHOST, appPort);
+        rawExplorerActionUrl = String.format("http://%s:%d/explorerAction/v1/", LOCALHOST, appPort);
 
         Unirest.setObjectMapper(new com.mashape.unirest.http.ObjectMapper() {
             private com.fasterxml.jackson.databind.ObjectMapper jacksonObjectMapper
@@ -129,7 +128,7 @@ public class QueryResourceIT {
             assertEquals(HttpStatus.SC_OK, putDataResponse.getStatus());
 
             final HttpResponse<String> response = Unirest
-                    .post(explorerActionUrl)
+                    .post(explorerActionUrl.apply(ELASTIC_INDEX_DOC_REF.getUuid()))
                     .header("accept", MediaType.APPLICATION_JSON)
                     .header("Content-Type", MediaType.APPLICATION_JSON)
                     .body(new ElasticIndexConfig.Builder()

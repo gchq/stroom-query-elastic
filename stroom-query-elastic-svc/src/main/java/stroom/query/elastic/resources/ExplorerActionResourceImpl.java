@@ -17,22 +17,22 @@ public class ExplorerActionResourceImpl implements ExplorerActionResource<Elasti
     }
 
     @Override
-    public Response createOrUpdate(ElasticIndexConfig data) {
+    public Response createOrUpdate(final String uuid, final ElasticIndexConfig data) {
         return service.createOrUpdate(data)
                 .map(d -> Response.ok(d).build())
                 .orElse(Response.noContent().build());
     }
 
     @Override
-    public Response get(String uuid) {
+    public Response get(final String uuid) {
         return service.get(uuid)
                 .map(d -> Response.ok(d).build())
                 .orElse(Response.status(HttpStatus.SC_NOT_FOUND).build());
     }
 
     @Override
-    public Response delete(String uuid) {
-        service.destroy(uuid);
+    public Response remove(final String uuid) {
+        service.remove(uuid);
 
         return Response.noContent().build();
     }

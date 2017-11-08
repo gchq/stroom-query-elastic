@@ -58,7 +58,7 @@ public class ElasticIndexConfigServiceImpl implements ElasticIndexConfigService 
     }
 
     @Override
-    public void destroy(String uuid) {
+    public void remove(String uuid) {
         client.prepareDelete(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, uuid).get();
     }
 }

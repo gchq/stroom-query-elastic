@@ -14,8 +14,9 @@ public interface ExplorerActionResource<E> {
      * @return
      */
     @POST
-    @Path("/")
-    Response createOrUpdate(E data);
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("/{uuid}")
+    Response createOrUpdate(@PathParam("uuid") String uuid, E data);
 
     /**
      * Called to load an existing Document by UUID
@@ -23,10 +24,10 @@ public interface ExplorerActionResource<E> {
      * @return The document configuration
      */
     @GET
-    @Path("/")
-    Response get(String uuid);
+    @Path("/{uuid}")
+    Response get(@PathParam("uuid") String uuid);
 
     @DELETE
     @Path("/{uuid}")
-    Response delete(String uuid);
+    Response remove(@PathParam("uuid") String uuid);
 }

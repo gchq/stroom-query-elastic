@@ -8,5 +8,5 @@ public interface ElasticIndexConfigService {
 
     Optional<ElasticIndexConfig> createOrUpdate(ElasticIndexConfig update);
     Optional<ElasticIndexConfig> get(String uuid);
-    void destroy(String uuid);
+    void remove(String uuid);
 }
