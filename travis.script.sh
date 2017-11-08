@@ -13,11 +13,17 @@ if [ -n "$TRAVIS_TAG" ]; then
     # The username and password are configured in the travis gui
     docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
 
-    ELASTIC_TAG="gchq/stroom-query-elastic:${TRAVIS_TAG}"
-    echo "Building stroom-query-elastic with tag ${ELASTIC_TAG}"
-    docker build --tag=${ELASTIC_TAG} .
-    echo "Pushing ${ELASTIC_TAG}"
-    docker push ${ELASTIC_TAG}
+    QUERY_ELASTIC_SERVICE_TAG="gchq/stroom-query-elastic-svc:${TRAVIS_TAG}"
+    echo "Building stroom-query-elastic with tag ${QUERY_ELASTIC_SERVICE_TAG}"
+    docker build --tag=${QUERY_ELASTIC_SERVICE_TAG} stroom-query-elastic-svc/.
+    echo "Pushing ${QUERY_ELASTIC_SERVICE_TAG}"
+    docker push ${QUERY_ELASTIC_SERVICE_TAG}
+
+    QUERY_ELASTIC_UI_TAG="gchq/stroom-query-elastic-ui:${TRAVIS_TAG}"
+    echo "Building stroom-annotations-ui with tag ${QUERY_ELASTIC_UI_TAG}"
+    docker build --tag=${QUERY_ELASTIC_UI_TAG} stroom-query-elastic-ui/.
+    echo "Pushing ${QUERY_ELASTIC_UI_TAG}"
+    docker push ${QUERY_ELASTIC_UI_TAG}
 else
     echo "Skipping Docker Push - No Tag Set"
 fi
