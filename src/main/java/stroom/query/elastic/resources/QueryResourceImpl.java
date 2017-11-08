@@ -43,9 +43,9 @@ public class QueryResourceImpl implements QueryResource {
 
     @Override
     public Response getDataSource(final DocRef docRef) {
-        LOGGER.info("Getting Data Source for DocRef: " + docRef);
+        LOGGER.debug("Getting Data Source for DocRef: " + docRef);
 
-        final Optional<ElasticIndexConfig> elasticIndexConfigO = elasticIndexConfigService.get(docRef);
+        final Optional<ElasticIndexConfig> elasticIndexConfigO = elasticIndexConfigService.get(docRef.getUuid());
 
         if (!elasticIndexConfigO.isPresent()) {
             return Response.noContent().build();
@@ -53,7 +53,7 @@ public class QueryResourceImpl implements QueryResource {
 
         final ElasticIndexConfig elasticIndexConfig = elasticIndexConfigO.get();
 
-        LOGGER.info("Found Elastic Config!" + elasticIndexConfig);
+        LOGGER.debug("Found Elastic Config!" + elasticIndexConfig);
 
         try {
             final List<DataSourceField> fields = new ArrayList<>();
@@ -95,8 +95,6 @@ public class QueryResourceImpl implements QueryResource {
                 });
             });
 
-            LOGGER.info("Response " + response);
-
             return Response.ok(new DataSource(fields)).build();
 
         } catch (Exception e) {
@@ -107,7 +105,8 @@ public class QueryResourceImpl implements QueryResource {
 
     @Override
     public Response search(final SearchRequest request) {
-        final Optional<ElasticIndexConfig> elasticIndexConfigO = elasticIndexConfigService.get(request.getQuery().getDataSource());
+        final String queryUuid = request.getQuery().getDataSource().getUuid();
+        final Optional<ElasticIndexConfig> elasticIndexConfigO = elasticIndexConfigService.get(queryUuid);
 
         if (!elasticIndexConfigO.isPresent()) {
             return Response.noContent().build();
@@ -124,12 +123,12 @@ public class QueryResourceImpl implements QueryResource {
                 .setQuery(elasticQuery)
                 .get();
 
-        LOGGER.info("Found " + response);
+        LOGGER.debug("Found " + response);
 
         for (final SearchHit hit : response.getHits().getHits()) {
-            LOGGER.info("Hit " + hit);
+            LOGGER.trace("Hit " + hit);
             hit.getSource().forEach((s, objects) -> {
-                LOGGER.info("Hit Field " + s + " - "  + objects);
+                LOGGER.trace("Hit Field " + s + " - "  + objects);
             });
         }
 

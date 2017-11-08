@@ -1,37 +1,64 @@
 package stroom.query.elastic.hibernate;
 
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import stroom.query.api.v2.DocRef;
+import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.client.transport.TransportClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
+import java.io.IOException;
 import java.util.Optional;
 
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
+
 public class ElasticIndexConfigServiceImpl implements ElasticIndexConfigService {
-    private final SessionFactory database;
+    private static final Logger LOGGER = LoggerFactory.getLogger(ElasticIndexConfigServiceImpl.class);
+
+    private final TransportClient client;
 
     @Inject
-    public ElasticIndexConfigServiceImpl(final SessionFactory database) {
-        this.database = database;
+    public ElasticIndexConfigServiceImpl(final TransportClient client) {
+        this.client = client;
     }
 
     @Override
-    public Optional<ElasticIndexConfig> get(final DocRef docRef) {
-        if (null == docRef) {
-            return null;
+    public Optional<ElasticIndexConfig> createOrUpdate(final ElasticIndexConfig update) {
+        try {
+            client.prepareIndex(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, update.getUUID())
+                    .setSource(jsonBuilder()
+                            .startObject()
+                            .field(ElasticIndexConfig.INDEX_NAME, update.getIndexName())
+                            .field(ElasticIndexConfig.INDEXED_TYPE, update.getIndexedType())
+                            .endObject()
+                    )
+                    .get();
+        } catch (IOException e) {
+            LOGGER.warn("Could not update index config", e);
+            return Optional.empty();
         }
 
-        try (final Session session = database.openSession()) {
-            final CriteriaBuilder cb = session.getCriteriaBuilder();
+        return get(update.getUUID());
+    }
 
-            final CriteriaQuery<ElasticIndexConfig> cq = cb.createQuery(ElasticIndexConfig.class);
-            final Root<ElasticIndexConfig> root = cq.from(ElasticIndexConfig.class);
-            cq.where(cb.equal(root.get(ElasticIndexConfig.UUID), docRef.getUuid()));
+    @Override
+    public Optional<ElasticIndexConfig> get(final String uuid) {
+        GetResponse searchResponse = client
+                .prepareGet(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, uuid)
+                .get();
 
-            return session.createQuery(cq).getResultList().stream().findFirst();
+        if (searchResponse.isExists() && !searchResponse.isSourceEmpty()) {
+            return Optional.of(new ElasticIndexConfig.Builder()
+                    .uuid(uuid)
+                    .indexName(searchResponse.getSource().get(ElasticIndexConfig.INDEX_NAME))
+                    .indexedType(searchResponse.getSource().get(ElasticIndexConfig.INDEXED_TYPE))
+                    .build());
+        } else {
+            return Optional.empty();
         }
+    }
+
+    @Override
+    public void destroy(String uuid) {
+        client.prepareDelete(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, uuid).get();
     }
 }

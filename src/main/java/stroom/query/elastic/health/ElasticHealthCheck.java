@@ -6,11 +6,11 @@ import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
 import org.elasticsearch.cluster.health.ClusterIndexHealth;
 
-public class QueryHealthCheck extends HealthCheck {
+public class ElasticHealthCheck extends HealthCheck {
 
     private final TransportClient client;
 
-    public QueryHealthCheck(TransportClient client) {
+    public ElasticHealthCheck(TransportClient client) {
         this.client = client;
     }
 

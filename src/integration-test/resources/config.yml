@@ -10,17 +10,6 @@ server:
     - type: ${ADMIN_CONNEXTOR_TYPE:- http}
       port: ${ADMIN_CONNEXTOR_PORT:- 8300}
 
-database:
-  driverClass: org.sqlite.JDBC
-  user: testUser
-  password: testPassword
-  url: jdbc:sqlite:test.db
-  properties:
-    charSet: UTF-8
-    hibernate.dialect: org.hibernate.dialect.MySQLInnoDBDialect
-    hibernate.show_sql: false
-    hibernate.hbm2ddl.auto: validate
-
 logging:
   level: ${LOGGING_LEVEL:- ERROR}
   loggers:

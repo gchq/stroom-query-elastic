@@ -3,14 +3,12 @@ package stroom.query.elastic;
 import io.dropwizard.Application;
 import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.SubstitutingSourceProvider;
-import io.dropwizard.db.DataSourceFactory;
-import io.dropwizard.hibernate.HibernateBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
 import stroom.query.audit.AuditedQueryBundle;
-import stroom.query.elastic.health.QueryHealthCheck;
-import stroom.query.elastic.hibernate.ElasticIndexConfig;
+import stroom.query.elastic.health.ElasticHealthCheck;
+import stroom.query.elastic.resources.ExplorerActionResourceImpl;
 import stroom.query.elastic.resources.QueryResourceImpl;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 
@@ -20,13 +18,6 @@ import java.util.EnumSet;
 import java.util.Map;
 
 public class App extends Application<Config> {
-
-    private final HibernateBundle<Config> hibernateBundle = new HibernateBundle<Config>(ElasticIndexConfig.class) {
-        @Override
-        public DataSourceFactory getDataSourceFactory(Config configuration) {
-            return configuration.getDataSourceFactory();
-        }
-    };
 
     public TransportClientBundle<Config> transportClientBundle = new TransportClientBundle<Config>() {
 
@@ -50,8 +41,9 @@ public class App extends Application<Config> {
     @Override
     public void run(final Config configuration, final Environment environment) throws Exception {
 
-        environment.healthChecks().register("Elastic", new QueryHealthCheck(transportClientBundle.getTransportClient()));
-        environment.jersey().register(new Module(transportClientBundle.getTransportClient(), hibernateBundle.getSessionFactory()));
+        environment.healthChecks().register("Elastic", new ElasticHealthCheck(transportClientBundle.getTransportClient()));
+        environment.jersey().register(new Module(transportClientBundle.getTransportClient()));
+        environment.jersey().register(ExplorerActionResourceImpl.class);
 
         configureCors(environment);
     }
@@ -67,7 +59,6 @@ public class App extends Application<Config> {
                 new EnvironmentVariableSubstitutor(false)));
 
         bootstrap.addBundle(this.transportClientBundle);
-        bootstrap.addBundle(this.hibernateBundle);
         bootstrap.addBundle(this.auditedQueryBundle);
 
     }

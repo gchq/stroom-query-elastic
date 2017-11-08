@@ -1,12 +1,5 @@
 package stroom.query.elastic.hibernate;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
-
-@Entity
-@Table(name = "ELASTIC_INDEX")
 public class ElasticIndexConfig {
     public static final String UUID = "UUID";
     public static final String INDEX_NAME = "INDEX_NAME";
@@ -18,8 +11,6 @@ public class ElasticIndexConfig {
 
     private String indexedType;
 
-    @Id
-    @Column(name = UUID)
     public String getUUID() {
         return uuid;
     }
@@ -28,7 +19,6 @@ public class ElasticIndexConfig {
         this.uuid = value;
     }
 
-    @Column(name = INDEX_NAME)
     public String getIndexName() {
         return indexName;
     }
@@ -37,7 +27,6 @@ public class ElasticIndexConfig {
         this.indexName = value;
     }
 
-    @Column(name = INDEXED_TYPE)
     public String getIndexedType() {
         return indexedType;
     }
@@ -54,5 +43,32 @@ public class ElasticIndexConfig {
         sb.append(", indexedType='").append(indexedType).append('\'');
         sb.append('}');
         return sb.toString();
+    }
+
+    public static class Builder {
+        private final ElasticIndexConfig instance;
+
+        public Builder() {
+            this.instance = new ElasticIndexConfig();
+        }
+
+        public Builder uuid(final Object value) {
+            this.instance.uuid = (value != null) ? value.toString() : null;
+            return this;
+        }
+
+        public Builder indexName(final Object value) {
+            this.instance.indexName = (value != null) ? value.toString() : null;;
+            return this;
+        }
+
+        public Builder indexedType(final Object value) {
+            this.instance.indexedType = (value != null) ? value.toString() : null;;
+            return this;
+        }
+
+        public ElasticIndexConfig build() {
+            return instance;
+        }
     }
 }

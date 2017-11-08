@@ -1,22 +1,13 @@
 package stroom.query.elastic;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.common.io.Resources;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import io.dropwizard.testing.junit.DropwizardAppRule;
+import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
-import org.elasticsearch.action.admin.indices.get.GetIndexRequest;
-import org.elasticsearch.action.admin.indices.get.GetIndexRequestBuilder;
-import org.elasticsearch.action.bulk.BulkRequestBuilder;
-import org.elasticsearch.action.bulk.BulkResponse;
-import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.transport.InetSocketTransportAddress;
-import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.IndexNotFoundException;
-import org.elasticsearch.transport.client.PreBuiltTransportClient;
-import org.flywaydb.core.Flyway;
 import org.junit.*;
 import org.junit.rules.TestRule;
 import org.slf4j.Logger;
@@ -25,10 +16,13 @@ import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.*;
 import stroom.query.audit.FifoLogbackAppender;
+import stroom.query.elastic.hibernate.ElasticIndexConfig;
 
 import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -36,53 +30,28 @@ import java.util.stream.Collectors;
 
 import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class QueryResourceIT {
     private static final Logger LOGGER = LoggerFactory.getLogger(QueryResourceIT.class);
 
-    private static final String TEST_DB_FILENAME = "test.db";
-    private static final String TEST_DB_URL = String.format("jdbc:sqlite:%s", TEST_DB_FILENAME);
     private static final DocRef ELASTIC_INDEX_DOC_REF = new DocRef.Builder()
-            .uuid("36b4aa5c-79b6-4735-b3e4-a87deb0fd808") // must match the migration script that creates the data
-            .name("Dont Care")
-            .type("Used by Stroom, but not this app")
+            .uuid("4447107f-7343-4357-aff5-d872226678ee")
             .build();
+
+    private static final String LOCALHOST = "localhost";
+    private static final int ELASTIC_HTTP_PORT = 9200;
     private static final String INDEX_NAME = "shakespeare";
     private static final String INDEXED_TYPE = "line";
     private static final String ELASTIC_DATA_FILE = "elastic/shakespeare.json";
-    private static final String ELASTIC_MAPPINGS_FILE = "elastic/shakespeare.mappings.json";
-    private static final String CLUSTER_NAME = "docker-cluster"; // must match the created elastic search
-
-    @ClassRule
-    public static final TestRule initialiseDb = (statement, description) -> {
-        LOGGER.info("Setting up Test Database");
-
-        if (new File(TEST_DB_FILENAME).delete()) {
-            LOGGER.info("Found an existing test database, deleted it");
-        }
-
-        final Flyway flyway = new Flyway();
-        flyway.setDataSource(TEST_DB_URL, "testUser", "testPassword");
-        flyway.migrate();
-
-        return statement;
-    };
-
-    @ClassRule
-    public static final TestRule initialiseElastic = new ElasticIndexRule()
-            .hostname("localhost")
-            .port(9300)
-            .testDataFile(ELASTIC_DATA_FILE)
-            .clusterName(CLUSTER_NAME)
-            .indexName(INDEX_NAME)
-            .indexedType(INDEXED_TYPE)
-            .mappingsFile(ELASTIC_MAPPINGS_FILE);
+    private static final String ELASTIC_DATA_MAPPINGS_FULL_FILE = "elastic/shakespeare.mappings.json";
 
     @ClassRule
     public static final DropwizardAppRule<Config> appRule = new DropwizardAppRule<>(App.class, resourceFilePath("config.yml"));
 
     private static String queryUrl;
+    private static String explorerActionUrl;
 
     private static final com.fasterxml.jackson.databind.ObjectMapper jacksonObjectMapper =
             new com.fasterxml.jackson.databind.ObjectMapper();
@@ -103,7 +72,8 @@ public class QueryResourceIT {
     public static void setupClass() {
 
         int appPort = appRule.getLocalPort();
-        queryUrl = "http://localhost:" + appPort + "/queryApi/v1";
+        queryUrl = String.format("http://%s:%d/queryApi/v1", LOCALHOST, appPort);
+        explorerActionUrl = String.format("http://%s:%d/explorerAction/v1", LOCALHOST, appPort);
 
         Unirest.setObjectMapper(new com.mashape.unirest.http.ObjectMapper() {
             private com.fasterxml.jackson.databind.ObjectMapper jacksonObjectMapper
@@ -125,6 +95,55 @@ public class QueryResourceIT {
                 }
             }
         });
+
+        try {
+            final String ND_JSON = "application/x-ndjson";
+            final ClassLoader classLoader = QueryResourceIT.class.getClassLoader();
+
+            // Delete existing index
+            final String indexUrl = String.format("http://%s:%d/%s", LOCALHOST, ELASTIC_HTTP_PORT, INDEX_NAME);
+            final HttpResponse<String> deleteResponse = Unirest
+                    .delete(indexUrl)
+                    .header("Content-Type", ND_JSON)
+                    .asString();
+            assertEquals(deleteResponse.getStatus(), HttpStatus.SC_OK);
+
+            // Create index with mappings
+            final String mappingsJson = IOUtils.toString(classLoader.getResourceAsStream(ELASTIC_DATA_MAPPINGS_FULL_FILE));
+            final HttpResponse<String> createMappingsResponse = Unirest
+                    .put(indexUrl)
+                    .header("accept", MediaType.APPLICATION_JSON)
+                    .header("Content-Type", ND_JSON)
+                    .body(mappingsJson)
+                    .asString();
+            assertEquals(createMappingsResponse.getStatus(), HttpStatus.SC_OK);
+
+            // Post Data
+            final String dataJson = IOUtils.toString(classLoader.getResourceAsStream(ELASTIC_DATA_FILE));
+            final String putDataUrl = String.format("http://%s:%d/%s/_bulk?pretty", LOCALHOST, ELASTIC_HTTP_PORT, INDEX_NAME);
+            final HttpResponse<String> putDataResponse = Unirest
+                    .put(putDataUrl)
+                    .header("accept", MediaType.APPLICATION_JSON)
+                    .header("Content-Type", ND_JSON)
+                    .body(dataJson)
+                    .asString();
+            assertEquals(putDataResponse.getStatus(), HttpStatus.SC_OK);
+
+            final HttpResponse<String> response = Unirest
+                    .post(explorerActionUrl)
+                    .header("accept", MediaType.APPLICATION_JSON)
+                    .header("Content-Type", MediaType.APPLICATION_JSON)
+                    .body(new ElasticIndexConfig.Builder()
+                            .uuid(ELASTIC_INDEX_DOC_REF.getUuid())
+                            .indexName(INDEX_NAME)
+                            .indexedType(INDEXED_TYPE)
+                            .build())
+                    .asString();
+            assertEquals(response.getStatus(), HttpStatus.SC_OK);
+        } catch (Exception e) {
+            LOGGER.error("Could not create index config", e);
+            fail(e.getLocalizedMessage());
+        }
     }
 
     @Before
@@ -143,11 +162,27 @@ public class QueryResourceIT {
     @Test
     public void testSearch() {
         final ExpressionOperator speakerFinder = new ExpressionOperator.Builder(ExpressionOperator.Op.AND)
-                .addTerm("speaker", ExpressionTerm.Condition.EQUALS, "SOMERSET")
-                .addTerm("Henry", ExpressionTerm.Condition.CONTAINS, "Henry")
+                .addTerm(ShakespeareLine.SPEAKER, ExpressionTerm.Condition.EQUALS, "WARWICK")
+                .addTerm(ShakespeareLine.TEXT_ENTRY, ExpressionTerm.Condition.CONTAINS, "pluck")
                 .build();
 
-        querySearch(speakerFinder);
+        final SearchResponse response = querySearch(speakerFinder);
+
+        final List<ShakespeareLine> lines = response.getResults().stream()
+                .map(r -> (FlatResult) r)
+                .map(FlatResult::getValues)
+                .flatMap(Collection::stream)
+                .map(r -> new ShakespeareLine.Builder()
+                        .playName(r.get(3).toString())
+                        .lineId(r.get(4).toString())
+                        .speechNumber(Integer.parseInt(r.get(5).toString()))
+                        .speaker(r.get(6).toString())
+                        .textEntry(r.get(7).toString())
+                        .build())
+                .collect(Collectors.toList());
+
+        assertEquals(1, lines.size());
+        assertEquals("4178", lines.get(0).getLineId());
 
         checkAuditLogs(1);
     }
@@ -161,7 +196,11 @@ public class QueryResourceIT {
                 .map(DataSourceField::getName)
                 .collect(Collectors.toSet());
 
-        LOGGER.info("Field Names: " + resultFieldNames);
+        assertTrue(resultFieldNames.contains(ShakespeareLine.LINE_ID));
+        assertTrue(resultFieldNames.contains(ShakespeareLine.PLAY_NAME));
+        assertTrue(resultFieldNames.contains(ShakespeareLine.SPEAKER));
+        assertTrue(resultFieldNames.contains(ShakespeareLine.SPEECH_NUMBER));
+        assertTrue(resultFieldNames.contains(ShakespeareLine.TEXT_ENTRY));
 
         checkAuditLogs(1);
     }
@@ -212,8 +251,11 @@ public class QueryResourceIT {
                             .queryId(queryKey)
                             .extractValues(false)
                             .showDetail(false)
-                            .addField("speaker", "${" + "speaker" + "}").end()
-                            .addField("text_entry", "${" + "text_entry" + "}").end()
+                            .addField(ShakespeareLine.PLAY_NAME, "${" + ShakespeareLine.PLAY_NAME + "}").end()
+                            .addField(ShakespeareLine.LINE_ID, "${" + ShakespeareLine.LINE_ID + "}").end()
+                            .addField(ShakespeareLine.SPEECH_NUMBER, "${" + ShakespeareLine.SPEECH_NUMBER + "}").end()
+                            .addField(ShakespeareLine.SPEAKER, "${" + ShakespeareLine.SPEAKER + "}").end()
+                            .addField(ShakespeareLine.TEXT_ENTRY, "${" + ShakespeareLine.TEXT_ENTRY + "}").end()
                             .addMaxResults(10)
                             .end()
                         .end()
