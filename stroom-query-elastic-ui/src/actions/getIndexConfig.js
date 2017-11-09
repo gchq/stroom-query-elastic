@@ -43,23 +43,23 @@ export const getIndexConfig = (uuid) => {
         dispatch(requestGetIndexConfig(thisApiCallId, uuid))
 
         return fetch(`${process.env.REACT_APP_QUERY_ELASTIC_URL}/explorerAction/v1/${uuid}`)
-            .then(
-                response => {
-                    if (response.status === 404) {
-                        dispatch(receiveGetIndexConfigNotExist(thisApiCallId, uuid))
-                    } else if (!response.ok) {
-                        throw new Error(response.statusText)
-                    }
-                    return response.json()
+        .then(
+            response => {
+                if (response.status === 404) {
+                    dispatch(receiveGetIndexConfigNotExist(thisApiCallId, uuid))
+                } else if (!response.ok) {
+                    throw new Error(response.statusText)
                 }
-            )
-            .then(json => {
-                if (json) {
-                    dispatch(receiveGetIndexConfig(thisApiCallId, uuid, json))
-                }
-            })
-            .catch(error => {
-                dispatch(receiveGetIndexConfigFailed(thisApiCallId, error))
-            })
+                return response.json()
+            }
+        )
+        .then(json => {
+            if (json.indexName) {
+                dispatch(receiveGetIndexConfig(thisApiCallId, uuid, json))
+            }
+        })
+        .catch(error => {
+            dispatch(receiveGetIndexConfigFailed(thisApiCallId, error.message))
+        })
     }
 }

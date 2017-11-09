@@ -1,0 +1,14 @@
+.single-index-config {
+    display: flex;
+    flex-direction: column;
+}
+
+.single-index-config__save-button {
+    margin-top: 2rem;
+    margin-right: 2rem;
+}
+
+.single-index-config__remove-button {
+    margin-top: 2rem;
+    margin-right: 2rem;
+}

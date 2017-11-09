@@ -16,7 +16,7 @@ public interface ExplorerActionResource<E> {
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{uuid}")
-    Response createOrUpdate(@PathParam("uuid") String uuid, E data);
+    Response set(@PathParam("uuid") String uuid, E data);
 
     /**
      * Called to load an existing Document by UUID

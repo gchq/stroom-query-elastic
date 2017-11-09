@@ -30,8 +30,8 @@ export const RECEIVE_UPDATE_INDEX_CONFIG_FAILED = 'RECEIVE_UPDATE_INDEX_CONFIG_F
 
 export const receiveUpdateIndexConfigFailed = (apiCallId, message) => ({
     type: RECEIVE_UPDATE_INDEX_CONFIG_FAILED,
-    message,
-    apiCallId
+    apiCallId,
+    message
 })
 
 let apiCallId = 0
@@ -53,20 +53,14 @@ export const updateIndexConfig = (uuid, indexConfig) => {
                 body: JSON.stringify(indexConfig)
             }
         )
-              .then(
-                response => response.json(),
-                // Do not use catch, because that will also catch
-                // any errors in the dispatch and resulting render,
-                // causing an loop of 'Unexpected batch number' errors.
-                // https://github.com/facebook/react/issues/6895
-                error => console.log('An error occured.', error)
-              )
-              .then(json => {
-                if (json.uuid) {
-                    dispatch(receiveUpdateIndexConfig(thisApiCallId, uuid, json))
-                } else {
-                    dispatch(receiveUpdateIndexConfigFailed(thisApiCallId, json.msg))
-                }
-              })
+        .then(
+            response => response.json()
+        )
+        .then(json => {
+            dispatch(receiveUpdateIndexConfig(thisApiCallId, uuid, json))
+        })
+        .catch(error => {
+            dispatch(receiveUpdateIndexConfigFailed(thisApiCallId, error.message))
+        })
     }
 }

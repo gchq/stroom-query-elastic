@@ -38,11 +38,13 @@ export const removeIndexConfig = (uuid) => {
                 method: "DELETE"
             }
         )
-              .then(
-                response => {
-                    dispatch(receiveRemoveIndexConfig(thisApiCallId, uuid))
-                },
-                error => dispatch(receiveRemoveIndexConfigFailed(thisApiCallId, error))
-              )
+        .then(
+            response => {
+                dispatch(receiveRemoveIndexConfig(thisApiCallId, uuid))
+            }
+        )
+        .catch(error => {
+            dispatch(receiveRemoveIndexConfigFailed(thisApiCallId, error.message))
+        })
     }
 }

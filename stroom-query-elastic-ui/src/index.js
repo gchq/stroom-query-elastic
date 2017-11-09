@@ -42,8 +42,7 @@ const store = createStore(
 )
 
 const SinglePage = ({ match }) => {
-    //store.dispatch(setAnnotationId(match.params.annotationId));
-    return <SingleIndexConfigPage />
+    return <SingleIndexConfigPage indexConfigUuid={match.params.uuid}/>
 }
 
 render(
@@ -51,8 +50,8 @@ render(
         <Provider store={store}>
             <Router>
                 <Switch>
-                    <Route exact={true} path="/:uuid?" component={SinglePage} />
-                    <Route path="*" component={NotFoundPage}/>
+                    <Route exact={true} path="/:uuid" component={SinglePage} />
+                    <Route path="*" component={NotFoundPage} />
                 </Switch>
             </Router>
         </Provider>

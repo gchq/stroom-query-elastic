@@ -22,9 +22,9 @@ public class ElasticIndexConfigServiceImpl implements ElasticIndexConfigService 
     }
 
     @Override
-    public Optional<ElasticIndexConfig> createOrUpdate(final ElasticIndexConfig update) {
+    public Optional<ElasticIndexConfig> set(final String uuid, final ElasticIndexConfig update) {
         try {
-            client.prepareIndex(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, update.getUUID())
+            client.prepareIndex(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, uuid)
                     .setSource(jsonBuilder()
                             .startObject()
                             .field(ElasticIndexConfig.INDEX_NAME, update.getIndexName())
@@ -37,7 +37,7 @@ public class ElasticIndexConfigServiceImpl implements ElasticIndexConfigService 
             return Optional.empty();
         }
 
-        return get(update.getUUID());
+        return get(uuid);
     }
 
     @Override
@@ -48,7 +48,6 @@ public class ElasticIndexConfigServiceImpl implements ElasticIndexConfigService 
 
         if (searchResponse.isExists() && !searchResponse.isSourceEmpty()) {
             return Optional.of(new ElasticIndexConfig.Builder()
-                    .uuid(uuid)
                     .indexName(searchResponse.getSource().get(ElasticIndexConfig.INDEX_NAME))
                     .indexedType(searchResponse.getSource().get(ElasticIndexConfig.INDEXED_TYPE))
                     .build());

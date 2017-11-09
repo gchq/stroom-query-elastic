@@ -5,19 +5,9 @@ public class ElasticIndexConfig {
     public static final String INDEX_NAME = "INDEX_NAME";
     public static final String INDEXED_TYPE = "INDEXED_TYPE";
 
-    private String uuid;
-
     private String indexName;
 
     private String indexedType;
-
-    public String getUUID() {
-        return uuid;
-    }
-
-    public void setUUID(final String value) {
-        this.uuid = value;
-    }
 
     public String getIndexName() {
         return indexName;
@@ -38,8 +28,7 @@ public class ElasticIndexConfig {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("ElasticIndexConfig{");
-        sb.append("uuid='").append(uuid).append('\'');
-        sb.append(", indexName='").append(indexName).append('\'');
+        sb.append("indexName='").append(indexName).append('\'');
         sb.append(", indexedType='").append(indexedType).append('\'');
         sb.append('}');
         return sb.toString();
@@ -50,11 +39,6 @@ public class ElasticIndexConfig {
 
         public Builder() {
             this.instance = new ElasticIndexConfig();
-        }
-
-        public Builder uuid(final Object value) {
-            this.instance.uuid = (value != null) ? value.toString() : null;
-            return this;
         }
 
         public Builder indexName(final Object value) {

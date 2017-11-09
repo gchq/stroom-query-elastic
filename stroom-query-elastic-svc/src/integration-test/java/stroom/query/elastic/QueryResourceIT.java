@@ -72,7 +72,7 @@ public class QueryResourceIT {
 
         int appPort = appRule.getLocalPort();
         queryUrl = String.format("http://%s:%d/queryApi/v1", LOCALHOST, appPort);
-        rawExplorerActionUrl = String.format("http://%s:%d/explorerAction/v1/", LOCALHOST, appPort);
+        rawExplorerActionUrl = String.format("http://%s:%d/explorerAction/v1", LOCALHOST, appPort);
 
         Unirest.setObjectMapper(new com.mashape.unirest.http.ObjectMapper() {
             private com.fasterxml.jackson.databind.ObjectMapper jacksonObjectMapper
@@ -132,7 +132,6 @@ public class QueryResourceIT {
                     .header("accept", MediaType.APPLICATION_JSON)
                     .header("Content-Type", MediaType.APPLICATION_JSON)
                     .body(new ElasticIndexConfig.Builder()
-                            .uuid(ELASTIC_INDEX_DOC_REF.getUuid())
                             .indexName(INDEX_NAME)
                             .indexedType(INDEXED_TYPE)
                             .build())
