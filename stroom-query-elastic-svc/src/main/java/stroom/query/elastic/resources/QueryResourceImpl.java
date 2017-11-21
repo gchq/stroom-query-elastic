@@ -1,9 +1,12 @@
 package stroom.query.elastic.resources;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.eclipse.jetty.http.HttpStatus;
 import org.elasticsearch.action.admin.indices.mapping.get.GetFieldMappingsRequest;
 import org.elasticsearch.action.admin.indices.mapping.get.GetFieldMappingsResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.index.IndexNotFoundException;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -24,7 +27,6 @@ import stroom.util.shared.HasTerminate;
 import javax.inject.Inject;
 import javax.ws.rs.core.Response;
 import java.util.*;
-import java.util.concurrent.Future;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
@@ -48,7 +50,7 @@ public class QueryResourceImpl implements QueryResource {
         final Optional<ElasticIndexConfig> elasticIndexConfigO = elasticIndexConfigService.get(docRef.getUuid());
 
         if (!elasticIndexConfigO.isPresent()) {
-            return Response.noContent().build();
+            return Response.status(HttpStatus.NOT_FOUND_404).build();
         }
 
         final ElasticIndexConfig elasticIndexConfig = elasticIndexConfigO.get();
@@ -58,13 +60,12 @@ public class QueryResourceImpl implements QueryResource {
         try {
             final List<DataSourceField> fields = new ArrayList<>();
 
-            Future<GetFieldMappingsResponse> fieldMappings = client.admin().indices()
+            final GetFieldMappingsResponse response = client.admin().indices()
                     .getFieldMappings(new GetFieldMappingsRequest()
                             .indices(elasticIndexConfig.getIndexName())
                             .types(elasticIndexConfig.getIndexedType())
-                            .fields("*"));
-
-            final GetFieldMappingsResponse response = fieldMappings.get();
+                            .fields("*"))
+                    .get();
 
             response.mappings().forEach((index, stringMapMap) -> {
                 stringMapMap.forEach((type, stringFieldMappingMetaDataMap) -> {
@@ -99,7 +100,13 @@ public class QueryResourceImpl implements QueryResource {
 
         } catch (Exception e) {
             LOGGER.warn("Could not query the datasource for field mappings", e);
-            return Response.serverError().build();
+
+            final Throwable rootCause = ExceptionUtils.getRootCause(e);
+            if (rootCause instanceof IndexNotFoundException) {
+                return Response.status(HttpStatus.NOT_FOUND_404).build();
+            } else {
+                return Response.serverError().build();
+            }
         }
     }
 
@@ -109,36 +116,49 @@ public class QueryResourceImpl implements QueryResource {
         final Optional<ElasticIndexConfig> elasticIndexConfigO = elasticIndexConfigService.get(queryUuid);
 
         if (!elasticIndexConfigO.isPresent()) {
-            return Response.noContent().build();
+            return Response.status(HttpStatus.NOT_FOUND_404).build();
         }
 
         final ElasticIndexConfig elasticIndexConfig = elasticIndexConfigO.get();
 
-        final QueryBuilder elasticQuery = getQuery(request.getQuery().getExpression());
+        try {
+            final QueryBuilder elasticQuery = getQuery(request.getQuery().getExpression());
 
-        org.elasticsearch.action.search.SearchResponse response = client
-                .prepareSearch(elasticIndexConfig.getIndexName())
-                .setTypes(elasticIndexConfig.getIndexedType())
-                .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
-                .setQuery(elasticQuery)
-                .get();
+            org.elasticsearch.action.search.SearchResponse response = client
+                    .prepareSearch(elasticIndexConfig.getIndexName())
+                    .setTypes(elasticIndexConfig.getIndexedType())
+                    .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
+                    .setQuery(elasticQuery)
+                    .get();
 
-        LOGGER.debug("Found " + response);
+            LOGGER.debug("Found " + response);
 
-        for (final SearchHit hit : response.getHits().getHits()) {
-            LOGGER.trace("Hit " + hit);
-            hit.getSource().forEach((s, objects) -> {
-                LOGGER.trace("Hit Field " + s + " - "  + objects);
-            });
+            for (final SearchHit hit : response.getHits().getHits()) {
+                LOGGER.trace("Hit " + hit);
+                hit.getSource().forEach((s, objects) -> {
+                    LOGGER.trace("Hit Field " + s + " - "  + objects);
+                });
+            }
+
+            final List<Map<String, Object>> hits = Arrays.stream(response.getHits().getHits())
+                    .map(SearchHit::getSource)
+                    .collect(Collectors.toList());
+
+            final stroom.query.api.v2.SearchResponse searchResponse = projectResults(request, hits);
+
+            return Response.ok(searchResponse).build();
+        } catch (IndexNotFoundException e) {
+            return Response.status(HttpStatus.NOT_FOUND_404).build();
+        } catch (Exception e) {
+            LOGGER.warn("Could not query the datasource for field mappings", e);
+
+            final Throwable rootCause = ExceptionUtils.getRootCause(e);
+            if (rootCause instanceof IndexNotFoundException) {
+                return Response.status(HttpStatus.NOT_FOUND_404).build();
+            } else {
+                return Response.serverError().build();
+            }
         }
-
-        final List<Map<String, Object>> hits = Arrays.stream(response.getHits().getHits())
-                .map(SearchHit::getSource)
-                .collect(Collectors.toList());
-
-        final stroom.query.api.v2.SearchResponse searchResponse = projectResults(request, hits);
-
-        return Response.ok(searchResponse).build();
     }
 
     @Override

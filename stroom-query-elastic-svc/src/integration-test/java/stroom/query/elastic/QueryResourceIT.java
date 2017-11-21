@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -33,14 +34,39 @@ import static org.junit.Assert.fail;
 public class QueryResourceIT {
     private static final Logger LOGGER = LoggerFactory.getLogger(QueryResourceIT.class);
 
-    private static final DocRef ELASTIC_INDEX_DOC_REF = new DocRef.Builder()
+    // This Config is for the valid elastic index, the index and doc ref will be created
+    // as part of the class setup
+    private static final ElasticIndexConfig ELASTIC_INDEX_VALID = new ElasticIndexConfig.Builder()
             .uuid("4447107f-7343-4357-aff5-d872226678ee")
+            .indexName("shakespeare")
+            .indexedType("line")
             .build();
+
+    // This DocRef is used to check the behaviour of the system if you request data/info about
+    // a completely non existent doc ref
+    private static final ElasticIndexConfig ELASTIC_INDEX_MISSING_DOC_REF = new ElasticIndexConfig.Builder()
+            .uuid("4cd6b8ba-403a-4b14-883e-ac7c235b78cb")
+            .indexName("garbage")
+            .indexedType("entry")
+            .build();
+
+    // This DocRef is used to check the behaviour of the system if you request data/info about
+    // a docRef that exists, but the index does not exist. The DocRef will be registered in elastic
+    // as part of the class setup
+    private static final ElasticIndexConfig ELASTIC_INDEX_MISSING_INDEX = new ElasticIndexConfig.Builder()
+            .uuid(UUID.randomUUID().toString())
+            .indexName("5c2e34d8-275b-4c1f-bf61-c80145ab4963")
+            .indexedType("record")
+            .build();
+
+    private static final DocRef getDocRef(final ElasticIndexConfig elasticIndexConfig) {
+        return new DocRef.Builder()
+                .uuid(elasticIndexConfig.getUuid())
+                .build();
+    }
 
     private static final String LOCALHOST = "localhost";
     private static final int ELASTIC_HTTP_PORT = 9200;
-    private static final String VALID_INDEX_NAME = "shakespeare";
-    private static final String VALID_INDEXED_TYPE = "line";
     private static final String ELASTIC_DATA_FILE = "elastic/shakespeare.json";
     private static final String ELASTIC_DATA_MAPPINGS_FULL_FILE = "elastic/shakespeare.mappings.json";
 
@@ -100,7 +126,7 @@ public class QueryResourceIT {
             final ClassLoader classLoader = QueryResourceIT.class.getClassLoader();
 
             // Delete existing index
-            final String indexUrl = String.format("http://%s:%d/%s", LOCALHOST, ELASTIC_HTTP_PORT, VALID_INDEX_NAME);
+            final String indexUrl = String.format("http://%s:%d/%s", LOCALHOST, ELASTIC_HTTP_PORT, ELASTIC_INDEX_VALID.getIndexName());
             Unirest
                     .delete(indexUrl)
                     .header("Content-Type", ND_JSON)
@@ -118,7 +144,7 @@ public class QueryResourceIT {
 
             // Post Data
             final String dataJson = IOUtils.toString(classLoader.getResourceAsStream(ELASTIC_DATA_FILE));
-            final String putDataUrl = String.format("http://%s:%d/%s/_bulk?pretty", LOCALHOST, ELASTIC_HTTP_PORT, VALID_INDEX_NAME);
+            final String putDataUrl = String.format("http://%s:%d/%s/_bulk?pretty", LOCALHOST, ELASTIC_HTTP_PORT, ELASTIC_INDEX_VALID.getIndexName());
             final HttpResponse<String> putDataResponse = Unirest
                     .put(putDataUrl)
                     .header("accept", MediaType.APPLICATION_JSON)
@@ -127,16 +153,31 @@ public class QueryResourceIT {
                     .asString();
             assertEquals(HttpStatus.SC_OK, putDataResponse.getStatus());
 
-            final HttpResponse<String> response = Unirest
-                    .post(explorerActionUrl.apply(ELASTIC_INDEX_DOC_REF.getUuid()))
-                    .header("accept", MediaType.APPLICATION_JSON)
-                    .header("Content-Type", MediaType.APPLICATION_JSON)
-                    .body(new ElasticIndexConfig.Builder()
-                            .indexName(VALID_INDEX_NAME)
-                            .indexedType(VALID_INDEXED_TYPE)
-                            .build())
-                    .asString();
-            assertEquals(HttpStatus.SC_OK, response.getStatus());
+            // A function for registering index configurations with elastic search
+            final Consumer<ElasticIndexConfig> registerIndex = elasticIndexConfig -> {
+                try {
+                    final HttpResponse<String> registerIndexResponse = Unirest
+                            .post(explorerActionUrl.apply(elasticIndexConfig.getUuid()))
+                            .header("accept", MediaType.APPLICATION_JSON)
+                            .header("Content-Type", MediaType.APPLICATION_JSON)
+                            .body(new ElasticIndexConfig.Builder()
+                                    .indexName(elasticIndexConfig.getIndexName())
+                                    .indexedType(elasticIndexConfig.getIndexedType())
+                                    .build())
+                            .asString();
+                    assertEquals(HttpStatus.SC_OK, registerIndexResponse.getStatus());
+                } catch (Exception e) {
+                    LOGGER.error("Could not create index config", e);
+                    fail(e.getLocalizedMessage());
+                }
+            };
+
+            // Create the doc ref for the valid index
+            registerIndex.accept(ELASTIC_INDEX_VALID);
+
+            // Create the doc ref for the missing index
+            registerIndex.accept(ELASTIC_INDEX_MISSING_INDEX);
+
         } catch (Exception e) {
             LOGGER.error("Could not create index config", e);
             fail(e.getLocalizedMessage());
@@ -157,13 +198,13 @@ public class QueryResourceIT {
     }
 
     @Test
-    public void testSearch() {
+    public void testSearchValid() {
         final ExpressionOperator speakerFinder = new ExpressionOperator.Builder(ExpressionOperator.Op.AND)
                 .addTerm(ShakespeareLine.SPEAKER, ExpressionTerm.Condition.EQUALS, "WARWICK")
                 .addTerm(ShakespeareLine.TEXT_ENTRY, ExpressionTerm.Condition.CONTAINS, "pluck")
                 .build();
 
-        final SearchResponse response = querySearch(speakerFinder);
+        final SearchResponse response = querySearch(ELASTIC_INDEX_VALID, speakerFinder);
 
         final List<ShakespeareLine> lines = response.getResults().stream()
                 .map(r -> (FlatResult) r)
@@ -184,10 +225,45 @@ public class QueryResourceIT {
         checkAuditLogs(1);
     }
 
+    @Test
+    public void testSearchMissingDocRef() {
+        final ExpressionOperator speakerFinder = new ExpressionOperator.Builder(ExpressionOperator.Op.AND)
+                .addTerm("aKey", ExpressionTerm.Condition.EQUALS, "aValue")
+                .build();
+
+        try {
+            final HttpResponse<String> response = rawQuerySearch(ELASTIC_INDEX_MISSING_DOC_REF, speakerFinder);
+
+            assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
+
+        } catch (UnirestException e) {
+            fail(e.getLocalizedMessage());
+        }
+
+        checkAuditLogs(1);
+    }
 
     @Test
-    public void testGetDataSource() {
-        final DataSource result = getDataSource(ELASTIC_INDEX_DOC_REF);
+    public void testSearchMissingIndex() {
+        final ExpressionOperator speakerFinder = new ExpressionOperator.Builder(ExpressionOperator.Op.AND)
+                .addTerm("aKey", ExpressionTerm.Condition.EQUALS, "aValue")
+                .build();
+
+        try {
+            final HttpResponse<String> response = rawQuerySearch(ELASTIC_INDEX_MISSING_INDEX, speakerFinder);
+
+            assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
+
+        } catch (UnirestException e) {
+            fail(e.getLocalizedMessage());
+        }
+
+        checkAuditLogs(1);
+    }
+
+    @Test
+    public void testGetDataSourceValid() {
+        final DataSource result = getDataSource(ELASTIC_INDEX_VALID);
 
         final Set<String> resultFieldNames = result.getFields().stream()
                 .map(DataSourceField::getName)
@@ -202,20 +278,46 @@ public class QueryResourceIT {
         checkAuditLogs(1);
     }
 
-    private HttpResponse<String> rawGetDataSource(final DocRef docRef) throws UnirestException {
+    @Test
+    public void testGetDataSourceMissingDocRef() {
+        try {
+            final HttpResponse<String> response = rawGetDataSource(ELASTIC_INDEX_MISSING_DOC_REF);
+
+            assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
+
+            checkAuditLogs(1);
+        } catch (UnirestException e) {
+            fail(e.getLocalizedMessage());
+        }
+    }
+
+    @Test
+    public void testGetDataSourceMissingIndex() {
+        try {
+            final HttpResponse<String> response = rawGetDataSource(ELASTIC_INDEX_MISSING_INDEX);
+
+            assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
+
+            checkAuditLogs(1);
+        } catch (UnirestException e) {
+            fail(e.getLocalizedMessage());
+        }
+    }
+
+    private HttpResponse<String> rawGetDataSource(final ElasticIndexConfig elasticIndexConfig) throws UnirestException {
          return Unirest
                 .post(getQueryDataSourceUrl())
                 .header("accept", MediaType.APPLICATION_JSON)
                 .header("Content-Type", MediaType.APPLICATION_JSON)
-                .body(docRef)
+                .body(getDocRef(elasticIndexConfig))
                 .asString();
     }
 
-    private DataSource getDataSource(final DocRef docRef) {
+    private DataSource getDataSource(final ElasticIndexConfig elasticIndexConfig) {
         DataSource result = null;
 
         try {
-            final HttpResponse<String> response = rawGetDataSource(docRef);
+            final HttpResponse<String> response = rawGetDataSource(elasticIndexConfig);
 
             assertEquals(HttpStatus.SC_OK, response.getStatus());
 
@@ -230,48 +332,52 @@ public class QueryResourceIT {
         return result;
     }
 
-    private HttpResponse<String> rawQuerySearch(final SearchRequest request) throws UnirestException {
+    private HttpResponse<String> rawQuerySearch(final ElasticIndexConfig elasticIndexConfig,
+                                                final ExpressionOperator expressionOperator) throws UnirestException {
+
+        final String queryKey = UUID.randomUUID().toString();
+        final SearchRequest request = new SearchRequest.Builder()
+                .query()
+                    .dataSource(getDocRef(elasticIndexConfig))
+                    .expression(expressionOperator)
+                    .end()
+                .key(queryKey)
+                .dateTimeLocale("en-gb")
+                .incremental(true)
+                .addResultRequest()
+                    .fetch(ResultRequest.Fetch.ALL)
+                    .resultStyle(ResultRequest.ResultStyle.FLAT)
+                    .componentId("componentId")
+                    .requestedRange(null)
+                    .addMapping()
+                        .queryId(queryKey)
+                        .extractValues(false)
+                        .showDetail(false)
+                        .addField(ShakespeareLine.PLAY_NAME, "${" + ShakespeareLine.PLAY_NAME + "}").end()
+                        .addField(ShakespeareLine.LINE_ID, "${" + ShakespeareLine.LINE_ID + "}").end()
+                        .addField(ShakespeareLine.SPEECH_NUMBER, "${" + ShakespeareLine.SPEECH_NUMBER + "}").end()
+                        .addField(ShakespeareLine.SPEAKER, "${" + ShakespeareLine.SPEAKER + "}").end()
+                        .addField(ShakespeareLine.TEXT_ENTRY, "${" + ShakespeareLine.TEXT_ENTRY + "}").end()
+                        .addMaxResults(10)
+                        .end()
+                    .end()
+                .build();
+
         return Unirest
                 .post(getQuerySearchUrl())
                 .header("accept", MediaType.APPLICATION_JSON)
                 .header("Content-Type", MediaType.APPLICATION_JSON)
                 .body(request)
                 .asString();
+
     }
 
-    private SearchResponse querySearch(final ExpressionOperator expressionOperator) {
+    private SearchResponse querySearch(final ElasticIndexConfig elasticIndexConfig,
+                                       final ExpressionOperator expressionOperator) {
         SearchResponse result = null;
 
         try {
-            final String queryKey = UUID.randomUUID().toString();
-            final SearchRequest request = new SearchRequest.Builder()
-                    .query()
-                        .dataSource(ELASTIC_INDEX_DOC_REF)
-                        .expression(expressionOperator)
-                        .end()
-                    .key(queryKey)
-                    .dateTimeLocale("en-gb")
-                    .incremental(true)
-                    .addResultRequest()
-                        .fetch(ResultRequest.Fetch.ALL)
-                        .resultStyle(ResultRequest.ResultStyle.FLAT)
-                        .componentId("componentId")
-                        .requestedRange(null)
-                        .addMapping()
-                            .queryId(queryKey)
-                            .extractValues(false)
-                            .showDetail(false)
-                            .addField(ShakespeareLine.PLAY_NAME, "${" + ShakespeareLine.PLAY_NAME + "}").end()
-                            .addField(ShakespeareLine.LINE_ID, "${" + ShakespeareLine.LINE_ID + "}").end()
-                            .addField(ShakespeareLine.SPEECH_NUMBER, "${" + ShakespeareLine.SPEECH_NUMBER + "}").end()
-                            .addField(ShakespeareLine.SPEAKER, "${" + ShakespeareLine.SPEAKER + "}").end()
-                            .addField(ShakespeareLine.TEXT_ENTRY, "${" + ShakespeareLine.TEXT_ENTRY + "}").end()
-                            .addMaxResults(10)
-                            .end()
-                        .end()
-                    .build();
-
-            final HttpResponse<String> response = rawQuerySearch(request);
+            final HttpResponse<String> response = rawQuerySearch(elasticIndexConfig, expressionOperator);
 
             assertEquals(HttpStatus.SC_OK, response.getStatus());
 
