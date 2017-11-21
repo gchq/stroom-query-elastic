@@ -7,11 +7,13 @@ import javax.validation.constraints.NotNull;
 import java.util.Map;
 
 public class ElasticConfig {
+    public static final String ENTRY_DELIMITER = ",";
+    public static final String HOST_PORT_DELIMITER = ":";
 
     @Valid
     @NotNull
     @JsonProperty("hosts")
-    private Map<String, Integer> hosts;
+    private String hosts;
 
     @Valid
     @NotNull
@@ -22,7 +24,7 @@ public class ElasticConfig {
         return clusterName;
     }
 
-    public Map<String, Integer> getHosts() {
+    public String getHosts() {
         return hosts;
     }
 }

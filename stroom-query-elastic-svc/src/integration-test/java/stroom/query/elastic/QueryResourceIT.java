@@ -39,8 +39,8 @@ public class QueryResourceIT {
 
     private static final String LOCALHOST = "localhost";
     private static final int ELASTIC_HTTP_PORT = 9200;
-    private static final String INDEX_NAME = "shakespeare";
-    private static final String INDEXED_TYPE = "line";
+    private static final String VALID_INDEX_NAME = "shakespeare";
+    private static final String VALID_INDEXED_TYPE = "line";
     private static final String ELASTIC_DATA_FILE = "elastic/shakespeare.json";
     private static final String ELASTIC_DATA_MAPPINGS_FULL_FILE = "elastic/shakespeare.mappings.json";
 
@@ -100,7 +100,7 @@ public class QueryResourceIT {
             final ClassLoader classLoader = QueryResourceIT.class.getClassLoader();
 
             // Delete existing index
-            final String indexUrl = String.format("http://%s:%d/%s", LOCALHOST, ELASTIC_HTTP_PORT, INDEX_NAME);
+            final String indexUrl = String.format("http://%s:%d/%s", LOCALHOST, ELASTIC_HTTP_PORT, VALID_INDEX_NAME);
             Unirest
                     .delete(indexUrl)
                     .header("Content-Type", ND_JSON)
@@ -118,7 +118,7 @@ public class QueryResourceIT {
 
             // Post Data
             final String dataJson = IOUtils.toString(classLoader.getResourceAsStream(ELASTIC_DATA_FILE));
-            final String putDataUrl = String.format("http://%s:%d/%s/_bulk?pretty", LOCALHOST, ELASTIC_HTTP_PORT, INDEX_NAME);
+            final String putDataUrl = String.format("http://%s:%d/%s/_bulk?pretty", LOCALHOST, ELASTIC_HTTP_PORT, VALID_INDEX_NAME);
             final HttpResponse<String> putDataResponse = Unirest
                     .put(putDataUrl)
                     .header("accept", MediaType.APPLICATION_JSON)
@@ -132,8 +132,8 @@ public class QueryResourceIT {
                     .header("accept", MediaType.APPLICATION_JSON)
                     .header("Content-Type", MediaType.APPLICATION_JSON)
                     .body(new ElasticIndexConfig.Builder()
-                            .indexName(INDEX_NAME)
-                            .indexedType(INDEXED_TYPE)
+                            .indexName(VALID_INDEX_NAME)
+                            .indexedType(VALID_INDEXED_TYPE)
                             .build())
                     .asString();
             assertEquals(HttpStatus.SC_OK, response.getStatus());
@@ -202,16 +202,20 @@ public class QueryResourceIT {
         checkAuditLogs(1);
     }
 
+    private HttpResponse<String> rawGetDataSource(final DocRef docRef) throws UnirestException {
+         return Unirest
+                .post(getQueryDataSourceUrl())
+                .header("accept", MediaType.APPLICATION_JSON)
+                .header("Content-Type", MediaType.APPLICATION_JSON)
+                .body(docRef)
+                .asString();
+    }
+
     private DataSource getDataSource(final DocRef docRef) {
         DataSource result = null;
 
         try {
-            final HttpResponse<String> response = Unirest
-                    .post(getQueryDataSourceUrl())
-                    .header("accept", MediaType.APPLICATION_JSON)
-                    .header("Content-Type", MediaType.APPLICATION_JSON)
-                    .body(docRef)
-                    .asString();
+            final HttpResponse<String> response = rawGetDataSource(docRef);
 
             assertEquals(HttpStatus.SC_OK, response.getStatus());
 
@@ -224,6 +228,15 @@ public class QueryResourceIT {
         }
 
         return result;
+    }
+
+    private HttpResponse<String> rawQuerySearch(final SearchRequest request) throws UnirestException {
+        return Unirest
+                .post(getQuerySearchUrl())
+                .header("accept", MediaType.APPLICATION_JSON)
+                .header("Content-Type", MediaType.APPLICATION_JSON)
+                .body(request)
+                .asString();
     }
 
     private SearchResponse querySearch(final ExpressionOperator expressionOperator) {
@@ -258,12 +271,7 @@ public class QueryResourceIT {
                         .end()
                     .build();
 
-            final HttpResponse<String> response = Unirest
-                    .post(getQuerySearchUrl())
-                    .header("accept", MediaType.APPLICATION_JSON)
-                    .header("Content-Type", MediaType.APPLICATION_JSON)
-                    .body(request)
-                    .asString();
+            final HttpResponse<String> response = rawQuerySearch(request);
 
             assertEquals(HttpStatus.SC_OK, response.getStatus());
 

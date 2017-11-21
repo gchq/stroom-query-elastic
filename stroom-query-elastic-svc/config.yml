@@ -28,6 +28,5 @@ logging:
       timeZone: UTC
 
 elastic:
-  clusterName: "docker-cluster"
-  hosts:
-    "localhost": 9300
+  clusterName: ${DOCKER_CLUSTER:- docker-cluster}
+  hosts: ${DOCKER_HOSTS:- localhost:9300}

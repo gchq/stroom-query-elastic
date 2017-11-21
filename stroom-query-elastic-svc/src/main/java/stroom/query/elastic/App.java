@@ -6,6 +6,7 @@ import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
+import org.elasticsearch.common.collect.Tuple;
 import stroom.query.audit.AuditedQueryBundle;
 import stroom.query.elastic.health.ElasticHealthCheck;
 import stroom.query.elastic.resources.ExplorerActionResourceImpl;
@@ -14,8 +15,10 @@ import stroom.query.elastic.transportClient.TransportClientBundle;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.FilterRegistration;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class App extends Application<Config> {
 
@@ -23,7 +26,11 @@ public class App extends Application<Config> {
 
         @Override
         protected Map<String, Integer> getHosts(final Config config) {
-            return config.getElasticConfig().getHosts();
+            return Arrays.stream(config.getElasticConfig().getHosts().split(ElasticConfig.ENTRY_DELIMITER))
+                .map(h -> h.split(ElasticConfig.HOST_PORT_DELIMITER))
+                .filter(h -> (h.length == 2))
+                .map(h -> new Tuple<>(h[0], Integer.parseInt(h[1])))
+                .collect(Collectors.toMap(Tuple::v1, Tuple::v2));
         }
 
         @Override
