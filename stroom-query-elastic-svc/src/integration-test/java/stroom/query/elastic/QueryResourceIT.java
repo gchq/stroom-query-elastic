@@ -15,8 +15,10 @@ import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.*;
 import stroom.query.audit.FifoLogbackAppender;
 import stroom.query.elastic.hibernate.ElasticIndexConfig;
+import stroom.query.elastic.resources.HelloResource;
 
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -54,8 +56,8 @@ public class QueryResourceIT {
     // a docRef that exists, but the index does not exist. The DocRef will be registered in elastic
     // as part of the class setup
     private static final ElasticIndexConfig ELASTIC_INDEX_MISSING_INDEX = new ElasticIndexConfig.Builder()
-            .uuid(UUID.randomUUID().toString())
-            .indexName("5c2e34d8-275b-4c1f-bf61-c80145ab4963")
+            .uuid("5c2e34d8-275b-4c1f-bf61-c80145ab4963")
+            .indexName("server")
             .indexedType("record")
             .build();
 
@@ -73,6 +75,7 @@ public class QueryResourceIT {
     @ClassRule
     public static final DropwizardAppRule<Config> appRule = new DropwizardAppRule<>(App.class, resourceFilePath("config.yml"));
 
+    private static String helloUrl;
     private static String queryUrl;
     private static String rawExplorerActionUrl;
     private static Function<String, String> explorerActionUrl = (uuid) ->
@@ -97,6 +100,7 @@ public class QueryResourceIT {
     public static void setupClass() {
 
         int appPort = appRule.getLocalPort();
+        helloUrl = String.format("http://%s:%d/hello/v1", LOCALHOST, appPort);
         queryUrl = String.format("http://%s:%d/queryApi/v1", LOCALHOST, appPort);
         rawExplorerActionUrl = String.format("http://%s:%d/explorerAction/v1", LOCALHOST, appPort);
 
@@ -195,6 +199,18 @@ public class QueryResourceIT {
         LOGGER.info(String.format("Expected %d records, received %d", expected, records.size()));
 
         assertEquals(expected, records.size());
+    }
+
+    @Test
+    public void testHello() {
+        try {
+            final HttpResponse<String> response = Unirest.get(helloUrl).asString();
+
+            assertEquals(HttpStatus.SC_OK, response.getStatus());
+            assertEquals(HelloResource.WELCOME_TEXT, response.getBody());
+        } catch (UnirestException e) {
+            fail(e.getLocalizedMessage());
+        }
     }
 
     @Test
