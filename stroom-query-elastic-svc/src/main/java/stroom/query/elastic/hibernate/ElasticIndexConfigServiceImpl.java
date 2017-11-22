@@ -48,6 +48,7 @@ public class ElasticIndexConfigServiceImpl implements ElasticIndexConfigService 
 
         if (searchResponse.isExists() && !searchResponse.isSourceEmpty()) {
             return Optional.of(new ElasticIndexConfig.Builder()
+                    .uuid(uuid)
                     .indexName(searchResponse.getSource().get(ElasticIndexConfig.INDEX_NAME))
                     .indexedType(searchResponse.getSource().get(ElasticIndexConfig.INDEXED_TYPE))
                     .build());
