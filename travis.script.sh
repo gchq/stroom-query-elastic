@@ -14,13 +14,13 @@ if [ -n "$TRAVIS_TAG" ]; then
     docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
 
     QUERY_ELASTIC_SERVICE_TAG="gchq/stroom-query-elastic-svc:${TRAVIS_TAG}"
-    echo "Building stroom-query-elastic with tag ${QUERY_ELASTIC_SERVICE_TAG}"
+    echo "Building stroom-query-elastic-svc with tag ${QUERY_ELASTIC_SERVICE_TAG}"
     docker build --tag=${QUERY_ELASTIC_SERVICE_TAG} stroom-query-elastic-svc/.
     echo "Pushing ${QUERY_ELASTIC_SERVICE_TAG}"
     docker push ${QUERY_ELASTIC_SERVICE_TAG}
 
     QUERY_ELASTIC_UI_TAG="gchq/stroom-query-elastic-ui:${TRAVIS_TAG}"
-    echo "Building stroom-annotations-ui with tag ${QUERY_ELASTIC_UI_TAG}"
+    echo "Building stroom-query-elastic-ui with tag ${QUERY_ELASTIC_UI_TAG}"
     docker build --tag=${QUERY_ELASTIC_UI_TAG} stroom-query-elastic-ui/.
     echo "Pushing ${QUERY_ELASTIC_UI_TAG}"
     docker push ${QUERY_ELASTIC_UI_TAG}
