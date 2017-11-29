@@ -17,7 +17,7 @@
     "simpl-schema": "^0.4.0"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "PORT=5002 react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"

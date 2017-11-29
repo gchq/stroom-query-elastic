@@ -43,7 +43,7 @@ export const updateIndexConfig = (uuid, indexConfig) => {
 
         dispatch(requestUpdateIndexConfig(thisApiCallId, uuid, indexConfig));
 
-        return fetch(`${process.env.REACT_APP_QUERY_ELASTIC_URL}/explorerAction/v1/${uuid}`,
+        return fetch(`${process.env.REACT_APP_QUERY_ELASTIC_URL}/elasticIndex/v1/${uuid}`,
             {
                 method: "POST",
                 headers: {

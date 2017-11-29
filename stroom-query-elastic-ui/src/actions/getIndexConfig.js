@@ -42,7 +42,7 @@ export const getIndexConfig = (uuid) => {
 
         dispatch(requestGetIndexConfig(thisApiCallId, uuid))
 
-        return fetch(`${process.env.REACT_APP_QUERY_ELASTIC_URL}/explorerAction/v1/${uuid}`)
+        return fetch(`${process.env.REACT_APP_QUERY_ELASTIC_URL}/docRefApi/v1/${uuid}`)
         .then(
             response => {
                 if (response.status === 404) {

@@ -17,10 +17,11 @@ import stroom.dashboard.expression.v1.FieldIndexMap;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.*;
+import stroom.query.audit.DocRefException;
 import stroom.query.audit.QueryResource;
 import stroom.query.common.v2.*;
 import stroom.query.elastic.hibernate.ElasticIndexConfig;
-import stroom.query.elastic.hibernate.ElasticIndexConfigService;
+import stroom.query.elastic.service.ElasticDocRefService;
 import stroom.query.elastic.store.ElasticStore;
 import stroom.util.shared.HasTerminate;
 
@@ -34,30 +35,30 @@ public class QueryResourceImpl implements QueryResource {
     private static final Logger LOGGER = LoggerFactory.getLogger(QueryResourceImpl.class);
 
     private final TransportClient client;
-    private final ElasticIndexConfigService elasticIndexConfigService;
+    private final ElasticDocRefService service;
 
     @Inject
     public QueryResourceImpl(final TransportClient client,
-                             final ElasticIndexConfigService elasticIndexConfigService) {
+                             final ElasticDocRefService service) {
         this.client = client;
-        this.elasticIndexConfigService = elasticIndexConfigService;
+        this.service = service;
     }
 
     @Override
-    public Response getDataSource(final DocRef docRef) {
+    public Response getDataSource(final DocRef docRef) throws Exception {
         LOGGER.debug("Getting Data Source for DocRef: " + docRef);
 
-        final Optional<ElasticIndexConfig> elasticIndexConfigO = elasticIndexConfigService.get(docRef.getUuid());
-
-        if (!elasticIndexConfigO.isPresent()) {
-            return Response.status(HttpStatus.NOT_FOUND_404).build();
-        }
-
-        final ElasticIndexConfig elasticIndexConfig = elasticIndexConfigO.get();
-
-        LOGGER.debug("Found Elastic Config!" + elasticIndexConfig);
-
         try {
+            final Optional<ElasticIndexConfig> elasticIndexConfigO = service.get(docRef.getUuid());
+
+            if (!elasticIndexConfigO.isPresent()) {
+                return Response.status(HttpStatus.NOT_FOUND_404).build();
+            }
+
+            final ElasticIndexConfig elasticIndexConfig = elasticIndexConfigO.get();
+
+            LOGGER.debug("Found Elastic Config!" + elasticIndexConfig);
+
             final List<DataSourceField> fields = new ArrayList<>();
 
             final GetFieldMappingsResponse response = client.admin().indices()
@@ -98,7 +99,7 @@ public class QueryResourceImpl implements QueryResource {
 
             return Response.ok(new DataSource(fields)).build();
 
-        } catch (Exception e) {
+        } catch (Exception | DocRefException e) {
             LOGGER.warn("Could not query the datasource for field mappings", e);
 
             final Throwable rootCause = ExceptionUtils.getRootCause(e);
@@ -111,17 +112,18 @@ public class QueryResourceImpl implements QueryResource {
     }
 
     @Override
-    public Response search(final SearchRequest request) {
-        final String queryUuid = request.getQuery().getDataSource().getUuid();
-        final Optional<ElasticIndexConfig> elasticIndexConfigO = elasticIndexConfigService.get(queryUuid);
-
-        if (!elasticIndexConfigO.isPresent()) {
-            return Response.status(HttpStatus.NOT_FOUND_404).build();
-        }
-
-        final ElasticIndexConfig elasticIndexConfig = elasticIndexConfigO.get();
+    public Response search(final SearchRequest request) throws Exception {
 
         try {
+            final String queryUuid = request.getQuery().getDataSource().getUuid();
+            final Optional<ElasticIndexConfig> elasticIndexConfigO = service.get(queryUuid);
+
+            if (!elasticIndexConfigO.isPresent()) {
+                return Response.status(HttpStatus.NOT_FOUND_404).build();
+            }
+
+            final ElasticIndexConfig elasticIndexConfig = elasticIndexConfigO.get();
+
             final QueryBuilder elasticQuery = getQuery(request.getQuery().getExpression());
 
             org.elasticsearch.action.search.SearchResponse response = client
@@ -149,7 +151,7 @@ public class QueryResourceImpl implements QueryResource {
             return Response.ok(searchResponse).build();
         } catch (IndexNotFoundException e) {
             return Response.status(HttpStatus.NOT_FOUND_404).build();
-        } catch (Exception e) {
+        } catch (Exception | DocRefException e) {
             LOGGER.warn("Could not query the datasource for field mappings", e);
 
             final Throwable rootCause = ExceptionUtils.getRootCause(e);
@@ -162,7 +164,7 @@ public class QueryResourceImpl implements QueryResource {
     }
 
     @Override
-    public Response destroy(QueryKey queryKey) {
+    public Response destroy(QueryKey queryKey) throws Exception {
 
         return Response
                 .ok(Boolean.TRUE)

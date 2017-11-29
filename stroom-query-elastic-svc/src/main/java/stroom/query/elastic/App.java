@@ -9,7 +9,10 @@ import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.elasticsearch.common.collect.Tuple;
 import stroom.query.audit.AuditedQueryBundle;
 import stroom.query.elastic.health.ElasticHealthCheck;
-import stroom.query.elastic.resources.ExplorerActionResourceImpl;
+import stroom.query.elastic.resources.AuditedElasticIndexResourceImpl;
+import stroom.query.elastic.resources.DocRefExceptionMapper;
+import stroom.query.elastic.resources.ElasticDocRefResourceImpl;
+import stroom.query.elastic.resources.ElasticIndexResourceImpl;
 import stroom.query.elastic.resources.HelloResource;
 import stroom.query.elastic.resources.QueryResourceImpl;
 import stroom.query.elastic.transportClient.TransportClientBundle;
@@ -40,7 +43,7 @@ public class App extends Application<Config> {
         }
     };
 
-    private final AuditedQueryBundle auditedQueryBundle = new AuditedQueryBundle<>(QueryResourceImpl.class);
+    private final AuditedQueryBundle auditedQueryBundle = new AuditedQueryBundle<>(QueryResourceImpl.class, ElasticDocRefResourceImpl.class);
 
     public static void main(String[] args) throws Exception {
         new App().run(args);
@@ -51,8 +54,9 @@ public class App extends Application<Config> {
 
         environment.healthChecks().register("Elastic", new ElasticHealthCheck(transportClientBundle.getTransportClient()));
         environment.jersey().register(new Module(transportClientBundle.getTransportClient()));
-        environment.jersey().register(ExplorerActionResourceImpl.class);
+        environment.jersey().register(AuditedElasticIndexResourceImpl.class);
         environment.jersey().register(HelloResource.class);
+        environment.jersey().register(DocRefExceptionMapper.class);
 
         configureCors(environment);
     }
