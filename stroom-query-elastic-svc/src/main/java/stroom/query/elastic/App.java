@@ -12,7 +12,6 @@ import stroom.query.elastic.health.ElasticHealthCheck;
 import stroom.query.elastic.resources.AuditedElasticIndexResourceImpl;
 import stroom.query.elastic.resources.DocRefExceptionMapper;
 import stroom.query.elastic.resources.ElasticDocRefResourceImpl;
-import stroom.query.elastic.resources.ElasticIndexResourceImpl;
 import stroom.query.elastic.resources.HelloResource;
 import stroom.query.elastic.resources.QueryResourceImpl;
 import stroom.query.elastic.transportClient.TransportClientBundle;

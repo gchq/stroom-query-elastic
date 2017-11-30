@@ -2,9 +2,11 @@ package stroom.query.elastic.resources;
 
 import stroom.query.elastic.hibernate.ElasticIndexConfig;
 
-import javax.ws.rs.*;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.PUT;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 
 /**
  * This is the implementation specific resource for updating an Elastic Index Config

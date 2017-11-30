@@ -17,14 +17,6 @@ export const receiveGetIndexConfig = (apiCallId, uuid, json) => ({
     apiCallId
 })
 
-export const RECEIVE_GET_INDEX_CONFIG_NOT_EXIST = 'RECEIVE_GET_INDEX_CONFIG_NOT_EXIST'
-
-export const receiveGetIndexConfigNotExist = (apiCallId, uuid) => ({
-    type: RECEIVE_GET_INDEX_CONFIG_NOT_EXIST,
-    uuid,
-    apiCallId
-})
-
 export const RECEIVE_GET_INDEX_CONFIG_FAILED = 'RECEIVE_GET_INDEX_CONFIG_FAILED'
 
 export const receiveGetIndexConfigFailed = (apiCallId, message) => ({
@@ -45,16 +37,14 @@ export const getIndexConfig = (uuid) => {
         return fetch(`${process.env.REACT_APP_QUERY_ELASTIC_URL}/docRefApi/v1/${uuid}`)
         .then(
             response => {
-                if (response.status === 404) {
-                    dispatch(receiveGetIndexConfigNotExist(thisApiCallId, uuid))
-                } else if (!response.ok) {
+                if (!response.ok) {
                     throw new Error(response.statusText)
                 }
                 return response.json()
             }
         )
         .then(json => {
-            if (json.indexName) {
+            if (json.uuid) {
                 dispatch(receiveGetIndexConfig(thisApiCallId, uuid, json))
             }
         })

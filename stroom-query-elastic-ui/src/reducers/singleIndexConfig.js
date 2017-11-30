@@ -14,7 +14,6 @@ import {
 import {
     REQUEST_GET_INDEX_CONFIG,
     RECEIVE_GET_INDEX_CONFIG,
-    RECEIVE_GET_INDEX_CONFIG_NOT_EXIST,
     RECEIVE_GET_INDEX_CONFIG_FAILED
 } from '../actions/getIndexConfig'
 
@@ -54,17 +53,12 @@ const singleIndexConfig = (
                 doesExist: true,
                 indexConfig: action.indexConfig
             })
-        case RECEIVE_GET_INDEX_CONFIG_NOT_EXIST:
-            return Object.assign({}, state, {
-                isClean: true,
-                doesExist: false,
-                indexConfig: defaultIndexConfig
-            })
         case RECEIVE_GET_INDEX_CONFIG_FAILED: 
         case RECEIVE_UPDATE_INDEX_CONFIG_FAILED:
         case RECEIVE_REMOVE_INDEX_CONFIG_FAILED:
             return Object.assign({}, state, {
-                isClean: false
+                isClean: false,
+                doesExist: false
             })
         case REQUEST_REMOVE_INDEX_CONFIG:
             return Object.assign({}, state, {

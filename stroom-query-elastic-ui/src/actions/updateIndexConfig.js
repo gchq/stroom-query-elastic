@@ -45,7 +45,7 @@ export const updateIndexConfig = (uuid, indexConfig) => {
 
         return fetch(`${process.env.REACT_APP_QUERY_ELASTIC_URL}/elasticIndex/v1/${uuid}`,
             {
-                method: "POST",
+                method: "PUT",
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'

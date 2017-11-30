@@ -5,7 +5,6 @@ import SingleIndexConfigPage from './singleIndexConfigPage'
 
 import { getIndexConfig } from '../../actions/getIndexConfig'
 import { editIndexConfig, updateIndexConfig } from '../../actions/updateIndexConfig'
-import { removeIndexConfig } from '../../actions/removeIndexConfig'
 
 export default connect(
     (state) => ({
@@ -14,7 +13,6 @@ export default connect(
     {
         updateIndexConfig,
         editIndexConfig,
-        getIndexConfig,
-        removeIndexConfig
+        getIndexConfig
     }
 )(withRouter(SingleIndexConfigPage));

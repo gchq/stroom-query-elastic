@@ -5,6 +5,8 @@ public class ElasticIndexConfig {
     public static final String INDEX_NAME = "INDEX_NAME";
     public static final String INDEXED_TYPE = "INDEXED_TYPE";
 
+    public static final String DEFAULT_STR = "";
+
     private String uuid;
 
     private String stroomName;
@@ -14,6 +16,14 @@ public class ElasticIndexConfig {
     private String indexedType;
 
     private String mappingsJson;
+
+    public String getUuid() {
+        return uuid;
+    }
+
+    public void setUuid(String uuid) {
+        this.uuid = uuid;
+    }
 
     public String getStroomName() {
         return stroomName;
@@ -37,14 +47,6 @@ public class ElasticIndexConfig {
 
     public void setIndexedType(final String value) {
         this.indexedType = value;
-    }
-
-    public String getUuid() {
-        return uuid;
-    }
-
-    public void setUuid(String uuid) {
-        this.uuid = uuid;
     }
 
     /**
@@ -85,8 +87,8 @@ public class ElasticIndexConfig {
             return this;
         }
 
-        public Builder stroomName(final String value) {
-            this.instance.stroomName = value;
+        public Builder stroomName(final Object value) {
+            this.instance.stroomName = (value != null) ? value.toString() : null;
             return this;
         }
 

@@ -38,6 +38,7 @@ public class ElasticDocRefServiceImpl implements ElasticDocRefService {
                     .get();
 
             if (searchResponse.isExists() && !searchResponse.isSourceEmpty()) {
+                final Object stroomName = searchResponse.getSource().get(ElasticIndexConfig.STROOM_NAME);
                 final Object indexName = searchResponse.getSource().get(ElasticIndexConfig.INDEX_NAME);
                 final Object indexedType = searchResponse.getSource().get(ElasticIndexConfig.INDEXED_TYPE);
 
@@ -57,6 +58,7 @@ public class ElasticDocRefServiceImpl implements ElasticDocRefService {
 
                 return Optional.of(new ElasticIndexConfig.Builder()
                         .uuid(uuid)
+                        .stroomName(stroomName)
                         .indexName(indexName)
                         .indexedType(indexedType)
                         .build());
