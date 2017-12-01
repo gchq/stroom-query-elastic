@@ -2,8 +2,8 @@ package stroom.query.elastic.resources;
 
 import event.logging.Event;
 import event.logging.EventLoggingService;
-import stroom.query.audit.DocRefException;
 import stroom.query.elastic.hibernate.ElasticIndexConfig;
+import stroom.util.shared.QueryApiException;
 
 import javax.inject.Inject;
 import javax.ws.rs.core.Response;
@@ -23,7 +23,7 @@ public class AuditedElasticIndexResourceImpl implements ElasticIndexResource {
 
     @Override
     public Response update(final String uuid,
-                           final ElasticIndexConfig updatedConfig) throws DocRefException {
+                           final ElasticIndexConfig updatedConfig) throws QueryApiException {
         Response response;
         Exception exception = null;
 

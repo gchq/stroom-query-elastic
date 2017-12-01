@@ -23,7 +23,6 @@ import stroom.query.api.v2.ExpressionTerm;
 import stroom.query.api.v2.Param;
 import stroom.query.api.v2.QueryKey;
 import stroom.query.api.v2.SearchRequest;
-import stroom.query.audit.DocRefException;
 import stroom.query.audit.QueryResource;
 import stroom.query.common.v2.Coprocessor;
 import stroom.query.common.v2.CoprocessorSettings;
@@ -37,6 +36,7 @@ import stroom.query.elastic.hibernate.ElasticIndexConfig;
 import stroom.query.elastic.service.ElasticDocRefService;
 import stroom.query.elastic.store.ElasticStore;
 import stroom.util.shared.HasTerminate;
+import stroom.util.shared.QueryApiException;
 
 import javax.inject.Inject;
 import javax.ws.rs.core.Response;
@@ -65,7 +65,7 @@ public class QueryResourceImpl implements QueryResource {
     }
 
     @Override
-    public Response getDataSource(final DocRef docRef) throws Exception {
+    public Response getDataSource(final DocRef docRef) throws QueryApiException {
         LOGGER.debug("Getting Data Source for DocRef: " + docRef);
 
         try {
@@ -119,7 +119,7 @@ public class QueryResourceImpl implements QueryResource {
 
             return Response.ok(new DataSource(fields)).build();
 
-        } catch (Exception | DocRefException e) {
+        } catch (Exception | QueryApiException e) {
             LOGGER.warn("Could not query the datasource for field mappings", e);
 
             final Throwable rootCause = ExceptionUtils.getRootCause(e);
@@ -132,7 +132,7 @@ public class QueryResourceImpl implements QueryResource {
     }
 
     @Override
-    public Response search(final SearchRequest request) throws Exception {
+    public Response search(final SearchRequest request) throws QueryApiException {
 
         try {
             final String queryUuid = request.getQuery().getDataSource().getUuid();
@@ -171,7 +171,7 @@ public class QueryResourceImpl implements QueryResource {
             return Response.ok(searchResponse).build();
         } catch (IndexNotFoundException e) {
             return Response.status(HttpStatus.NOT_FOUND_404).build();
-        } catch (Exception | DocRefException e) {
+        } catch (Exception | QueryApiException e) {
             LOGGER.warn("Could not query the datasource for field mappings", e);
 
             final Throwable rootCause = ExceptionUtils.getRootCause(e);
@@ -184,7 +184,7 @@ public class QueryResourceImpl implements QueryResource {
     }
 
     @Override
-    public Response destroy(QueryKey queryKey) throws Exception {
+    public Response destroy(QueryKey queryKey) throws QueryApiException {
 
         return Response
                 .ok(Boolean.TRUE)

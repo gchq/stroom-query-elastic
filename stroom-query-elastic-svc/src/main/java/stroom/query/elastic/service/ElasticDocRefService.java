@@ -1,7 +1,7 @@
 package stroom.query.elastic.service;
 
-import stroom.query.audit.DocRefException;
 import stroom.query.elastic.hibernate.ElasticIndexConfig;
+import stroom.util.shared.QueryApiException;
 
 import java.util.List;
 import java.util.Optional;
@@ -13,17 +13,17 @@ public interface ElasticDocRefService {
     /**
      * Retrieve all of the index entities currently registered
      * @return The list of all known index entities
-     * @throws DocRefException
+     * @throws QueryApiException
      */
-    List<ElasticIndexConfig> getAll() throws DocRefException;
+    List<ElasticIndexConfig> getAll() throws QueryApiException;
 
     /**
      * Retrieve the full config for the given DocRef
      * @param uuid              The UUID of the docRef to return
      * @return                  The full implementation specific config for this docRef.
-     * @throws DocRefException  If something goes wrong
+     * @throws QueryApiException  If something goes wrong
      */
-    Optional<ElasticIndexConfig> get(String uuid) throws DocRefException;
+    Optional<ElasticIndexConfig> get(String uuid) throws QueryApiException;
 
     /**
      * A new document has been created in Stroom
@@ -31,9 +31,9 @@ public interface ElasticDocRefService {
      * @param uuid              The UUID of the document as created by stroom
      * @param name              The name of the document to be created.
      * @return The new index entity
-     * @throws DocRefException  If something goes wrong
+     * @throws QueryApiException  If something goes wrong
      */
-    Optional<ElasticIndexConfig> createDocument(String uuid, String name) throws DocRefException;
+    Optional<ElasticIndexConfig> createDocument(String uuid, String name) throws QueryApiException;
 
     /**
      * Used to update a specific elastic index config.
@@ -41,9 +41,9 @@ public interface ElasticDocRefService {
      * @param uuid The UUID of DocRef used to store the index configuration
      * @param updatedConfig The updated configuration
      * @return
-     * @throws DocRefException
+     * @throws QueryApiException
      */
-    Optional<ElasticIndexConfig> update(String uuid, ElasticIndexConfig updatedConfig) throws DocRefException;
+    Optional<ElasticIndexConfig> update(String uuid, ElasticIndexConfig updatedConfig) throws QueryApiException;
 
     /**
      * A notification from Stroom that a document is being copied. The external system should
@@ -52,9 +52,9 @@ public interface ElasticDocRefService {
      * @param originalUuid      The uuid of the document being copied
      * @param copyUuid          The uuid of the copy
      * @return The new index entity
-     * @throws DocRefException  If something goes wrong
+     * @throws QueryApiException  If something goes wrong
      */
-    Optional<ElasticIndexConfig> copyDocument(String originalUuid, String copyUuid) throws DocRefException;
+    Optional<ElasticIndexConfig> copyDocument(String originalUuid, String copyUuid) throws QueryApiException;
 
     /**
      * A Notification from Stroom that the document has been 'moved'. In most cases the external system
@@ -62,9 +62,9 @@ public interface ElasticDocRefService {
      *
      * @param uuid             The uuid of the document that was moved
      * @return The updated index entity
-     * @throws DocRefException  If something goes wrong
+     * @throws QueryApiException  If something goes wrong
      */
-    Optional<ElasticIndexConfig> documentMoved(String uuid) throws DocRefException;
+    Optional<ElasticIndexConfig> documentMoved(String uuid) throws QueryApiException;
 
     /**
      * A notifiation from Stroom that the name of a document has been changed. Whilst the name belongs to stroom
@@ -74,15 +74,15 @@ public interface ElasticDocRefService {
      * @param uuid The uuid of the document you want to rename.
      * @param name The new name of the document.
      * @return The updated index entity
-     * @throws DocRefException  If something goes wrong
+     * @throws QueryApiException  If something goes wrong
      */
-    Optional<ElasticIndexConfig> documentRenamed(String uuid, String name) throws DocRefException;
+    Optional<ElasticIndexConfig> documentRenamed(String uuid, String name) throws QueryApiException;
 
     /**
      * The document with this UUID is being deleted in Stroom.
      *
      * @param uuid The uuid of the document you want to delete.
-     * @throws DocRefException  If something goes wrong
+     * @throws QueryApiException  If something goes wrong
      */
-    void deleteDocument(String uuid) throws DocRefException;
+    void deleteDocument(String uuid) throws QueryApiException;
 }

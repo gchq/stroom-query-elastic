@@ -5,8 +5,8 @@ import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.transport.TransportClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import stroom.query.audit.DocRefException;
 import stroom.query.elastic.hibernate.ElasticIndexConfig;
+import stroom.util.shared.QueryApiException;
 
 import javax.inject.Inject;
 import java.io.IOException;
@@ -26,12 +26,12 @@ public class ElasticDocRefServiceImpl implements ElasticDocRefService {
     }
 
     @Override
-    public List<ElasticIndexConfig> getAll() throws DocRefException {
+    public List<ElasticIndexConfig> getAll() throws QueryApiException {
         return null;
     }
 
     @Override
-    public Optional<ElasticIndexConfig> get(final String uuid) throws DocRefException {
+    public Optional<ElasticIndexConfig> get(final String uuid) throws QueryApiException {
         try {
             final GetResponse searchResponse = client
                     .prepareGet(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, uuid)
@@ -67,13 +67,13 @@ public class ElasticDocRefServiceImpl implements ElasticDocRefService {
             }
         } catch (Exception e) {
             LOGGER.warn("Could not update index config", e);
-            throw new DocRefException(e);
+            throw new QueryApiException(e);
         }
     }
 
     @Override
     public Optional<ElasticIndexConfig> createDocument(final String uuid,
-                                                       final String name) throws DocRefException {
+                                                       final String name) throws QueryApiException {
         try {
             client.prepareIndex(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, uuid)
                     .setSource(jsonBuilder()
@@ -89,13 +89,13 @@ public class ElasticDocRefServiceImpl implements ElasticDocRefService {
                     .build());
         } catch (IOException e) {
             LOGGER.warn("Could not update index config", e);
-            throw new DocRefException(e);
+            throw new QueryApiException(e);
         }
     }
 
     @Override
     public Optional<ElasticIndexConfig> update(final String uuid,
-                                               final ElasticIndexConfig update) throws DocRefException {
+                                               final ElasticIndexConfig update) throws QueryApiException {
         try {
             client.prepareUpdate(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, uuid)
                     .setDoc(jsonBuilder()
@@ -107,7 +107,7 @@ public class ElasticDocRefServiceImpl implements ElasticDocRefService {
                     .get();
         } catch (IOException e) {
             LOGGER.warn("Could not update index config", e);
-            throw new DocRefException(e);
+            throw new QueryApiException(e);
         }
 
         return get(uuid);
@@ -115,7 +115,7 @@ public class ElasticDocRefServiceImpl implements ElasticDocRefService {
 
     @Override
     public Optional<ElasticIndexConfig> copyDocument(final String originalUuid,
-                                                     final String copyUuid) throws DocRefException {
+                                                     final String copyUuid) throws QueryApiException {
         try {
             final GetResponse searchResponse = client
                     .prepareGet(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, originalUuid)
@@ -141,19 +141,19 @@ public class ElasticDocRefServiceImpl implements ElasticDocRefService {
             }
         } catch (IOException e) {
             LOGGER.warn("Could not update index config", e);
-            throw new DocRefException(e);
+            throw new QueryApiException(e);
         }
     }
 
     @Override
-    public Optional<ElasticIndexConfig> documentMoved(final String uuid) throws DocRefException {
+    public Optional<ElasticIndexConfig> documentMoved(final String uuid) throws QueryApiException {
         // two grapes? Who cares?!
         return get(uuid);
     }
 
     @Override
     public Optional<ElasticIndexConfig> documentRenamed(final String uuid,
-                                                        final String name) throws DocRefException {
+                                                        final String name) throws QueryApiException {
         try {
             client.prepareUpdate(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, uuid)
                     .setDoc(jsonBuilder()
@@ -164,14 +164,14 @@ public class ElasticDocRefServiceImpl implements ElasticDocRefService {
                     .get();
         } catch (IOException e) {
             LOGGER.warn("Could not update index config", e);
-            throw new DocRefException(e);
+            throw new QueryApiException(e);
         }
 
         return get(uuid);
     }
 
     @Override
-    public void deleteDocument(final String uuid) throws DocRefException {
+    public void deleteDocument(final String uuid) throws QueryApiException {
         client.prepareDelete(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, uuid).get();
     }
 }

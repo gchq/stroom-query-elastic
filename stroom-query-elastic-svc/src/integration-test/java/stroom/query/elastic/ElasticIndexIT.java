@@ -3,7 +3,6 @@ package stroom.query.elastic;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
 import io.dropwizard.testing.junit.DropwizardAppRule;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
@@ -22,12 +21,16 @@ import stroom.query.api.v2.FlatResult;
 import stroom.query.api.v2.ResultRequest;
 import stroom.query.api.v2.SearchRequest;
 import stroom.query.api.v2.SearchResponse;
+import stroom.query.audit.DocRefResourceHttpClient;
 import stroom.query.audit.FifoLogbackAppender;
+import stroom.query.audit.QueryResourceHttpClient;
 import stroom.query.elastic.hibernate.ElasticIndexConfig;
-import stroom.query.elastic.resources.HelloResource;
+import stroom.query.elastic.resources.ElasticIndexHttpClient;
 import stroom.query.elastic.service.ElasticDocRefService;
+import stroom.util.shared.QueryApiException;
 
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -99,19 +102,18 @@ public class ElasticIndexIT {
     private static final com.fasterxml.jackson.databind.ObjectMapper jacksonObjectMapper =
             new com.fasterxml.jackson.databind.ObjectMapper();
 
-    private static String helloUrl;
-    private static QueryResourceClient queryClient;
-    private static ElasticIndexClient elasticIndexClient;
-    private static DocRefResourceClient docRefClient;
+    private static QueryResourceHttpClient queryClient;
+    private static ElasticIndexHttpClient elasticIndexClient;
+    private static DocRefResourceHttpClient docRefClient;
 
     @BeforeClass
     public static void setupClass() {
 
         int appPort = appRule.getLocalPort();
-        helloUrl = String.format("http://%s:%d/hello/v1", LOCALHOST, appPort);
-        queryClient = new QueryResourceClient(String.format("http://%s:%d/queryApi/v1", LOCALHOST, appPort));
-        elasticIndexClient = new ElasticIndexClient(String.format("http://%s:%d/elasticIndex/v1", LOCALHOST, appPort));
-        docRefClient = new DocRefResourceClient(String.format("http://%s:%d/docRefApi/v1", LOCALHOST, appPort));
+        final String host = String.format("http://%s:%d", LOCALHOST, appPort);
+        queryClient = new QueryResourceHttpClient(host);
+        elasticIndexClient = new ElasticIndexHttpClient(host);
+        docRefClient = new DocRefResourceHttpClient(host);
 
         Unirest.setObjectMapper(new com.mashape.unirest.http.ObjectMapper() {
             private com.fasterxml.jackson.databind.ObjectMapper jacksonObjectMapper
@@ -199,26 +201,14 @@ public class ElasticIndexIT {
     }
 
     @Test
-    public void testHello() {
-        try {
-            final HttpResponse<String> response = Unirest.get(helloUrl).asString();
-
-            assertEquals(HttpStatus.SC_OK, response.getStatus());
-            assertEquals(HelloResource.WELCOME_TEXT, response.getBody());
-        } catch (UnirestException e) {
-            fail(e.getLocalizedMessage());
-        }
-    }
-
-    @Test
-    public void testGetDataSourceValid() throws UnirestException, IOException {
+    public void testGetDataSourceValid() throws IOException, QueryApiException {
         final ElasticIndexConfig elasticIndexConfig = createDataIndexDocRef();
 
-        final HttpResponse<String> response = queryClient.getDataSource(getDocRef(elasticIndexConfig));
+        final Response response = queryClient.getDataSource(getDocRef(elasticIndexConfig));
 
         assertEquals(HttpStatus.SC_OK, response.getStatus());
 
-        final String body = response.getBody();
+        final String body = response.getEntity().toString();
 
         LOGGER.info("Data Source Body: " + body);
         final DataSource result = jacksonObjectMapper.readValue(body, DataSource.class);
@@ -242,7 +232,7 @@ public class ElasticIndexIT {
      * a completely non existent doc ref.
      */
     @Test
-    public void testGetDataSourceMissingDocRef() throws UnirestException {
+    public void testGetDataSourceMissingDocRef() throws QueryApiException {
 
         // Create a random index config that is not registered with the system
         final DocRef elasticIndexConfig = new DocRef.Builder()
@@ -250,7 +240,7 @@ public class ElasticIndexIT {
                 .name("DoesNotExist")
                 .build();
 
-        final HttpResponse<String> response = queryClient.getDataSource(elasticIndexConfig);
+        final Response response = queryClient.getDataSource(elasticIndexConfig);
 
         assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
 
@@ -259,7 +249,7 @@ public class ElasticIndexIT {
     }
 
     @Test
-    public void testSearchValid() throws UnirestException, IOException {
+    public void testSearchValid() throws IOException, QueryApiException {
         final ElasticIndexConfig elasticIndexConfig = createDataIndexDocRef();
 
         final ExpressionOperator speakerFinder = new ExpressionOperator.Builder(ExpressionOperator.Op.AND)
@@ -269,13 +259,15 @@ public class ElasticIndexIT {
 
         final SearchRequest searchRequest = dataSearchRequest.apply(elasticIndexConfig, speakerFinder);
 
-        final HttpResponse<String> response = queryClient.search(searchRequest);
+        final Response response = queryClient.search(searchRequest);
 
         assertEquals(HttpStatus.SC_OK, response.getStatus());
 
-        LOGGER.info("BODY - " + response.getBody());
+        final String body = response.getEntity().toString();
 
-        final SearchResponse searchResponse = jacksonObjectMapper.readValue(response.getBody(), SearchResponse.class);
+        LOGGER.info("BODY - " + body);
+
+        final SearchResponse searchResponse = jacksonObjectMapper.readValue(body, SearchResponse.class);
 
         final List<ShakespeareLine> lines = searchResponse.getResults().stream()
                 .map(r -> (FlatResult) r)
@@ -302,7 +294,7 @@ public class ElasticIndexIT {
      * a completely non existent doc ref
      */
     @Test
-    public void testSearchMissingDocRef() throws UnirestException {
+    public void testSearchMissingDocRef() throws QueryApiException {
 
         // Create a random index config that is not registered with the system
         final ElasticIndexConfig elasticIndexConfig = new ElasticIndexConfig.Builder()
@@ -316,7 +308,7 @@ public class ElasticIndexIT {
                 .build();
 
         final SearchRequest searchRequest = dataSearchRequest.apply(elasticIndexConfig, speakerFinder);
-        final HttpResponse<String> response = queryClient.search(searchRequest);
+        final Response response = queryClient.search(searchRequest);
 
         assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
 
@@ -329,7 +321,7 @@ public class ElasticIndexIT {
      * a docRef that exists, but the index does not exist.
      */
     @Test
-    public void testSearchMissingIndex() throws UnirestException {
+    public void testSearchMissingIndex() throws QueryApiException {
 
         final ElasticIndexConfig elasticIndexConfig = new ElasticIndexConfig.Builder()
                 .uuid(UUID.randomUUID())
@@ -345,7 +337,7 @@ public class ElasticIndexIT {
                 .build();
 
         final SearchRequest searchRequest = dataSearchRequest.apply(elasticIndexConfig, speakerFinder);
-        final HttpResponse<String> response = queryClient.search(searchRequest);
+        final Response response = queryClient.search(searchRequest);
 
         assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
 
@@ -356,7 +348,7 @@ public class ElasticIndexIT {
      * Shortcut function to create another DocRef that references the populated 'data' index.
      * @return The ElasticIndexConfig representing the new DocRef
      */
-    private ElasticIndexConfig createDataIndexDocRef() throws UnirestException {
+    private ElasticIndexConfig createDataIndexDocRef() throws QueryApiException {
         final ElasticIndexConfig elasticIndexConfig = new ElasticIndexConfig.Builder()
                 .uuid(UUID.randomUUID().toString())
                 .stroomName(DATA_INDEX_STROOM_NAME)
@@ -364,10 +356,10 @@ public class ElasticIndexIT {
                 .indexedType(DATA_INDEXED_TYPE)
                 .build();
 
-        final HttpResponse<String> createDocRefResponse = docRefClient.createDocument(elasticIndexConfig.getUuid(), elasticIndexConfig.getStroomName());
+        final Response createDocRefResponse = docRefClient.createDocument(elasticIndexConfig.getUuid(), elasticIndexConfig.getStroomName());
         assertEquals(HttpStatus.SC_OK, createDocRefResponse.getStatus());
 
-        final HttpResponse<String> updateIndexResponse =
+        final Response updateIndexResponse =
                 elasticIndexClient.update(elasticIndexConfig.getUuid(), elasticIndexConfig);
         assertEquals(HttpStatus.SC_OK, updateIndexResponse.getStatus());
 
