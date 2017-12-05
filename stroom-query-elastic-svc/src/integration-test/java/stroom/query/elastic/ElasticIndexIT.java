@@ -17,10 +17,14 @@ import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.ExpressionOperator;
 import stroom.query.api.v2.ExpressionTerm;
+import stroom.query.api.v2.Field;
 import stroom.query.api.v2.FlatResult;
+import stroom.query.api.v2.Query;
 import stroom.query.api.v2.ResultRequest;
 import stroom.query.api.v2.SearchRequest;
 import stroom.query.api.v2.SearchResponse;
+import stroom.query.api.v2.TableResult;
+import stroom.query.api.v2.TableSettings;
 import stroom.query.audit.DocRefResourceHttpClient;
 import stroom.query.audit.FifoLogbackAppender;
 import stroom.query.audit.QueryResourceHttpClient;
@@ -58,30 +62,45 @@ public class ElasticIndexIT {
             (elasticIndexConfig, expressionOperator) -> {
                 final String queryKey = UUID.randomUUID().toString();
                 return new SearchRequest.Builder()
-                        .query()
+                        .query(new Query.Builder()
                             .dataSource(getDocRef(elasticIndexConfig))
                             .expression(expressionOperator)
-                            .end()
+                            .build())
                         .key(queryKey)
                         .dateTimeLocale("en-gb")
                         .incremental(true)
-                        .addResultRequest()
+                        .addResultRequests(new ResultRequest.Builder()
                             .fetch(ResultRequest.Fetch.ALL)
                             .resultStyle(ResultRequest.ResultStyle.FLAT)
                             .componentId("componentId")
                             .requestedRange(null)
-                            .addMapping()
+                            .addMappings(new TableSettings.Builder()
                                 .queryId(queryKey)
                                 .extractValues(false)
                                 .showDetail(false)
-                                .addField(ShakespeareLine.PLAY_NAME, "${" + ShakespeareLine.PLAY_NAME + "}").end()
-                                .addField(ShakespeareLine.LINE_ID, "${" + ShakespeareLine.LINE_ID + "}").end()
-                                .addField(ShakespeareLine.SPEECH_NUMBER, "${" + ShakespeareLine.SPEECH_NUMBER + "}").end()
-                                .addField(ShakespeareLine.SPEAKER, "${" + ShakespeareLine.SPEAKER + "}").end()
-                                .addField(ShakespeareLine.TEXT_ENTRY, "${" + ShakespeareLine.TEXT_ENTRY + "}").end()
+                                .addFields(new Field.Builder()
+                                        .name(ShakespeareLine.PLAY_NAME)
+                                        .expression("${" + ShakespeareLine.PLAY_NAME + "}")
+                                        .build())
+                                .addFields(new Field.Builder()
+                                        .name(ShakespeareLine.LINE_ID)
+                                        .expression("${" + ShakespeareLine.LINE_ID + "}")
+                                        .build())
+                                .addFields(new Field.Builder()
+                                        .name(ShakespeareLine.SPEECH_NUMBER)
+                                        .expression("${" + ShakespeareLine.SPEECH_NUMBER + "}")
+                                        .build())
+                                .addFields(new Field.Builder()
+                                        .name(ShakespeareLine.SPEAKER)
+                                        .expression("${" + ShakespeareLine.SPEAKER + "}")
+                                        .build())
+                                .addFields(new Field.Builder()
+                                        .name(ShakespeareLine.TEXT_ENTRY)
+                                        .expression("${" + ShakespeareLine.TEXT_ENTRY + "}")
+                                        .build())
                                 .addMaxResults(10)
-                                .end()
-                            .end()
+                                .build())
+                            .build())
                         .build();
             };
 
