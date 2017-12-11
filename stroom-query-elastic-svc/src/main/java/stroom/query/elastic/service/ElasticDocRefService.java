@@ -1,9 +1,11 @@
 package stroom.query.elastic.service;
 
+import stroom.query.audit.ExportDTO;
 import stroom.query.elastic.hibernate.ElasticIndexConfig;
 import stroom.util.shared.QueryApiException;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface ElasticDocRefService {
@@ -85,4 +87,25 @@ public interface ElasticDocRefService {
      * @throws QueryApiException  If something goes wrong
      */
     void deleteDocument(String uuid) throws QueryApiException;
+
+    /**
+     * Used to export the full details of a document for transfer.
+     * @param uuid The UUID of the document to export
+     * @return The exported data
+     * @throws QueryApiException If something goes wrong
+     */
+    ExportDTO exportDocument(String uuid) throws QueryApiException;
+
+    /**
+     * Used to import a document into the system
+     * @param uuid The UUID of the document to import
+     * @param name The Name of the document to import
+     * @param confirmed Used to indicate if this is a dry run
+     * @param dataMap The data that gives all the implementation specific details
+     * @return
+     */
+    Optional<ElasticIndexConfig> importDocument(String uuid,
+                                                String name,
+                                                Boolean confirmed,
+                                                Map<String, String> dataMap) throws QueryApiException;
 }

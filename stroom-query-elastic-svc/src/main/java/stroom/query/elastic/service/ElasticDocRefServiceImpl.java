@@ -5,12 +5,15 @@ import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.transport.TransportClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import stroom.query.audit.ExportDTO;
 import stroom.query.elastic.hibernate.ElasticIndexConfig;
 import stroom.util.shared.QueryApiException;
 
 import javax.inject.Inject;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
@@ -173,5 +176,53 @@ public class ElasticDocRefServiceImpl implements ElasticDocRefService {
     @Override
     public void deleteDocument(final String uuid) throws QueryApiException {
         client.prepareDelete(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, uuid).get();
+    }
+
+    @Override
+    public ExportDTO exportDocument(final String uuid) throws QueryApiException {
+        final Optional<ElasticIndexConfig> index = get(uuid);
+
+        if (index.isPresent()) {
+            final ElasticIndexConfig indexConfig = index.get();
+
+            return ExportDTO
+                    .withValue(ElasticIndexConfig.INDEX_NAME, indexConfig.getIndexName())
+                    .value(ElasticIndexConfig.INDEXED_TYPE, indexConfig.getIndexedType())
+                    .build();
+        } else {
+            return ExportDTO.withMessage(String.format("Could not find document with %s", uuid)).build();
+        }
+
+    }
+
+    @Override
+    public Optional<ElasticIndexConfig> importDocument(final String uuid,
+                                                       final String name,
+                                                       final Boolean confirmed,
+                                                       final Map<String, String> dataMap) throws QueryApiException {
+        if (confirmed) {
+            final Optional<ElasticIndexConfig> index = createDocument(uuid, name);
+
+            if (index.isPresent()) {
+                final ElasticIndexConfig indexConfig = index.get();
+                indexConfig.setIndexName(dataMap.get(ElasticIndexConfig.INDEX_NAME));
+                indexConfig.setIndexedType(dataMap.get(ElasticIndexConfig.INDEXED_TYPE));
+                return update(uuid, indexConfig);
+            } else {
+                return Optional.empty();
+            }
+        } else {
+            final Optional<ElasticIndexConfig> existing = get(uuid);
+            if (existing.isPresent()) {
+                return Optional.empty();
+            } else {
+                return Optional.of(new ElasticIndexConfig.Builder()
+                        .uuid(uuid)
+                        .stroomName(name)
+                        .indexName(dataMap.get(ElasticIndexConfig.INDEX_NAME))
+                        .indexedType(dataMap.get(ElasticIndexConfig.INDEXED_TYPE))
+                        .build());
+            }
+        }
     }
 }
