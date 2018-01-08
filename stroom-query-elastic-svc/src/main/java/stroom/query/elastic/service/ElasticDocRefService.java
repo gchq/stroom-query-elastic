@@ -1,5 +1,6 @@
 package stroom.query.elastic.service;
 
+import stroom.query.api.v2.DocRefInfo;
 import stroom.query.audit.ExportDTO;
 import stroom.query.elastic.hibernate.ElasticIndexConfig;
 import stroom.util.shared.QueryApiException;
@@ -26,6 +27,14 @@ public interface ElasticDocRefService {
      * @throws QueryApiException  If something goes wrong
      */
     Optional<ElasticIndexConfig> get(String uuid) throws QueryApiException;
+
+    /**
+     * Retrieve the info about a doc ref
+     * @param uuid The UUID of the doc ref to find
+     * @return The DocRefInfo for the UUID
+     * @throws QueryApiException If something goes wrong
+     */
+    Optional<DocRefInfo> getInfo(String uuid) throws QueryApiException;
 
     /**
      * A new document has been created in Stroom

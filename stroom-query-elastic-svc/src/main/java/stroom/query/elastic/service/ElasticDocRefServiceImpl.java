@@ -5,6 +5,8 @@ import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.transport.TransportClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import stroom.query.api.v2.DocRef;
+import stroom.query.api.v2.DocRefInfo;
 import stroom.query.audit.ExportDTO;
 import stroom.query.elastic.hibernate.ElasticIndexConfig;
 import stroom.util.shared.QueryApiException;
@@ -64,6 +66,31 @@ public class ElasticDocRefServiceImpl implements ElasticDocRefService {
                         .stroomName(stroomName)
                         .indexName(indexName)
                         .indexedType(indexedType)
+                        .build());
+            } else {
+                return Optional.empty();
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Could not update index config", e);
+            throw new QueryApiException(e);
+        }
+    }
+
+    @Override
+    public Optional<DocRefInfo> getInfo(String uuid) throws QueryApiException {
+        try {
+            final GetResponse searchResponse = client
+                    .prepareGet(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, uuid)
+                    .get();
+
+            if (searchResponse.isExists() && !searchResponse.isSourceEmpty()) {
+                final Object stroomName = searchResponse.getSource().get(ElasticIndexConfig.STROOM_NAME);
+
+                return Optional.of(new DocRefInfo.Builder()
+                        .docRef(new DocRef.Builder()
+                                .uuid(uuid)
+                                .name((stroomName != null) ? stroomName.toString() : null)
+                                .build())
                         .build());
             } else {
                 return Optional.empty();

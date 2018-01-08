@@ -37,6 +37,15 @@ public class ElasticDocRefResourceImpl implements DocRefResource {
     }
 
     @Override
+    public Response getInfo(String uuid) throws QueryApiException {
+        return service.getInfo(uuid)
+                .map(d -> Response.ok(d).build())
+                .orElse(Response.status(HttpStatus.SC_NOT_FOUND)
+                        .entity(new ElasticIndexConfig())
+                        .build());
+    }
+
+    @Override
     public Response createDocument(final String uuid,
                                    final String name) throws QueryApiException {
         return service.createDocument(uuid, name)
