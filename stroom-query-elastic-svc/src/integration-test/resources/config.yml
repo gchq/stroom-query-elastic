@@ -28,4 +28,10 @@ logging:
 
 elastic:
   clusterName: docker-cluster
-  hosts: ${DOCKER_HOSTS:- localhost:9300}
+  hosts: localhost:9300
+
+token:
+  publicKeyUrl: http://stroom-auth-service:8099/token/v1/publickey
+  jwsIssuer: stroom
+  algorithm: RS256
+  authEnabled: false

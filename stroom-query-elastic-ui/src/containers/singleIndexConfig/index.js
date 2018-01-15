@@ -1,7 +1,7 @@
 import { connect } from 'react-redux'
 import { withRouter } from 'react-router'
 
-import SingleIndexConfigPage from './singleIndexConfigPage'
+import SingleIndexConfig from './singleIndexConfig'
 
 import { getIndexConfig } from '../../actions/getIndexConfig'
 import { editIndexConfig, updateIndexConfig } from '../../actions/updateIndexConfig'
@@ -15,4 +15,4 @@ export default connect(
         editIndexConfig,
         getIndexConfig
     }
-)(withRouter(SingleIndexConfigPage));
+)(withRouter(SingleIndexConfig));

@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.DocRefInfo;
 import stroom.query.audit.ExportDTO;
+import stroom.query.audit.service.DocRefService;
 import stroom.query.elastic.hibernate.ElasticIndexConfig;
 import stroom.util.shared.QueryApiException;
 
@@ -20,7 +21,10 @@ import java.util.Optional;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
-public class ElasticDocRefServiceImpl implements ElasticDocRefService {
+public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexConfig> {
+    public static final String STROOM_INDEX_NAME = "stroom";
+    public static final String DOC_REF_INDEXED_TYPE = "docref";
+
     private static final Logger LOGGER = LoggerFactory.getLogger(ElasticDocRefServiceImpl.class);
 
     private final TransportClient client;

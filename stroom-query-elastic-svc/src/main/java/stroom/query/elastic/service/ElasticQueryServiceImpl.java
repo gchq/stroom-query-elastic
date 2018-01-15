@@ -1,7 +1,6 @@
-package stroom.query.elastic.resources;
+package stroom.query.elastic.service;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.eclipse.jetty.http.HttpStatus;
 import org.elasticsearch.action.admin.indices.mapping.get.GetFieldMappingsRequest;
 import org.elasticsearch.action.admin.indices.mapping.get.GetFieldMappingsResponse;
 import org.elasticsearch.action.search.SearchType;
@@ -23,7 +22,10 @@ import stroom.query.api.v2.ExpressionTerm;
 import stroom.query.api.v2.Param;
 import stroom.query.api.v2.QueryKey;
 import stroom.query.api.v2.SearchRequest;
-import stroom.query.audit.QueryResource;
+import stroom.query.api.v2.SearchResponse;
+import stroom.query.audit.security.ServiceUser;
+import stroom.query.audit.service.DocRefService;
+import stroom.query.audit.service.QueryService;
 import stroom.query.common.v2.Coprocessor;
 import stroom.query.common.v2.CoprocessorSettings;
 import stroom.query.common.v2.CoprocessorSettingsMap;
@@ -33,13 +35,11 @@ import stroom.query.common.v2.StoreSize;
 import stroom.query.common.v2.TableCoprocessor;
 import stroom.query.common.v2.TableCoprocessorSettings;
 import stroom.query.elastic.hibernate.ElasticIndexConfig;
-import stroom.query.elastic.service.ElasticDocRefService;
 import stroom.query.elastic.store.ElasticStore;
 import stroom.util.shared.HasTerminate;
 import stroom.util.shared.QueryApiException;
 
 import javax.inject.Inject;
-import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -51,28 +51,29 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
-public class QueryResourceImpl implements QueryResource {
-    private static final Logger LOGGER = LoggerFactory.getLogger(QueryResourceImpl.class);
+public class ElasticQueryServiceImpl implements QueryService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ElasticQueryServiceImpl.class);
 
     private final TransportClient client;
-    private final ElasticDocRefService service;
+    private final DocRefService<ElasticIndexConfig> service;
 
     @Inject
-    public QueryResourceImpl(final TransportClient client,
-                             final ElasticDocRefService service) {
+    public ElasticQueryServiceImpl(final TransportClient client,
+                                   final DocRefService<ElasticIndexConfig> service) {
         this.client = client;
         this.service = service;
     }
 
     @Override
-    public Response getDataSource(final DocRef docRef) throws QueryApiException {
+    public Optional<DataSource> getDataSource(final ServiceUser authenticatedServiceUser,
+                                              final DocRef docRef) throws QueryApiException {
         LOGGER.debug("Getting Data Source for DocRef: " + docRef);
 
         try {
             final Optional<ElasticIndexConfig> elasticIndexConfigO = service.get(docRef.getUuid());
 
             if (!elasticIndexConfigO.isPresent()) {
-                return Response.status(HttpStatus.NOT_FOUND_404).build();
+                return Optional.empty();
             }
 
             final ElasticIndexConfig elasticIndexConfig = elasticIndexConfigO.get();
@@ -117,29 +118,29 @@ public class QueryResourceImpl implements QueryResource {
                 });
             });
 
-            return Response.ok(new DataSource(fields)).build();
+            return Optional.of(new stroom.datasource.api.v2.DataSource(fields));
 
-        } catch (Exception | QueryApiException e) {
+        } catch (Exception e) {
             LOGGER.warn("Could not query the datasource for field mappings", e);
 
             final Throwable rootCause = ExceptionUtils.getRootCause(e);
             if (rootCause instanceof IndexNotFoundException) {
-                return Response.status(HttpStatus.NOT_FOUND_404).build();
+                return Optional.empty();
             } else {
-                return Response.serverError().build();
+                throw new QueryApiException(e);
             }
         }
     }
 
     @Override
-    public Response search(final SearchRequest request) throws QueryApiException {
-
+    public Optional<SearchResponse> search(final ServiceUser authenticatedServiceUser,
+                                           final SearchRequest request) throws QueryApiException {
         try {
             final String queryUuid = request.getQuery().getDataSource().getUuid();
             final Optional<ElasticIndexConfig> elasticIndexConfigO = service.get(queryUuid);
 
             if (!elasticIndexConfigO.isPresent()) {
-                return Response.status(HttpStatus.NOT_FOUND_404).build();
+                return Optional.empty();
             }
 
             final ElasticIndexConfig elasticIndexConfig = elasticIndexConfigO.get();
@@ -168,27 +169,25 @@ public class QueryResourceImpl implements QueryResource {
 
             final stroom.query.api.v2.SearchResponse searchResponse = projectResults(request, hits);
 
-            return Response.ok(searchResponse).build();
+            return Optional.of(searchResponse);
         } catch (IndexNotFoundException e) {
-            return Response.status(HttpStatus.NOT_FOUND_404).build();
-        } catch (Exception | QueryApiException e) {
+            return Optional.empty();
+        } catch (Exception e) {
             LOGGER.warn("Could not query the datasource for field mappings", e);
 
             final Throwable rootCause = ExceptionUtils.getRootCause(e);
             if (rootCause instanceof IndexNotFoundException) {
-                return Response.status(HttpStatus.NOT_FOUND_404).build();
+                return Optional.empty();
             } else {
-                return Response.serverError().build();
+                throw new QueryApiException(e);
             }
         }
     }
 
     @Override
-    public Response destroy(QueryKey queryKey) throws QueryApiException {
-
-        return Response
-                .ok(Boolean.TRUE)
-                .build();
+    public Boolean destroy(final ServiceUser authenticatedServiceUser,
+                           final QueryKey queryKey) throws QueryApiException {
+        return Boolean.TRUE;
     }
 
     private QueryBuilder getQuery(final ExpressionItem item) {

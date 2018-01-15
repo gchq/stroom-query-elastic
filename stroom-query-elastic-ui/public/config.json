@@ -1,0 +1,7 @@
+{
+    "authenticationServiceUrl": "http://stroom-auth-service:8099/authentication/v1",
+    "authorisationServiceUrl": "http://localhost:8080/api/authorisation/v1",
+    "advertisedUrl": "http://stroom-query-elastic-ui:5002",
+    "appClientId": "stroom-query-elastic",
+    "queryElasticUrl": "http://stroom-query-elastic-service:8299"
+}

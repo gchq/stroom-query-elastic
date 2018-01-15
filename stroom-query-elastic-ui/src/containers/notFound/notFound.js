@@ -6,7 +6,7 @@ import Paper from 'material-ui/Paper'
 
 import '../appStyle/app.css'
 
-const NotFoundPage = (props) => (
+const NotFound = (props) => (
     <div className='app'>
         <AppBar
             title='Page Not Found'
@@ -22,4 +22,4 @@ const NotFoundPage = (props) => (
     </div>
 )
 
-export default NotFoundPage
+export default NotFound

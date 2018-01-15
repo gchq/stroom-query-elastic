@@ -1,5 +1,7 @@
 import fetch from 'isomorphic-fetch'
 
+import { sendToSnackbar } from './snackBar'
+
 export const REQUEST_REMOVE_INDEX_CONFIG = 'REQUEST_REMOVE_INDEX_CONFIG'
 
 export const requestRemoveIndexConfig = (apiCallId, uuid) => ({
@@ -27,24 +29,34 @@ export const receiveRemoveIndexConfigFailed = (apiCallId, message) => ({
 let apiCallId = 0
 
 export const removeIndexConfig = (uuid) => {
-    return function(dispatch) {
+    return function(dispatch, getState) {
         const thisApiCallId = `removeIndexConfig-${apiCallId}`
         apiCallId += 1
 
         dispatch(requestRemoveIndexConfig(thisApiCallId, uuid));
 
-        return fetch(`${process.env.REACT_APP_QUERY_ELASTIC_URL}/docRefApi/v1/delete/${uuid}`,
+        const state = getState()
+        const jwsToken = state.authentication.idToken
+
+        return fetch(`${state.config.queryElasticUrl}/docRefApi/v1/delete/${uuid}`,
             {
-                method: "DELETE"
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': 'Bearer ' + jwsToken
+                },
+                method: "DELETE",
+                mode: 'cors'
             }
         )
         .then(
             response => {
                 dispatch(receiveRemoveIndexConfig(thisApiCallId, uuid))
+                dispatch(sendToSnackbar('Index config deleted'))
             }
         )
         .catch(error => {
             dispatch(receiveRemoveIndexConfigFailed(thisApiCallId, error.message))
+            dispatch(sendToSnackbar('Failed to delete index config ' + error.message))
         })
     }
 }

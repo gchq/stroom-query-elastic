@@ -1,5 +1,7 @@
 import fetch from 'isomorphic-fetch'
 
+import { sendToSnackbar } from './snackBar'
+
 export const EDIT_INDEX_CONFIG = 'EDIT_INDEX_CONFIG'
 
 export const editIndexConfig = (uuid, updates) => ({
@@ -37,19 +39,24 @@ export const receiveUpdateIndexConfigFailed = (apiCallId, message) => ({
 let apiCallId = 0
 
 export const updateIndexConfig = (uuid, indexConfig) => {
-    return function(dispatch) {
+    return function(dispatch, getState) {
         const thisApiCallId = `updateIndexConfig-${apiCallId}`
         apiCallId += 1
 
         dispatch(requestUpdateIndexConfig(thisApiCallId, uuid, indexConfig));
 
-        return fetch(`${process.env.REACT_APP_QUERY_ELASTIC_URL}/elasticIndex/v1/${uuid}`,
+        const state = getState()
+        const jwsToken = state.authentication.idToken
+
+        return fetch(`${state.config.queryElasticUrl}/docRefApi/v1/update/${uuid}`,
             {
                 method: "PUT",
                 headers: {
                     'Accept': 'application/json',
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + jwsToken
                 },
+                mode: 'cors',
                 body: JSON.stringify(indexConfig)
             }
         )
@@ -58,9 +65,11 @@ export const updateIndexConfig = (uuid, indexConfig) => {
         )
         .then(json => {
             dispatch(receiveUpdateIndexConfig(thisApiCallId, uuid, json))
+            dispatch(sendToSnackbar('Index config updated'))
         })
         .catch(error => {
             dispatch(receiveUpdateIndexConfigFailed(thisApiCallId, error.message))
+            dispatch(sendToSnackbar('Failed to update index config ' + error.message))
         })
     }
 }

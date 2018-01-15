@@ -5,13 +5,12 @@ import Paper from 'material-ui/Paper'
 import RaisedButton from 'material-ui/RaisedButton'
 import TextField from 'material-ui/TextField'
 
-import ApiCallSpinner from '../apiCallSpinner'
 import SnackbarDisplay from '../snackbarDisplay'
 
 import '../appStyle/app.css'
 import './singleIndexConfig.css'
 
-class SingleIndexConfigPage extends Component {
+class SingleIndexConfig extends Component {
 
     componentDidMount() {
         this.props.getIndexConfig(this.props.indexConfigUuid)
@@ -80,14 +79,13 @@ class SingleIndexConfigPage extends Component {
         return (
             <div className='app'>
                 <SnackbarDisplay />
-                <ApiCallSpinner />
                 {mainContent}
             </div>
         )
     }
 }
 
-SingleIndexConfigPage.propTypes = {
+SingleIndexConfig.propTypes = {
     // Set from routing
     indexConfigUuid: PropTypes.string.isRequired,
 
@@ -105,4 +103,4 @@ SingleIndexConfigPage.propTypes = {
     getIndexConfig: PropTypes.func.isRequired
 }
 
-export default SingleIndexConfigPage
+export default SingleIndexConfig
