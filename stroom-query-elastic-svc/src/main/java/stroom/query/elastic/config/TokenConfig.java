@@ -40,11 +40,6 @@ public class TokenConfig {
     @JsonProperty
     private String publicKeyUrl;
 
-    @Valid
-    @NotNull
-    @JsonProperty
-    private Boolean authEnabled = true;
-
     public String getJwsIssuer() {
         return jwsIssuer;
     }
@@ -67,13 +62,5 @@ public class TokenConfig {
 
     public void setPublicKeyUrl(String publicKeyUrl) {
         this.publicKeyUrl = publicKeyUrl;
-    }
-
-    public Boolean getAuthEnabled() {
-        return authEnabled;
-    }
-
-    public void setAuthEnabled(Boolean authEnabled) {
-        this.authEnabled = authEnabled;
     }
 }

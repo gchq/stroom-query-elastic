@@ -28,6 +28,7 @@ import stroom.query.audit.client.DocRefResourceHttpClient;
 import stroom.query.audit.logback.FifoLogbackAppender;
 import stroom.query.audit.client.QueryResourceHttpClient;
 import stroom.query.audit.security.ServiceUser;
+import stroom.query.audit.security.TestAuthenticationApp;
 import stroom.query.elastic.config.Config;
 import stroom.query.elastic.hibernate.ElasticIndexConfig;
 import stroom.query.elastic.service.ElasticDocRefServiceImpl;
@@ -56,12 +57,6 @@ public class ElasticIndexIT {
     private static final String DATA_INDEX_STROOM_NAME = "StroomShakespeare";
     private static final String DATA_INDEX_NAME = "shakespeare";
     private static final String DATA_INDEXED_TYPE = "line";
-
-    public static ServiceUser SERVICE_USER = new ServiceUser.Builder()
-            .jwt("eyJhbGciOiJSUzI1NiJ9.eyJleHAiOjE1MTgzNDM0NzAsInN1YiI6ImFkbWluIiwiaXNzIjoic3Ryb29tIiwic2lkIjoibm9kZTBteWpwcHZxNjh5c3oxYnZkZHhod2JzdmxjMSIsIm5vbmNlIjoiZDA1NjFlYWEwNGJkZDZjMzdlNjhiODgzZjI2ZGRmZmVlMmE2NmNlMGI1NWU2Nzg1MzdjNWU4NWY2ODliODNlNyIsInN0YXRlIjoiIn0.TgkyHJjJqH9usv2Ry6nfLDe3oJgA60XVJWw8AeS9dI2m3Iqa7Sf6ZsvkWdgp23EnZ-WaPmGQ9A6Q5biKFGfgUspkkM4V9ERk3LZ3DnH6BJywmqX_C6yTUafIUFiAEfnAovQW42swPFbG-v7SaLShlEIaJ2gygJzhWt1gB-CKLGI0Eip6I9LotOFJoYpyoGhnmP_m8OZBNpoYudvbMiZ9nRk8PDr159G5hlYJPHPVFLxQ38n3wPhuDFwPNljBhopOJKx_GmzHHNWOV7utOcf6HZebDBbZ2N-PXMRC5nv0xyrnU10sEiYQQroM7SQtNwiJtbWGYCyGIx3-2VVJuH8LnQ")
-            //.jwt("JOEhbGciOiJSUzI1NiJ9.eyJleHAiOjE1MTgzNDM0NzAsInN1YiI6ImFkbWluIiwiaXNzIjoic3Ryb29tIiwic2lkIjoibm9kZTBteWpwcHZxNjh5c3oxYnZkZHhod2JzdmxjMSIsIm5vbmNlIjoiZDA1NjFlYWEwNGJkZDZjMzdlNjhiODgzZjI2ZGRmZmVlMmE2NmNlMGI1NWU2Nzg1MzdjNWU4NWY2ODliODNlNyIsInN0YXRlIjoiIn0.TgkyHJjJqH9usv2Ry6nfLDe3oJgA60XVJWw8AeS9dI2m3Iqa7Sf6ZsvkWdgp23EnZ-WaPmGQ9A6Q5biKFGfgUspkkM4V9ERk3LZ3DnH6BJywmqX_C6yTUafIUFiAEfnAovQW42swPFbG-v7SaLShlEIaJ2gygJzhWt1gB-CKLGI0Eip6I9LotOFJoYpyoGhnmP_m8OZBNpoYudvbMiZ9nRk8PDr159G5hlYJPHPVFLxQ38n3wPhuDFwPNljBhopOJKx_GmzHHNWOV7utOcf6HZebDBbZ2N-PXMRC5nv0xyrnU10sEiYQQroM7SQtNwiJtbWGYCyGIx3-2VVJuH8LnQ")
-            .name("admin")
-            .build();
 
     private static BiFunction<ElasticIndexConfig, ExpressionOperator, SearchRequest> dataSearchRequest =
             (elasticIndexConfig, expressionOperator) -> {
@@ -114,14 +109,19 @@ public class ElasticIndexIT {
                 .uuid(elasticIndexConfig.getUuid())
                 .build();
     }
-
+    
     private static final String LOCALHOST = "localhost";
     private static final int ELASTIC_HTTP_PORT = 9200;
     private static final String ELASTIC_DATA_FILE = "elastic/shakespeare.json";
     private static final String ELASTIC_DATA_MAPPINGS_FULL_FILE = "elastic/shakespeare.mappings.json";
 
     @ClassRule
-    public static final DropwizardAppRule<Config> appRule = new DropwizardAppRule<>(App.class, resourceFilePath("config.yml"));
+    public static final DropwizardAppRule<Config> appRule =
+            new DropwizardAppRule<>(App.class, resourceFilePath("config.yml"));
+
+    @ClassRule
+    public static final DropwizardAppRule<TestAuthenticationApp.AuthConfig> authAppRule =
+            new DropwizardAppRule<>(TestAuthenticationApp.class, resourceFilePath("authConfig.yml"));
 
     private static final com.fasterxml.jackson.databind.ObjectMapper jacksonObjectMapper =
             new com.fasterxml.jackson.databind.ObjectMapper();
@@ -129,13 +129,22 @@ public class ElasticIndexIT {
     private static QueryResourceHttpClient queryClient;
     private static DocRefResourceHttpClient docRefClient;
 
+    public static ServiceUser serviceUser;
+    
     @BeforeClass
     public static void setupClass() {
-
-        int appPort = appRule.getLocalPort();
+        final int appPort = appRule.getLocalPort();
         final String host = String.format("http://%s:%d", LOCALHOST, appPort);
         queryClient = new QueryResourceHttpClient(host);
         docRefClient = new DocRefResourceHttpClient(host);
+
+        final int authPort = authAppRule.getLocalPort();
+        final TestAuthenticationApp.Client authResourceClient = TestAuthenticationApp.client(LOCALHOST, authPort);
+        try {
+            serviceUser = authResourceClient.getAuthenticatedUser();
+        } catch (Exception e) {
+            fail(e.getLocalizedMessage());
+        }
 
         Unirest.setObjectMapper(new com.mashape.unirest.http.ObjectMapper() {
             private com.fasterxml.jackson.databind.ObjectMapper jacksonObjectMapper
@@ -226,7 +235,7 @@ public class ElasticIndexIT {
     public void testGetDataSourceValid() throws IOException, QueryApiException {
         final ElasticIndexConfig elasticIndexConfig = createDataIndexDocRef();
 
-        final Response response = queryClient.getDataSource(SERVICE_USER, getDocRef(elasticIndexConfig));
+        final Response response = queryClient.getDataSource(serviceUser, getDocRef(elasticIndexConfig));
 
         assertEquals(HttpStatus.SC_OK, response.getStatus());
 
@@ -262,7 +271,7 @@ public class ElasticIndexIT {
                 .name("DoesNotExist")
                 .build();
 
-        final Response response = queryClient.getDataSource(SERVICE_USER, elasticIndexConfig);
+        final Response response = queryClient.getDataSource(serviceUser, elasticIndexConfig);
 
         assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
 
@@ -281,7 +290,7 @@ public class ElasticIndexIT {
 
         final SearchRequest searchRequest = dataSearchRequest.apply(elasticIndexConfig, speakerFinder);
 
-        final Response response = queryClient.search(SERVICE_USER, searchRequest);
+        final Response response = queryClient.search(serviceUser, searchRequest);
 
         assertEquals(HttpStatus.SC_OK, response.getStatus());
 
@@ -330,7 +339,7 @@ public class ElasticIndexIT {
                 .build();
 
         final SearchRequest searchRequest = dataSearchRequest.apply(elasticIndexConfig, speakerFinder);
-        final Response response = queryClient.search(SERVICE_USER, searchRequest);
+        final Response response = queryClient.search(serviceUser, searchRequest);
 
         assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
 
@@ -351,10 +360,10 @@ public class ElasticIndexIT {
                 .indexedType(UUID.randomUUID())
                 .build();
 
-        docRefClient.createDocument(SERVICE_USER,
+        docRefClient.createDocument(serviceUser,
                 elasticIndexConfig.getUuid(),
                 elasticIndexConfig.getStroomName());
-        docRefClient.update(SERVICE_USER,
+        docRefClient.update(serviceUser,
                 elasticIndexConfig.getUuid(),
                 elasticIndexConfig);
 
@@ -363,7 +372,7 @@ public class ElasticIndexIT {
                 .build();
 
         final SearchRequest searchRequest = dataSearchRequest.apply(elasticIndexConfig, speakerFinder);
-        final Response response = queryClient.search(SERVICE_USER, searchRequest);
+        final Response response = queryClient.search(serviceUser, searchRequest);
 
         assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
 
@@ -382,13 +391,13 @@ public class ElasticIndexIT {
                 .indexedType(DATA_INDEXED_TYPE)
                 .build();
 
-        final Response createDocRefResponse = docRefClient.createDocument(SERVICE_USER,
+        final Response createDocRefResponse = docRefClient.createDocument(serviceUser,
                 elasticIndexConfig.getUuid(),
                 elasticIndexConfig.getStroomName());
         assertEquals(HttpStatus.SC_OK, createDocRefResponse.getStatus());
 
         final Response updateIndexResponse =
-                docRefClient.update(SERVICE_USER,
+                docRefClient.update(serviceUser,
                         elasticIndexConfig.getUuid(),
                         elasticIndexConfig);
         assertEquals(HttpStatus.SC_OK, updateIndexResponse.getStatus());

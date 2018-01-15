@@ -205,8 +205,9 @@ public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexConfi
     }
 
     @Override
-    public void deleteDocument(final String uuid) throws QueryApiException {
+    public Optional<Boolean> deleteDocument(final String uuid) throws QueryApiException {
         client.prepareDelete(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, uuid).get();
+        return Optional.of(Boolean.TRUE);
     }
 
     @Override
