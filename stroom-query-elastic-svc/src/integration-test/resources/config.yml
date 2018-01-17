@@ -31,6 +31,11 @@ elastic:
   hosts: localhost:9300
 
 token:
-  publicKeyUrl: http://localhost:10299/testAuthService/publicKey
+  publicKeyUrl: http://localhost:10080/testAuthService/publicKey
   jwsIssuer: stroom
   algorithm: RS256
+
+
+authorisationService:
+  url: http://localhost:10080/api/authorisation/v1
+  isAuthorisedPath: /isAuthorised

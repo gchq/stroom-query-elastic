@@ -52,7 +52,7 @@ ext.versions = [
     elasticSearch: '5.6.3',
 
     //same version for both stroom-query-api and stroom-query-common
-    stroomQuery: 'v2.0.0-alpha.22',
+    stroomQuery: 'SNAPSHOT',
     stroomExpression: 'v1.0.1',
 ]
 
@@ -116,5 +116,6 @@ ext.testDeps = [
     dropwizard_testing: "io.dropwizard:dropwizard-testing:$versions.dropwizard",
     fuel: 'com.github.kittinunf.fuel:fuel:1.7.0',
     moshi: 'com.squareup.moshi:moshi:1.5.0',
-    unirest: 'com.mashape.unirest:unirest-java:1.4.9'
+    unirest: 'com.mashape.unirest:unirest-java:1.4.9',
+    wiremock: 'com.github.tomakehurst:wiremock:2.12.0'
 ]

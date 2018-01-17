@@ -37,7 +37,6 @@ import stroom.query.common.v2.TableCoprocessorSettings;
 import stroom.query.elastic.hibernate.ElasticIndexConfig;
 import stroom.query.elastic.store.ElasticStore;
 import stroom.util.shared.HasTerminate;
-import stroom.util.shared.QueryApiException;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
@@ -65,12 +64,12 @@ public class ElasticQueryServiceImpl implements QueryService {
     }
 
     @Override
-    public Optional<DataSource> getDataSource(final ServiceUser authenticatedServiceUser,
-                                              final DocRef docRef) throws QueryApiException {
+    public Optional<DataSource> getDataSource(final ServiceUser user,
+                                              final DocRef docRef) throws Exception {
         LOGGER.debug("Getting Data Source for DocRef: " + docRef);
 
         try {
-            final Optional<ElasticIndexConfig> elasticIndexConfigO = service.get(docRef.getUuid());
+            final Optional<ElasticIndexConfig> elasticIndexConfigO = service.get(user, docRef.getUuid());
 
             if (!elasticIndexConfigO.isPresent()) {
                 return Optional.empty();
@@ -120,6 +119,8 @@ public class ElasticQueryServiceImpl implements QueryService {
 
             return Optional.of(new stroom.datasource.api.v2.DataSource(fields));
 
+        } catch (IndexNotFoundException e) {
+            return Optional.empty();
         } catch (Exception e) {
             LOGGER.warn("Could not query the datasource for field mappings", e);
 
@@ -127,17 +128,17 @@ public class ElasticQueryServiceImpl implements QueryService {
             if (rootCause instanceof IndexNotFoundException) {
                 return Optional.empty();
             } else {
-                throw new QueryApiException(e);
+                throw e;
             }
         }
     }
 
     @Override
-    public Optional<SearchResponse> search(final ServiceUser authenticatedServiceUser,
-                                           final SearchRequest request) throws QueryApiException {
+    public Optional<SearchResponse> search(final ServiceUser user,
+                                           final SearchRequest request) throws Exception {
         try {
             final String queryUuid = request.getQuery().getDataSource().getUuid();
-            final Optional<ElasticIndexConfig> elasticIndexConfigO = service.get(queryUuid);
+            final Optional<ElasticIndexConfig> elasticIndexConfigO = service.get(user, queryUuid);
 
             if (!elasticIndexConfigO.isPresent()) {
                 return Optional.empty();
@@ -179,14 +180,14 @@ public class ElasticQueryServiceImpl implements QueryService {
             if (rootCause instanceof IndexNotFoundException) {
                 return Optional.empty();
             } else {
-                throw new QueryApiException(e);
+                throw e;
             }
         }
     }
 
     @Override
-    public Boolean destroy(final ServiceUser authenticatedServiceUser,
-                           final QueryKey queryKey) throws QueryApiException {
+    public Boolean destroy(final ServiceUser user,
+                           final QueryKey queryKey) throws Exception {
         return Boolean.TRUE;
     }
 

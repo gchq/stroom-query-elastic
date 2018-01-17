@@ -1,37 +1,18 @@
 package stroom.query.elastic.hibernate;
 
-public class ElasticIndexConfig {
-    public static final String STROOM_NAME = "STROOM_NAME";
+import stroom.query.audit.service.DocRefEntity;
+
+public class ElasticIndexConfig extends DocRefEntity {
     public static final String INDEX_NAME = "INDEX_NAME";
     public static final String INDEXED_TYPE = "INDEXED_TYPE";
 
     public static final String DEFAULT_STR = "";
-
-    private String uuid;
-
-    private String stroomName;
 
     private String indexName;
 
     private String indexedType;
 
     private String mappingsJson;
-
-    public String getUuid() {
-        return uuid;
-    }
-
-    public void setUuid(String uuid) {
-        this.uuid = uuid;
-    }
-
-    public String getStroomName() {
-        return stroomName;
-    }
-
-    public void setStroomName(String stroomName) {
-        this.stroomName = stroomName;
-    }
 
     public String getIndexName() {
         return indexName;
@@ -66,8 +47,7 @@ public class ElasticIndexConfig {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("ElasticIndexConfig{");
-        sb.append("uuid='").append(uuid).append('\'');
-        sb.append(", stroomName='").append(stroomName).append('\'');
+        sb.append("super='").append(super.toString()).append('\'');
         sb.append(", indexName='").append(indexName).append('\'');
         sb.append(", indexedType='").append(indexedType).append('\'');
         sb.append(", mappingsJson='").append(mappingsJson).append('\'');
@@ -75,40 +55,34 @@ public class ElasticIndexConfig {
         return sb.toString();
     }
 
-    public static class Builder {
-        private final ElasticIndexConfig instance;
+    public static class Builder extends DocRefEntity.Builder<ElasticIndexConfig, Builder> {
 
         public Builder() {
-            this.instance = new ElasticIndexConfig();
-        }
-
-        public Builder uuid(final Object value) {
-            this.instance.uuid = (value != null) ? value.toString() : null;
-            return this;
-        }
-
-        public Builder stroomName(final Object value) {
-            this.instance.stroomName = (value != null) ? value.toString() : null;
-            return this;
+            super(new ElasticIndexConfig());
         }
 
         public Builder indexName(final Object value) {
             this.instance.indexName = (value != null) ? value.toString() : null;
-            return this;
+            return self();
         }
 
         public Builder indexedType(final Object value) {
             this.instance.indexedType = (value != null) ? value.toString() : null;
-            return this;
+            return self();
         }
 
         public Builder mappingsJson(final String value) {
             this.instance.mappingsJson = value;
-            return this;
+            return self();
         }
 
         public ElasticIndexConfig build() {
             return instance;
+        }
+
+        @Override
+        protected Builder self() {
+            return this;
         }
     }
 }

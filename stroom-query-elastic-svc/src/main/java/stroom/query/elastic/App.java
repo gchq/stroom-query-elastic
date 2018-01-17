@@ -12,12 +12,13 @@ import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.elasticsearch.common.collect.Tuple;
 import org.glassfish.jersey.server.filter.RolesAllowedDynamicFeature;
 import stroom.query.audit.AuditedQueryBundle;
+import stroom.query.audit.authorisation.AuthorisationService;
 import stroom.query.audit.rest.AuditedDocRefResourceImpl;
 import stroom.query.audit.security.RobustJwtAuthFilter;
 import stroom.query.audit.security.ServiceUser;
+import stroom.query.audit.security.TokenConfig;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.elastic.config.Config;
-import stroom.query.elastic.config.TokenConfig;
 import stroom.query.elastic.health.ElasticHealthCheck;
 import stroom.query.elastic.hibernate.ElasticIndexConfig;
 import stroom.query.elastic.service.ElasticDocRefServiceImpl;
@@ -30,6 +31,7 @@ import javax.servlet.FilterRegistration;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class App extends Application<Config> {
@@ -55,8 +57,9 @@ public class App extends Application<Config> {
 
         @Inject
         public AuditedElasticDocRefResource(final DocRefService<ElasticIndexConfig> service,
-                                            final EventLoggingService eventLoggingService) {
-            super(service, eventLoggingService);
+                                            final EventLoggingService eventLoggingService,
+                                            final AuthorisationService authorisationService) {
+            super(service, eventLoggingService, authorisationService);
         }
     }
 
@@ -72,13 +75,18 @@ public class App extends Application<Config> {
     }
 
     @Override
-    public void run(final Config configuration, final Environment environment) throws Exception {
+    public void run(final Config configuration, final Environment environment) {
 
         // And we want to configure authentication before the resources
         configureAuthentication(configuration.getTokenConfig(), environment);
 
-        environment.healthChecks().register("Elastic", new ElasticHealthCheck(transportClientBundle.getTransportClient()));
-        environment.jersey().register(new Module(transportClientBundle.getTransportClient()));
+        environment.healthChecks().register(
+                "Elastic",
+                new ElasticHealthCheck(transportClientBundle.getTransportClient())
+        );
+        environment.jersey().register(
+                new Module(transportClientBundle.getTransportClient())
+        );
 
         configureCors(environment);
     }
@@ -102,11 +110,7 @@ public class App extends Application<Config> {
                                                 final Environment environment) {
         environment.jersey().register(
                 new AuthDynamicFeature(
-                        new RobustJwtAuthFilter(
-                                tokenConfig.getJwsIssuer(),
-                                tokenConfig.getAlgorithm(),
-                                tokenConfig.getPublicKeyUrl()
-                        )
+                        new RobustJwtAuthFilter(tokenConfig)
                 ));
         environment.jersey().register(new AuthValueFactoryProvider.Binder<>(ServiceUser.class));
         environment.jersey().register(RolesAllowedDynamicFeature.class);

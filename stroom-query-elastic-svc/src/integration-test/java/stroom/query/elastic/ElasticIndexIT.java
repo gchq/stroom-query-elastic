@@ -1,11 +1,20 @@
 package stroom.query.elastic;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.junit.WireMockClassRule;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import io.dropwizard.testing.junit.DropwizardAppRule;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
+import org.jose4j.jwk.JsonWebKey;
+import org.jose4j.jwk.RsaJsonWebKey;
+import org.jose4j.jwk.RsaJwkGenerator;
+import org.jose4j.jws.AlgorithmIdentifiers;
+import org.jose4j.jws.JsonWebSignature;
+import org.jose4j.jwt.JwtClaims;
+import org.jose4j.lang.JoseException;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -28,11 +37,9 @@ import stroom.query.audit.client.DocRefResourceHttpClient;
 import stroom.query.audit.logback.FifoLogbackAppender;
 import stroom.query.audit.client.QueryResourceHttpClient;
 import stroom.query.audit.security.ServiceUser;
-import stroom.query.audit.security.TestAuthenticationApp;
 import stroom.query.elastic.config.Config;
 import stroom.query.elastic.hibernate.ElasticIndexConfig;
 import stroom.query.elastic.service.ElasticDocRefServiceImpl;
-import stroom.util.shared.QueryApiException;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -44,6 +51,11 @@ import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -109,27 +121,29 @@ public class ElasticIndexIT {
                 .uuid(elasticIndexConfig.getUuid())
                 .build();
     }
-    
+
+    private static final String VALID_USER_NAME = "testSubject";
     private static final String LOCALHOST = "localhost";
     private static final int ELASTIC_HTTP_PORT = 9200;
     private static final String ELASTIC_DATA_FILE = "elastic/shakespeare.json";
     private static final String ELASTIC_DATA_MAPPINGS_FULL_FILE = "elastic/shakespeare.mappings.json";
+    private static final String PARENT_FOLDER_UUID = UUID.randomUUID().toString();
 
     @ClassRule
     public static final DropwizardAppRule<Config> appRule =
             new DropwizardAppRule<>(App.class, resourceFilePath("config.yml"));
 
     @ClassRule
-    public static final DropwizardAppRule<TestAuthenticationApp.AuthConfig> authAppRule =
-            new DropwizardAppRule<>(TestAuthenticationApp.class, resourceFilePath("authConfig.yml"));
+    public static WireMockClassRule wireMockRule = new WireMockClassRule(
+            WireMockConfiguration.options().port(10080));
+
+    private static ServiceUser serviceUser;
 
     private static final com.fasterxml.jackson.databind.ObjectMapper jacksonObjectMapper =
             new com.fasterxml.jackson.databind.ObjectMapper();
 
     private static QueryResourceHttpClient queryClient;
     private static DocRefResourceHttpClient docRefClient;
-
-    public static ServiceUser serviceUser;
     
     @BeforeClass
     public static void setupClass() {
@@ -138,11 +152,44 @@ public class ElasticIndexIT {
         queryClient = new QueryResourceHttpClient(host);
         docRefClient = new DocRefResourceHttpClient(host);
 
-        final int authPort = authAppRule.getLocalPort();
-        final TestAuthenticationApp.Client authResourceClient = TestAuthenticationApp.client(LOCALHOST, authPort);
+        stubFor(post(urlEqualTo("/api/authorisation/v1/isAuthorised"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", MediaType.TEXT_PLAIN)
+                        .withBody("Mock approval for authorisation")
+                        .withStatus(200)));
+
+        RsaJsonWebKey jwk;
         try {
-            serviceUser = authResourceClient.getAuthenticatedUser();
+            String jwkId = UUID.randomUUID().toString();
+            jwk = RsaJwkGenerator.generateJwk(2048);
+            jwk.setKeyId(jwkId);
         } catch (Exception e) {
+            fail(e.getLocalizedMessage());
+            return;
+        }
+
+        stubFor(get(urlEqualTo("/testAuthService/publicKey"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", MediaType.APPLICATION_JSON)
+                        .withBody(jwk.toJson(JsonWebKey.OutputControlLevel.PUBLIC_ONLY))
+                        .withStatus(200)));
+
+        JwtClaims claims = new JwtClaims();
+        claims.setIssuer("stroom");  // who creates the token and signs it
+        claims.setSubject(VALID_USER_NAME); // the subject/principal is whom the token is about
+
+        final JsonWebSignature jws = new JsonWebSignature();
+        jws.setPayload(claims.toJson());
+        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.RSA_USING_SHA256);
+        jws.setKey(jwk.getPrivateKey());
+        jws.setDoKeyValidation(false);
+
+        try {
+            serviceUser = new ServiceUser.Builder()
+                    .jwt(jws.getCompactSerialization())
+                    .name(VALID_USER_NAME)
+                    .build();
+        } catch (JoseException e) {
             fail(e.getLocalizedMessage());
         }
 
@@ -232,14 +279,14 @@ public class ElasticIndexIT {
     }
 
     @Test
-    public void testGetDataSourceValid() throws IOException, QueryApiException {
+    public void testGetDataSourceValid() throws Exception {
         final ElasticIndexConfig elasticIndexConfig = createDataIndexDocRef();
 
         final Response response = queryClient.getDataSource(serviceUser, getDocRef(elasticIndexConfig));
 
         assertEquals(HttpStatus.SC_OK, response.getStatus());
 
-        final String body = response.getEntity().toString();
+        final String body = response.readEntity(String.class);
 
         LOGGER.info("Data Source Body: " + body);
         final DataSource result = jacksonObjectMapper.readValue(body, DataSource.class);
@@ -263,7 +310,7 @@ public class ElasticIndexIT {
      * a completely non existent doc ref.
      */
     @Test
-    public void testGetDataSourceMissingDocRef() throws QueryApiException {
+    public void testGetDataSourceMissingDocRef() throws Exception {
 
         // Create a random index config that is not registered with the system
         final DocRef elasticIndexConfig = new DocRef.Builder()
@@ -280,7 +327,7 @@ public class ElasticIndexIT {
     }
 
     @Test
-    public void testSearchValid() throws IOException, QueryApiException {
+    public void testSearchValid() throws Exception {
         final ElasticIndexConfig elasticIndexConfig = createDataIndexDocRef();
 
         final ExpressionOperator speakerFinder = new ExpressionOperator.Builder(ExpressionOperator.Op.AND)
@@ -294,7 +341,7 @@ public class ElasticIndexIT {
 
         assertEquals(HttpStatus.SC_OK, response.getStatus());
 
-        final String body = response.getEntity().toString();
+        final String body = response.readEntity(String.class);
 
         LOGGER.info("BODY - " + body);
 
@@ -325,11 +372,11 @@ public class ElasticIndexIT {
      * a completely non existent doc ref
      */
     @Test
-    public void testSearchMissingDocRef() throws QueryApiException {
+    public void testSearchMissingDocRef() throws Exception {
 
         // Create a random index config that is not registered with the system
         final ElasticIndexConfig elasticIndexConfig = new ElasticIndexConfig.Builder()
-                .uuid(UUID.randomUUID())
+                .uuid(UUID.randomUUID().toString())
                 .indexName(UUID.randomUUID())
                 .indexedType(UUID.randomUUID())
                 .build();
@@ -352,17 +399,18 @@ public class ElasticIndexIT {
      * a docRef that exists, but the index does not exist.
      */
     @Test
-    public void testSearchMissingIndex() throws QueryApiException {
+    public void testSearchMissingIndex() throws Exception {
 
         final ElasticIndexConfig elasticIndexConfig = new ElasticIndexConfig.Builder()
-                .uuid(UUID.randomUUID())
+                .uuid(UUID.randomUUID().toString())
                 .indexName(UUID.randomUUID())
                 .indexedType(UUID.randomUUID())
                 .build();
 
         docRefClient.createDocument(serviceUser,
                 elasticIndexConfig.getUuid(),
-                elasticIndexConfig.getStroomName());
+                elasticIndexConfig.getName(),
+                PARENT_FOLDER_UUID);
         docRefClient.update(serviceUser,
                 elasticIndexConfig.getUuid(),
                 elasticIndexConfig);
@@ -383,17 +431,18 @@ public class ElasticIndexIT {
      * Shortcut function to create another DocRef that references the populated 'data' index.
      * @return The ElasticIndexConfig representing the new DocRef
      */
-    private ElasticIndexConfig createDataIndexDocRef() throws QueryApiException {
+    private ElasticIndexConfig createDataIndexDocRef() throws Exception {
         final ElasticIndexConfig elasticIndexConfig = new ElasticIndexConfig.Builder()
                 .uuid(UUID.randomUUID().toString())
-                .stroomName(DATA_INDEX_STROOM_NAME)
+                .name(DATA_INDEX_STROOM_NAME)
                 .indexName(DATA_INDEX_NAME)
                 .indexedType(DATA_INDEXED_TYPE)
                 .build();
 
         final Response createDocRefResponse = docRefClient.createDocument(serviceUser,
                 elasticIndexConfig.getUuid(),
-                elasticIndexConfig.getStroomName());
+                elasticIndexConfig.getName(),
+                PARENT_FOLDER_UUID);
         assertEquals(HttpStatus.SC_OK, createDocRefResponse.getStatus());
 
         final Response updateIndexResponse =
