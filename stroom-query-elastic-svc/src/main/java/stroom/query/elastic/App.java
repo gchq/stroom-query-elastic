@@ -20,7 +20,7 @@ import stroom.query.audit.security.TokenConfig;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.elastic.config.Config;
 import stroom.query.elastic.health.ElasticHealthCheck;
-import stroom.query.elastic.hibernate.ElasticIndexConfig;
+import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
 import stroom.query.elastic.service.ElasticDocRefServiceImpl;
 import stroom.query.elastic.service.ElasticQueryServiceImpl;
 import stroom.query.elastic.transportClient.TransportClientBundle;
@@ -53,10 +53,10 @@ public class App extends Application<Config> {
         }
     };
 
-    public static final class AuditedElasticDocRefResource extends AuditedDocRefResourceImpl<ElasticIndexConfig> {
+    public static final class AuditedElasticDocRefResource extends AuditedDocRefResourceImpl<ElasticIndexDocRefEntity> {
 
         @Inject
-        public AuditedElasticDocRefResource(final DocRefService<ElasticIndexConfig> service,
+        public AuditedElasticDocRefResource(final DocRefService<ElasticIndexDocRefEntity> service,
                                             final EventLoggingService eventLoggingService,
                                             final AuthorisationService authorisationService) {
             super(service, eventLoggingService, authorisationService);
@@ -66,7 +66,7 @@ public class App extends Application<Config> {
     private final AuditedQueryBundle auditedQueryBundle =
             new AuditedQueryBundle<>(
                     ElasticQueryServiceImpl.class,
-                    ElasticIndexConfig.class,
+                    ElasticIndexDocRefEntity.class,
                     AuditedElasticDocRefResource.class,
                     ElasticDocRefServiceImpl.class);
 

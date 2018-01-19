@@ -2,11 +2,11 @@ package stroom.query.elastic.hibernate;
 
 import stroom.query.audit.service.DocRefEntity;
 
-public class ElasticIndexConfig extends DocRefEntity {
+public class ElasticIndexDocRefEntity extends DocRefEntity {
+
+    public static final String TYPE = "ElasticIndex";
     public static final String INDEX_NAME = "INDEX_NAME";
     public static final String INDEXED_TYPE = "INDEXED_TYPE";
-
-    public static final String DEFAULT_STR = "";
 
     private String indexName;
 
@@ -55,10 +55,10 @@ public class ElasticIndexConfig extends DocRefEntity {
         return sb.toString();
     }
 
-    public static class Builder extends DocRefEntity.Builder<ElasticIndexConfig, Builder> {
+    public static class Builder extends DocRefEntity.BaseBuilder<ElasticIndexDocRefEntity, Builder> {
 
         public Builder() {
-            super(new ElasticIndexConfig());
+            super(new ElasticIndexDocRefEntity());
         }
 
         public Builder indexName(final Object value) {
@@ -76,7 +76,7 @@ public class ElasticIndexConfig extends DocRefEntity {
             return self();
         }
 
-        public ElasticIndexConfig build() {
+        public ElasticIndexDocRefEntity build() {
             return instance;
         }
 

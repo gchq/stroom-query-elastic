@@ -34,7 +34,7 @@ import stroom.query.common.v2.SearchResponseCreator;
 import stroom.query.common.v2.StoreSize;
 import stroom.query.common.v2.TableCoprocessor;
 import stroom.query.common.v2.TableCoprocessorSettings;
-import stroom.query.elastic.hibernate.ElasticIndexConfig;
+import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
 import stroom.query.elastic.store.ElasticStore;
 import stroom.util.shared.HasTerminate;
 
@@ -54,11 +54,11 @@ public class ElasticQueryServiceImpl implements QueryService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ElasticQueryServiceImpl.class);
 
     private final TransportClient client;
-    private final DocRefService<ElasticIndexConfig> service;
+    private final DocRefService<ElasticIndexDocRefEntity> service;
 
     @Inject
     public ElasticQueryServiceImpl(final TransportClient client,
-                                   final DocRefService<ElasticIndexConfig> service) {
+                                   final DocRefService<ElasticIndexDocRefEntity> service) {
         this.client = client;
         this.service = service;
     }
@@ -69,13 +69,13 @@ public class ElasticQueryServiceImpl implements QueryService {
         LOGGER.debug("Getting Data Source for DocRef: " + docRef);
 
         try {
-            final Optional<ElasticIndexConfig> elasticIndexConfigO = service.get(user, docRef.getUuid());
+            final Optional<ElasticIndexDocRefEntity> elasticIndexConfigO = service.get(user, docRef.getUuid());
 
             if (!elasticIndexConfigO.isPresent()) {
                 return Optional.empty();
             }
 
-            final ElasticIndexConfig elasticIndexConfig = elasticIndexConfigO.get();
+            final ElasticIndexDocRefEntity elasticIndexConfig = elasticIndexConfigO.get();
 
             LOGGER.debug("Found Elastic Config!" + elasticIndexConfig);
 
@@ -138,13 +138,13 @@ public class ElasticQueryServiceImpl implements QueryService {
                                            final SearchRequest request) throws Exception {
         try {
             final String queryUuid = request.getQuery().getDataSource().getUuid();
-            final Optional<ElasticIndexConfig> elasticIndexConfigO = service.get(user, queryUuid);
+            final Optional<ElasticIndexDocRefEntity> elasticIndexConfigO = service.get(user, queryUuid);
 
             if (!elasticIndexConfigO.isPresent()) {
                 return Optional.empty();
             }
 
-            final ElasticIndexConfig elasticIndexConfig = elasticIndexConfigO.get();
+            final ElasticIndexDocRefEntity elasticIndexConfig = elasticIndexConfigO.get();
 
             final QueryBuilder elasticQuery = getQuery(request.getQuery().getExpression());
 

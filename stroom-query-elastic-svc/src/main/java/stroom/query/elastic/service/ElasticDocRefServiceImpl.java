@@ -12,7 +12,7 @@ import stroom.query.audit.ExportDTO;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.audit.service.DocRefEntity;
 import stroom.query.audit.service.DocRefService;
-import stroom.query.elastic.hibernate.ElasticIndexConfig;
+import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
 
 import javax.inject.Inject;
 import java.io.IOException;
@@ -22,7 +22,7 @@ import java.util.Optional;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
-public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexConfig> {
+public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexDocRefEntity> {
     public static final String STROOM_INDEX_NAME = "stroom";
     public static final String DOC_REF_INDEXED_TYPE = "docref";
 
@@ -41,12 +41,12 @@ public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexConfi
     }
 
     @Override
-    public List<ElasticIndexConfig> getAll(final ServiceUser user) throws Exception {
+    public List<ElasticIndexDocRefEntity> getAll(final ServiceUser user) throws Exception {
         return null;
     }
 
     @Override
-    public Optional<ElasticIndexConfig> get(final ServiceUser user,
+    public Optional<ElasticIndexDocRefEntity> get(final ServiceUser user,
                                             final String uuid) throws Exception {
         try {
             final GetResponse searchResponse = client
@@ -55,8 +55,8 @@ public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexConfi
 
             if (searchResponse.isExists() && !searchResponse.isSourceEmpty()) {
                 final Object stroomName = searchResponse.getSource().get(DocRefEntity.NAME);
-                final Object indexName = searchResponse.getSource().get(ElasticIndexConfig.INDEX_NAME);
-                final Object indexedType = searchResponse.getSource().get(ElasticIndexConfig.INDEXED_TYPE);
+                final Object indexName = searchResponse.getSource().get(ElasticIndexDocRefEntity.INDEX_NAME);
+                final Object indexedType = searchResponse.getSource().get(ElasticIndexDocRefEntity.INDEXED_TYPE);
 
                 if ((null != indexName) && (null != indexedType)) {
                     try {
@@ -72,7 +72,7 @@ public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexConfi
                     }
                 }
 
-                return Optional.of(new ElasticIndexConfig.Builder()
+                return Optional.of(new ElasticIndexDocRefEntity.Builder()
                         .uuid(uuid)
                         .name((stroomName != null) ? stroomName.toString() : null)
                         .indexName(indexName)
@@ -98,13 +98,21 @@ public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexConfi
                     .get();
 
             if (searchResponse.isExists() && !searchResponse.isSourceEmpty()) {
-                final Object stroomName = searchResponse.getSource().get(DocRefEntity.NAME);
+                final Object name = searchResponse.getSource().get(DocRefEntity.NAME);
+                final Object createUser = searchResponse.getSource().get(DocRefEntity.CREATE_USER);
+                final Object createTime = searchResponse.getSource().get(DocRefEntity.CREATE_TIME);
+                final Object updateUser = searchResponse.getSource().get(DocRefEntity.UPDATE_USER);
+                final Object updateTime = searchResponse.getSource().get(DocRefEntity.UPDATE_TIME);
 
                 return Optional.of(new DocRefInfo.Builder()
                         .docRef(new DocRef.Builder()
                                 .uuid(uuid)
-                                .name((stroomName != null) ? stroomName.toString() : null)
+                                .name((name != null) ? name.toString() : null)
                                 .build())
+                        .createUser((createUser != null) ? createUser.toString() : null)
+                        .createTime((createTime != null) ? Long.valueOf(createTime.toString()) : null)
+                        .updateUser((updateUser != null) ? updateUser.toString() : null)
+                        .updateTime((updateTime != null) ? Long.valueOf(updateTime.toString()) : null)
                         .build());
             } else {
                 return Optional.empty();
@@ -118,7 +126,7 @@ public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexConfi
     }
 
     @Override
-    public Optional<ElasticIndexConfig> createDocument(final ServiceUser user,
+    public Optional<ElasticIndexDocRefEntity> createDocument(final ServiceUser user,
                                                        final String uuid,
                                                        final String name) throws Exception {
         try {
@@ -136,7 +144,7 @@ public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexConfi
                     )
                     .get();
 
-            return Optional.of(new ElasticIndexConfig.Builder()
+            return Optional.of(new ElasticIndexDocRefEntity.Builder()
                     .uuid(uuid)
                     .name(name)
                     .build());
@@ -147,17 +155,17 @@ public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexConfi
     }
 
     @Override
-    public Optional<ElasticIndexConfig> update(final ServiceUser user,
+    public Optional<ElasticIndexDocRefEntity> update(final ServiceUser user,
                                                final String uuid,
-                                               final ElasticIndexConfig update) throws Exception {
+                                               final ElasticIndexDocRefEntity update) throws Exception {
         try {
             final Long now = System.currentTimeMillis();
 
             client.prepareUpdate(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, uuid)
                     .setDoc(jsonBuilder()
                             .startObject()
-                            .field(ElasticIndexConfig.INDEX_NAME, update.getIndexName())
-                            .field(ElasticIndexConfig.INDEXED_TYPE, update.getIndexedType())
+                            .field(ElasticIndexDocRefEntity.INDEX_NAME, update.getIndexName())
+                            .field(ElasticIndexDocRefEntity.INDEXED_TYPE, update.getIndexedType())
                             .field(DocRefEntity.UPDATE_TIME, now)
                             .field(DocRefEntity.UPDATE_USER, user.getName())
                             .endObject()
@@ -174,7 +182,7 @@ public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexConfi
     }
 
     @Override
-    public Optional<ElasticIndexConfig> copyDocument(final ServiceUser user,
+    public Optional<ElasticIndexDocRefEntity> copyDocument(final ServiceUser user,
                                                      final String originalUuid,
                                                      final String copyUuid) throws Exception {
         try {
@@ -184,15 +192,15 @@ public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexConfi
             if (searchResponse.isExists() && !searchResponse.isSourceEmpty()) {
                 final Long now = System.currentTimeMillis();
                 final String stroomName = searchResponse.getSource().get(DocRefEntity.NAME).toString();
-                final String indexName = searchResponse.getSource().get(ElasticIndexConfig.INDEX_NAME).toString();
-                final String indexedType = searchResponse.getSource().get(ElasticIndexConfig.INDEXED_TYPE).toString();
+                final Object indexName = searchResponse.getSource().get(ElasticIndexDocRefEntity.INDEX_NAME);
+                final Object indexedType = searchResponse.getSource().get(ElasticIndexDocRefEntity.INDEXED_TYPE);
 
                 client.prepareIndex(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, copyUuid)
                         .setSource(jsonBuilder()
                                 .startObject()
                                 .field(DocRefEntity.NAME, stroomName)
-                                .field(ElasticIndexConfig.INDEX_NAME, indexName)
-                                .field(ElasticIndexConfig.INDEXED_TYPE, indexedType)
+                                .field(ElasticIndexDocRefEntity.INDEX_NAME, indexName)
+                                .field(ElasticIndexDocRefEntity.INDEXED_TYPE, indexedType)
                                 .field(DocRefEntity.CREATE_TIME, now)
                                 .field(DocRefEntity.CREATE_USER, user.getName())
                                 .field(DocRefEntity.UPDATE_TIME, now)
@@ -214,14 +222,14 @@ public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexConfi
     }
 
     @Override
-    public Optional<ElasticIndexConfig> moveDocument(final ServiceUser user,
+    public Optional<ElasticIndexDocRefEntity> moveDocument(final ServiceUser user,
                                                      final String uuid) throws Exception {
         // two grapes? Who cares?!
         return get(user, uuid);
     }
 
     @Override
-    public Optional<ElasticIndexConfig> renameDocument(final ServiceUser user,
+    public Optional<ElasticIndexDocRefEntity> renameDocument(final ServiceUser user,
                                                        final String uuid,
                                                        final String name) throws Exception {
         try {
@@ -256,14 +264,14 @@ public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexConfi
     @Override
     public ExportDTO exportDocument(final ServiceUser user,
                                     final String uuid) throws Exception {
-        final Optional<ElasticIndexConfig> index = get(user, uuid);
+        final Optional<ElasticIndexDocRefEntity> index = get(user, uuid);
 
         if (index.isPresent()) {
-            final ElasticIndexConfig indexConfig = index.get();
+            final ElasticIndexDocRefEntity indexConfig = index.get();
 
             return ExportDTO
-                    .withValue(ElasticIndexConfig.INDEX_NAME, indexConfig.getIndexName())
-                    .value(ElasticIndexConfig.INDEXED_TYPE, indexConfig.getIndexedType())
+                    .withValue(ElasticIndexDocRefEntity.INDEX_NAME, indexConfig.getIndexName())
+                    .value(ElasticIndexDocRefEntity.INDEXED_TYPE, indexConfig.getIndexedType())
                     .build();
         } else {
             return ExportDTO.withMessage(String.format("Could not find document with %s", uuid)).build();
@@ -272,32 +280,32 @@ public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexConfi
     }
 
     @Override
-    public Optional<ElasticIndexConfig> importDocument(final ServiceUser user,
+    public Optional<ElasticIndexDocRefEntity> importDocument(final ServiceUser user,
                                                        final String uuid,
                                                        final String name,
                                                        final Boolean confirmed,
                                                        final Map<String, String> dataMap) throws Exception {
         if (confirmed) {
-            final Optional<ElasticIndexConfig> index = createDocument(user, uuid, name);
+            final Optional<ElasticIndexDocRefEntity> index = createDocument(user, uuid, name);
 
             if (index.isPresent()) {
-                final ElasticIndexConfig indexConfig = index.get();
-                indexConfig.setIndexName(dataMap.get(ElasticIndexConfig.INDEX_NAME));
-                indexConfig.setIndexedType(dataMap.get(ElasticIndexConfig.INDEXED_TYPE));
+                final ElasticIndexDocRefEntity indexConfig = index.get();
+                indexConfig.setIndexName(dataMap.get(ElasticIndexDocRefEntity.INDEX_NAME));
+                indexConfig.setIndexedType(dataMap.get(ElasticIndexDocRefEntity.INDEXED_TYPE));
                 return update(user, uuid, indexConfig);
             } else {
                 return Optional.empty();
             }
         } else {
-            final Optional<ElasticIndexConfig> existing = get(user, uuid);
+            final Optional<ElasticIndexDocRefEntity> existing = get(user, uuid);
             if (existing.isPresent()) {
                 return Optional.empty();
             } else {
-                return Optional.of(new ElasticIndexConfig.Builder()
+                return Optional.of(new ElasticIndexDocRefEntity.Builder()
                         .uuid(uuid)
                         .name(name)
-                        .indexName(dataMap.get(ElasticIndexConfig.INDEX_NAME))
-                        .indexedType(dataMap.get(ElasticIndexConfig.INDEXED_TYPE))
+                        .indexName(dataMap.get(ElasticIndexDocRefEntity.INDEX_NAME))
+                        .indexedType(dataMap.get(ElasticIndexDocRefEntity.INDEXED_TYPE))
                         .build());
             }
         }
