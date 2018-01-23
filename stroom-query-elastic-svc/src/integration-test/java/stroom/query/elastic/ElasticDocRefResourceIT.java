@@ -8,9 +8,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class ElasticIndexDocRefResourceIT
+public class ElasticDocRefResourceIT
         extends DocRefResourceIT<ElasticIndexDocRefEntity, Config, App> {
-    public ElasticIndexDocRefResourceIT() {
+    public ElasticDocRefResourceIT() {
         super(App.class, ElasticIndexDocRefEntity.class, ElasticIndexDocRefEntity.TYPE);
     }
 

@@ -11,16 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
-import stroom.query.api.v2.DocRef;
-import stroom.query.api.v2.ExpressionOperator;
-import stroom.query.api.v2.ExpressionTerm;
-import stroom.query.api.v2.Field;
-import stroom.query.api.v2.FlatResult;
-import stroom.query.api.v2.Query;
-import stroom.query.api.v2.ResultRequest;
-import stroom.query.api.v2.SearchRequest;
-import stroom.query.api.v2.SearchResponse;
-import stroom.query.api.v2.TableSettings;
+import stroom.query.api.v2.*;
 import stroom.query.audit.authorisation.DocumentPermission;
 import stroom.query.audit.client.DocRefResourceHttpClient;
 import stroom.query.audit.client.QueryResourceHttpClient;
@@ -28,7 +19,7 @@ import stroom.query.audit.logback.FifoLogbackAppender;
 import stroom.query.elastic.config.Config;
 import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
 import stroom.query.elastic.service.ElasticDocRefServiceImpl;
-import stroom.query.testing.AbstractIT;
+import stroom.query.testing.QueryResourceIT;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -39,20 +30,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
-public class QueryResourceIT extends AbstractIT<ElasticIndexDocRefEntity, Config, App> {
-    private static final Logger LOGGER = LoggerFactory.getLogger(QueryResourceIT.class);
+public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEntity, Config, App> {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ElasticQueryResourceIT.class);
 
-    protected QueryResourceHttpClient queryClient;
-    protected DocRefResourceHttpClient<ElasticIndexDocRefEntity> docRefClient;
-
-    public QueryResourceIT() {
+    public ElasticQueryResourceIT() {
         super(App.class, ElasticIndexDocRefEntity.class, ElasticIndexDocRefEntity.TYPE);
     }
 
@@ -62,64 +47,17 @@ public class QueryResourceIT extends AbstractIT<ElasticIndexDocRefEntity, Config
     private static final String DATA_INDEX_NAME = "shakespeare";
     private static final String DATA_INDEXED_TYPE = "line";
 
-    private BiFunction<ElasticIndexDocRefEntity, ExpressionOperator, SearchRequest> dataSearchRequest =
-            (elasticIndexConfig, expressionOperator) -> {
-                final String queryKey = UUID.randomUUID().toString();
-                return new SearchRequest.Builder()
-                        .query(new Query.Builder()
-                            .dataSource(getDocRef(elasticIndexConfig))
-                            .expression(expressionOperator)
-                            .build())
-                        .key(queryKey)
-                        .dateTimeLocale("en-gb")
-                        .incremental(true)
-                        .addResultRequests(new ResultRequest.Builder()
-                            .fetch(ResultRequest.Fetch.ALL)
-                            .resultStyle(ResultRequest.ResultStyle.FLAT)
-                            .componentId("componentId")
-                            .requestedRange(null)
-                            .addMappings(new TableSettings.Builder()
-                                .queryId(queryKey)
-                                .extractValues(false)
-                                .showDetail(false)
-                                .addFields(new Field.Builder()
-                                        .name(ShakespeareLine.PLAY_NAME)
-                                        .expression("${" + ShakespeareLine.PLAY_NAME + "}")
-                                        .build())
-                                .addFields(new Field.Builder()
-                                        .name(ShakespeareLine.LINE_ID)
-                                        .expression("${" + ShakespeareLine.LINE_ID + "}")
-                                        .build())
-                                .addFields(new Field.Builder()
-                                        .name(ShakespeareLine.SPEECH_NUMBER)
-                                        .expression("${" + ShakespeareLine.SPEECH_NUMBER + "}")
-                                        .build())
-                                .addFields(new Field.Builder()
-                                        .name(ShakespeareLine.SPEAKER)
-                                        .expression("${" + ShakespeareLine.SPEAKER + "}")
-                                        .build())
-                                .addFields(new Field.Builder()
-                                        .name(ShakespeareLine.TEXT_ENTRY)
-                                        .expression("${" + ShakespeareLine.TEXT_ENTRY + "}")
-                                        .build())
-                                .addMaxResults(10)
-                                .build())
-                            .build())
-                        .build();
-            };
-
     private static final int ELASTIC_HTTP_PORT = 9200;
     private static final String ELASTIC_DATA_FILE = "elastic/shakespeare.json";
     private static final String ELASTIC_DATA_MAPPINGS_FULL_FILE = "elastic/shakespeare.mappings.json";
-    private static final String PARENT_FOLDER_UUID = UUID.randomUUID().toString();
     
     @BeforeClass
-    public static void setupClass() {
+    public static void beforeQueryClass() {
         try {
             final Client httpClient = ClientBuilder.newClient(new ClientConfig().register(ClientResponse.class));
 
             final String ND_JSON = "application/x-ndjson";
-            final ClassLoader classLoader = QueryResourceIT.class.getClassLoader();
+            final ClassLoader classLoader = ElasticQueryResourceIT.class.getClassLoader();
 
             // Talk directly to Elastic Search to create a fresh populated index for us to connect to
 
@@ -168,28 +106,67 @@ public class QueryResourceIT extends AbstractIT<ElasticIndexDocRefEntity, Config
         }
     }
 
-    @Before
-    public void beforeTest() {
-
-        queryClient = new QueryResourceHttpClient(getAppHost());
-        docRefClient = new DocRefResourceHttpClient<>(getAppHost());
-        FifoLogbackAppender.popLogs();
+    @Override
+    protected ElasticIndexDocRefEntity getValidEntity(final DocRef docRef) {
+        return new ElasticIndexDocRefEntity.Builder()
+                .uuid(docRef.getUuid())
+                .name(DATA_INDEX_STROOM_NAME)
+                .indexName(DATA_INDEX_NAME)
+                .indexedType(DATA_INDEXED_TYPE)
+                .build();
     }
 
-    @Test
-    public void testGetDataSourceValid() throws Exception {
-        final ElasticIndexDocRefEntity elasticIndexConfig = createDataIndexDocRef();
+    @Override
+    protected SearchRequest getValidSearchRequest(final DocRef docRef,
+                                                  final ExpressionOperator expressionOperator,
+                                                  final OffsetRange offsetRange) {
+        final String queryKey = UUID.randomUUID().toString();
+        return new SearchRequest.Builder()
+                .query(new Query.Builder()
+                        .dataSource(docRef)
+                        .expression(expressionOperator)
+                        .build())
+                .key(queryKey)
+                .dateTimeLocale("en-gb")
+                .incremental(true)
+                .addResultRequests(new ResultRequest.Builder()
+                        .fetch(ResultRequest.Fetch.ALL)
+                        .resultStyle(ResultRequest.ResultStyle.FLAT)
+                        .componentId("componentId")
+                        .requestedRange(offsetRange)
+                        .addMappings(new TableSettings.Builder()
+                                .queryId(queryKey)
+                                .extractValues(false)
+                                .showDetail(false)
+                                .addFields(new Field.Builder()
+                                        .name(ShakespeareLine.PLAY_NAME)
+                                        .expression("${" + ShakespeareLine.PLAY_NAME + "}")
+                                        .build())
+                                .addFields(new Field.Builder()
+                                        .name(ShakespeareLine.LINE_ID)
+                                        .expression("${" + ShakespeareLine.LINE_ID + "}")
+                                        .build())
+                                .addFields(new Field.Builder()
+                                        .name(ShakespeareLine.SPEECH_NUMBER)
+                                        .expression("${" + ShakespeareLine.SPEECH_NUMBER + "}")
+                                        .build())
+                                .addFields(new Field.Builder()
+                                        .name(ShakespeareLine.SPEAKER)
+                                        .expression("${" + ShakespeareLine.SPEAKER + "}")
+                                        .build())
+                                .addFields(new Field.Builder()
+                                        .name(ShakespeareLine.TEXT_ENTRY)
+                                        .expression("${" + ShakespeareLine.TEXT_ENTRY + "}")
+                                        .build())
+                                .addMaxResults(10)
+                                .build())
+                        .build())
+                .build();
+    }
 
-        final Response response = queryClient.getDataSource(adminUser(), getDocRef(elasticIndexConfig));
-
-        assertEquals(HttpStatus.SC_OK, response.getStatus());
-
-        final String body = response.readEntity(String.class);
-
-        LOGGER.info("Data Source Body: " + body);
-        final DataSource result = jacksonObjectMapper.readValue(body, DataSource.class);
-
-        final Set<String> resultFieldNames = result.getFields().stream()
+    @Override
+    protected void assertValidDataSource(final DataSource dataSource) {
+        final Set<String> resultFieldNames = dataSource.getFields().stream()
                 .map(DataSourceField::getName)
                 .collect(Collectors.toSet());
 
@@ -198,9 +175,6 @@ public class QueryResourceIT extends AbstractIT<ElasticIndexDocRefEntity, Config
         assertTrue(resultFieldNames.contains(ShakespeareLine.SPEAKER));
         assertTrue(resultFieldNames.contains(ShakespeareLine.SPEECH_NUMBER));
         assertTrue(resultFieldNames.contains(ShakespeareLine.TEXT_ENTRY));
-
-        // Create, update, getDataSource
-        checkAuditLogs(3);
     }
 
     /**
@@ -228,14 +202,14 @@ public class QueryResourceIT extends AbstractIT<ElasticIndexDocRefEntity, Config
 
     @Test
     public void testSearchValid() throws Exception {
-        final ElasticIndexDocRefEntity elasticIndexConfig = createDataIndexDocRef();
+        final DocRef docRef = createDocument();
 
         final ExpressionOperator speakerFinder = new ExpressionOperator.Builder(ExpressionOperator.Op.AND)
                 .addTerm(ShakespeareLine.SPEAKER, ExpressionTerm.Condition.EQUALS, "WARWICK")
                 .addTerm(ShakespeareLine.TEXT_ENTRY, ExpressionTerm.Condition.CONTAINS, "pluck")
                 .build();
 
-        final SearchRequest searchRequest = dataSearchRequest.apply(elasticIndexConfig, speakerFinder);
+        final SearchRequest searchRequest = getValidSearchRequest(docRef, speakerFinder, null);
 
         final Response response = queryClient.search(adminUser(), searchRequest);
 
@@ -275,22 +249,23 @@ public class QueryResourceIT extends AbstractIT<ElasticIndexDocRefEntity, Config
     public void testSearchMissingDocRef() {
 
         // Create a random index config that is not registered with the system
-        final ElasticIndexDocRefEntity elasticIndexConfig = new ElasticIndexDocRefEntity.Builder()
+        final DocRef docRef = new DocRef.Builder()
                 .uuid(UUID.randomUUID().toString())
-                .indexName(UUID.randomUUID())
-                .indexedType(UUID.randomUUID())
+                .type(getDocRefType())
+                .name(UUID.randomUUID().toString())
                 .build();
-        giveDocumentPermission(adminUser(), elasticIndexConfig.getUuid(), DocumentPermission.READ);
+
+        // Give permission to this non existent document
+        giveDocumentPermission(adminUser(), docRef.getUuid(), DocumentPermission.READ);
 
         final ExpressionOperator speakerFinder = new ExpressionOperator.Builder(ExpressionOperator.Op.AND)
                 .addTerm("aKey", ExpressionTerm.Condition.EQUALS, "aValue")
                 .build();
 
-        final SearchRequest searchRequest = dataSearchRequest.apply(elasticIndexConfig, speakerFinder);
+        final SearchRequest searchRequest = getValidSearchRequest(docRef, speakerFinder, null);
         final Response response = queryClient.search(adminUser(), searchRequest);
 
         assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
-
 
         checkAuditLogs(1);
     }
@@ -302,67 +277,21 @@ public class QueryResourceIT extends AbstractIT<ElasticIndexDocRefEntity, Config
     @Test
     public void testSearchMissingIndex() throws Exception {
 
-        final ElasticIndexDocRefEntity elasticIndexConfig = new ElasticIndexDocRefEntity.Builder()
+        final DocRef docRef = createDocument(new ElasticIndexDocRefEntity.Builder()
                 .uuid(UUID.randomUUID().toString())
                 .indexName(UUID.randomUUID())
                 .indexedType(UUID.randomUUID())
-                .build();
-        giveFolderCreatePermission(adminUser(), PARENT_FOLDER_UUID);
-        giveDocumentPermission(adminUser(), elasticIndexConfig.getUuid(), DocumentPermission.READ);
-        giveDocumentPermission(adminUser(), elasticIndexConfig.getUuid(), DocumentPermission.UPDATE);
-
-        final Response createDocRefResponse = docRefClient.createDocument(adminUser(),
-                elasticIndexConfig.getUuid(),
-                elasticIndexConfig.getName(),
-                PARENT_FOLDER_UUID);
-        assertEquals(HttpStatus.SC_OK, createDocRefResponse.getStatus());
-        final Response updateIndexResponse = docRefClient.update(adminUser(),
-                elasticIndexConfig.getUuid(),
-                elasticIndexConfig);
-        assertEquals(HttpStatus.SC_OK, updateIndexResponse.getStatus());
+                .build());
 
         final ExpressionOperator speakerFinder = new ExpressionOperator.Builder(ExpressionOperator.Op.AND)
                 .addTerm("aKey", ExpressionTerm.Condition.EQUALS, "aValue")
                 .build();
 
-        final SearchRequest searchRequest = dataSearchRequest.apply(elasticIndexConfig, speakerFinder);
+        final SearchRequest searchRequest = getValidSearchRequest(docRef, speakerFinder, null);
         final Response response = queryClient.search(adminUser(), searchRequest);
 
         assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
 
         checkAuditLogs(3);
-    }
-
-    /**
-     * Shortcut function to create another DocRef that references the populated 'data' index.
-     * @return The ElasticIndexDocRefEntity representing the new DocRef
-     */
-    private ElasticIndexDocRefEntity createDataIndexDocRef() {
-        final String uuid = UUID.randomUUID().toString();
-
-        giveFolderCreatePermission(adminUser(), PARENT_FOLDER_UUID);
-        giveDocumentPermission(adminUser(), uuid, DocumentPermission.READ);
-        giveDocumentPermission(adminUser(), uuid, DocumentPermission.UPDATE);
-
-        final ElasticIndexDocRefEntity elasticIndexConfig = new ElasticIndexDocRefEntity.Builder()
-                .uuid(uuid)
-                .name(DATA_INDEX_STROOM_NAME)
-                .indexName(DATA_INDEX_NAME)
-                .indexedType(DATA_INDEXED_TYPE)
-                .build();
-
-        final Response createDocRefResponse = docRefClient.createDocument(adminUser(),
-                elasticIndexConfig.getUuid(),
-                elasticIndexConfig.getName(),
-                PARENT_FOLDER_UUID);
-        assertEquals(HttpStatus.SC_OK, createDocRefResponse.getStatus());
-
-        final Response updateIndexResponse =
-                docRefClient.update(adminUser(),
-                        elasticIndexConfig.getUuid(),
-                        elasticIndexConfig);
-        assertEquals(HttpStatus.SC_OK, updateIndexResponse.getStatus());
-
-        return elasticIndexConfig;
     }
 }

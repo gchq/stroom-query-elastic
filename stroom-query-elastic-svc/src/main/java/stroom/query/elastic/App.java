@@ -14,10 +14,12 @@ import org.glassfish.jersey.server.filter.RolesAllowedDynamicFeature;
 import stroom.query.audit.AuditedQueryBundle;
 import stroom.query.audit.authorisation.AuthorisationService;
 import stroom.query.audit.rest.AuditedDocRefResourceImpl;
+import stroom.query.audit.rest.AuditedQueryResourceImpl;
 import stroom.query.audit.security.RobustJwtAuthFilter;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.audit.security.TokenConfig;
 import stroom.query.audit.service.DocRefService;
+import stroom.query.audit.service.QueryService;
 import stroom.query.elastic.config.Config;
 import stroom.query.elastic.health.ElasticHealthCheck;
 import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
@@ -63,12 +65,24 @@ public class App extends Application<Config> {
         }
     }
 
+    public static final class AuditedElasticQueryResource extends AuditedQueryResourceImpl<ElasticIndexDocRefEntity> {
+
+        @Inject
+        public AuditedElasticQueryResource(final EventLoggingService eventLoggingService,
+                                           final QueryService service,
+                                           final AuthorisationService authorisationService,
+                                           final DocRefService<ElasticIndexDocRefEntity> docRefService) {
+            super(eventLoggingService, service, authorisationService, docRefService);
+        }
+    }
+
     private final AuditedQueryBundle auditedQueryBundle =
             new AuditedQueryBundle<>(
-                    ElasticQueryServiceImpl.class,
                     ElasticIndexDocRefEntity.class,
-                    AuditedElasticDocRefResource.class,
-                    ElasticDocRefServiceImpl.class);
+                    ElasticQueryServiceImpl.class,
+                    AuditedElasticQueryResource.class,
+                    ElasticDocRefServiceImpl.class,
+                    AuditedElasticDocRefResource.class);
 
     public static void main(String[] args) throws Exception {
         new App().run(args);

@@ -191,6 +191,12 @@ public class ElasticQueryServiceImpl implements QueryService {
         return Boolean.TRUE;
     }
 
+    @Override
+    public Optional<DocRef> getDocRefForQueryKey(final ServiceUser user,
+                                                 final QueryKey queryKey) throws Exception {
+        return Optional.empty();
+    }
+
     private QueryBuilder getQuery(final ExpressionItem item) {
         if (!item.enabled()) {
             return null;
