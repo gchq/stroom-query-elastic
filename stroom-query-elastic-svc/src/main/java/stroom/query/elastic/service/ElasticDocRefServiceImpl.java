@@ -57,6 +57,10 @@ public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexDocRe
                 final Object stroomName = searchResponse.getSource().get(DocRefEntity.NAME);
                 final Object indexName = searchResponse.getSource().get(ElasticIndexDocRefEntity.INDEX_NAME);
                 final Object indexedType = searchResponse.getSource().get(ElasticIndexDocRefEntity.INDEXED_TYPE);
+                final Object createUser = searchResponse.getSource().get(DocRefEntity.CREATE_USER);
+                final Object createTime = searchResponse.getSource().get(DocRefEntity.CREATE_TIME);
+                final Object updateUser = searchResponse.getSource().get(DocRefEntity.UPDATE_USER);
+                final Object updateTime = searchResponse.getSource().get(DocRefEntity.UPDATE_TIME);
 
                 if ((null != indexName) && (null != indexedType)) {
                     try {
@@ -77,6 +81,10 @@ public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexDocRe
                         .name((stroomName != null) ? stroomName.toString() : null)
                         .indexName(indexName)
                         .indexedType(indexedType)
+                        .createUser((createUser != null) ? createUser.toString() : null)
+                        .createTime((createTime != null) ? Long.valueOf(createTime.toString()) : null)
+                        .updateUser((updateUser != null) ? updateUser.toString() : null)
+                        .updateTime((updateTime != null) ? Long.valueOf(updateTime.toString()) : null)
                         .build());
             } else {
                 return Optional.empty();
@@ -264,19 +272,12 @@ public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexDocRe
     @Override
     public ExportDTO exportDocument(final ServiceUser user,
                                     final String uuid) throws Exception {
-        final Optional<ElasticIndexDocRefEntity> index = get(user, uuid);
-
-        if (index.isPresent()) {
-            final ElasticIndexDocRefEntity indexConfig = index.get();
-
-            return ExportDTO
-                    .withValue(ElasticIndexDocRefEntity.INDEX_NAME, indexConfig.getIndexName())
-                    .value(ElasticIndexDocRefEntity.INDEXED_TYPE, indexConfig.getIndexedType())
-                    .build();
-        } else {
-            return ExportDTO.withMessage(String.format("Could not find document with %s", uuid)).build();
-        }
-
+        return get(user, uuid)
+                .map(d -> ExportDTO
+                        .withValue(ElasticIndexDocRefEntity.INDEX_NAME, d.getIndexName())
+                        .value(ElasticIndexDocRefEntity.INDEXED_TYPE, d.getIndexedType())
+                        .build())
+                .orElse(ExportDTO.withMessage(String.format("Could not find document with %s", uuid)).build());
     }
 
     @Override

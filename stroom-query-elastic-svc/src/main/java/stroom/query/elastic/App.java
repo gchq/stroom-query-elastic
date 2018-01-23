@@ -76,13 +76,18 @@ public class App extends Application<Config> {
         }
     }
 
-    private final AuditedQueryBundle auditedQueryBundle =
+    private final AuditedQueryBundle<Config,
+            ElasticIndexDocRefEntity,
+            ElasticQueryServiceImpl,
+            AuditedElasticQueryResource,
+            ElasticDocRefServiceImpl,
+            AuditedElasticDocRefResource> auditedQueryBundle =
             new AuditedQueryBundle<>(
-                    ElasticIndexDocRefEntity.class,
-                    ElasticQueryServiceImpl.class,
-                    AuditedElasticQueryResource.class,
-                    ElasticDocRefServiceImpl.class,
-                    AuditedElasticDocRefResource.class);
+                            ElasticIndexDocRefEntity.class,
+                            ElasticQueryServiceImpl.class,
+                            AuditedElasticQueryResource.class,
+                            ElasticDocRefServiceImpl.class,
+                            AuditedElasticDocRefResource.class);
 
     public static void main(String[] args) throws Exception {
         new App().run(args);

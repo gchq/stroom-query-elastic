@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static io.netty.util.NetUtil.LOCALHOST;
 import static org.junit.Assert.*;
 
 public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEntity, Config, App> {
@@ -43,7 +44,6 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
 
     // This Config is for the valid elastic index, the index and doc ref will be created
     // as part of the class setup
-    private static final String DATA_INDEX_STROOM_NAME = "StroomShakespeare";
     private static final String DATA_INDEX_NAME = "shakespeare";
     private static final String DATA_INDEXED_TYPE = "line";
 
@@ -110,7 +110,7 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
     protected ElasticIndexDocRefEntity getValidEntity(final DocRef docRef) {
         return new ElasticIndexDocRefEntity.Builder()
                 .uuid(docRef.getUuid())
-                .name(DATA_INDEX_STROOM_NAME)
+                .name(UUID.randomUUID().toString())
                 .indexName(DATA_INDEX_NAME)
                 .indexedType(DATA_INDEXED_TYPE)
                 .build();

@@ -95,11 +95,11 @@ public class ElasticQueryServiceImpl implements QueryService {
                             if (meta instanceof Map) {
                                 final Map<?, ?> metaAsMap = (Map) meta;
                                 metaAsMap.forEach((metaProp, metaPropValue) -> {
-                                    final DataSourceField dataSourceField = new DataSourceField(
-                                            DataSourceField.DataSourceFieldType.FIELD,
-                                            fieldName,
-                                            true,
-                                            Arrays.asList(
+                                    final DataSourceField dataSourceField = new DataSourceField.Builder()
+                                            .type(DataSourceField.DataSourceFieldType.FIELD)
+                                            .name(fieldName)
+                                            .queryable(true)
+                                            .addConditions(
                                                     ExpressionTerm.Condition.EQUALS,
                                                     ExpressionTerm.Condition.CONTAINS,
                                                     ExpressionTerm.Condition.GREATER_THAN,
@@ -108,7 +108,7 @@ public class ElasticQueryServiceImpl implements QueryService {
                                                     ExpressionTerm.Condition.LESS_THAN_OR_EQUAL_TO,
                                                     ExpressionTerm.Condition.BETWEEN,
                                                     ExpressionTerm.Condition.IN
-                                            ));
+                                            ).build();
                                     fields.add(dataSourceField);
                                 });
                             }
