@@ -276,6 +276,7 @@ public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexDocRe
                 .map(d -> ExportDTO
                         .withValue(ElasticIndexDocRefEntity.INDEX_NAME, d.getIndexName())
                         .value(ElasticIndexDocRefEntity.INDEXED_TYPE, d.getIndexedType())
+                        .value(DocRefEntity.NAME, d.getName())
                         .build())
                 .orElse(ExportDTO.withMessage(String.format("Could not find document with %s", uuid)).build());
     }
