@@ -52,7 +52,7 @@ ext.versions = [
     elasticSearch: '5.6.3',
 
     //same version for both stroom-query-api and stroom-query-common
-    stroomQuery: 'SNAPSHOT',
+    stroomQuery: 'v2.0.0-alpha.24',
     stroomExpression: 'v1.0.1',
 ]
 
