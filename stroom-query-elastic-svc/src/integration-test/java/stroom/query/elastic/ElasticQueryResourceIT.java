@@ -1,25 +1,36 @@
 package stroom.query.elastic;
 
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import io.dropwizard.testing.junit.DropwizardAppRule;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientResponse;
-import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
-import stroom.query.api.v2.*;
+import stroom.query.api.v2.DocRef;
+import stroom.query.api.v2.ExpressionOperator;
+import stroom.query.api.v2.ExpressionTerm;
+import stroom.query.api.v2.Field;
+import stroom.query.api.v2.FlatResult;
+import stroom.query.api.v2.OffsetRange;
+import stroom.query.api.v2.Query;
+import stroom.query.api.v2.ResultRequest;
+import stroom.query.api.v2.SearchRequest;
+import stroom.query.api.v2.SearchResponse;
+import stroom.query.api.v2.TableSettings;
 import stroom.query.audit.authorisation.DocumentPermission;
-import stroom.query.audit.client.DocRefResourceHttpClient;
-import stroom.query.audit.client.QueryResourceHttpClient;
-import stroom.query.audit.logback.FifoLogbackAppender;
 import stroom.query.elastic.config.Config;
 import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
 import stroom.query.elastic.service.ElasticDocRefServiceImpl;
+import stroom.query.testing.DropwizardAppWithClientsRule;
 import stroom.query.testing.QueryResourceIT;
+import stroom.query.testing.StroomAuthenticationRule;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -32,14 +43,27 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static io.netty.util.NetUtil.LOCALHOST;
-import static org.junit.Assert.*;
+import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEntity, Config, App> {
+public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEntity, Config> {
     private static final Logger LOGGER = LoggerFactory.getLogger(ElasticQueryResourceIT.class);
 
+    @ClassRule
+    public static final DropwizardAppWithClientsRule<Config> appRule =
+            new DropwizardAppWithClientsRule<>(App.class, resourceFilePath("config.yml"));
+
+    @ClassRule
+    public static StroomAuthenticationRule authRule =
+            new StroomAuthenticationRule(WireMockConfiguration.options().port(10080), ElasticIndexDocRefEntity.TYPE);
+
     public ElasticQueryResourceIT() {
-        super(App.class, ElasticIndexDocRefEntity.class, ElasticIndexDocRefEntity.TYPE);
+        super(ElasticIndexDocRefEntity.class,
+                ElasticIndexDocRefEntity.TYPE,
+                appRule,
+                authRule);
     }
 
     // This Config is for the valid elastic index, the index and doc ref will be created
@@ -47,7 +71,7 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
     private static final String DATA_INDEX_NAME = "shakespeare";
     private static final String DATA_INDEXED_TYPE = "line";
 
-    private static final int ELASTIC_HTTP_PORT = 9200;
+    private static final int ELASTIC_HTTP_PORT = 19200;
     private static final String ELASTIC_DATA_FILE = "elastic/shakespeare.json";
     private static final String ELASTIC_DATA_MAPPINGS_FULL_FILE = "elastic/shakespeare.mappings.json";
     
@@ -62,14 +86,14 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
             // Talk directly to Elastic Search to create a fresh populated index for us to connect to
 
             // Delete any existing 'stroom doc ref' index
-            final String elasticDocRefIndexUrl = String.format("http://%s:%d/%s", LOCALHOST, ELASTIC_HTTP_PORT, ElasticDocRefServiceImpl.STROOM_INDEX_NAME);
+            final String elasticDocRefIndexUrl = String.format("http://localhost:%d/%s", ELASTIC_HTTP_PORT, ElasticDocRefServiceImpl.STROOM_INDEX_NAME);
             httpClient.target(elasticDocRefIndexUrl)
                     .request()
                     .header("Content-Type", ND_JSON)
                     .delete(); // response may be 404 if first time run
 
             // Delete any existing 'data' index
-            final String elasticDataIndexUrl = String.format("http://%s:%d/%s", LOCALHOST, ELASTIC_HTTP_PORT, DATA_INDEX_NAME);
+            final String elasticDataIndexUrl = String.format("http://localhost:%d/%s", ELASTIC_HTTP_PORT, DATA_INDEX_NAME);
             httpClient.target(elasticDataIndexUrl)
                     .request()
                     .header("Content-Type", ND_JSON)
@@ -89,7 +113,7 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
 
             // Post Data
             final String dataJson = IOUtils.toString(classLoader.getResourceAsStream(ELASTIC_DATA_FILE));
-            final String putDataUrl = String.format("http://%s:%d/%s/_bulk?pretty", LOCALHOST, ELASTIC_HTTP_PORT, DATA_INDEXED_TYPE);
+            final String putDataUrl = String.format("http://localhost:%d/%s/_bulk?pretty", ELASTIC_HTTP_PORT, DATA_INDEXED_TYPE);
             final Response putDataResponse = httpClient
                     .target(putDataUrl)
                     .request()
@@ -187,17 +211,17 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
         // Create a random index config that is not registered with the system
         final DocRef elasticIndexConfig = new DocRef.Builder()
                 .uuid(UUID.randomUUID().toString())
-                .type(getDocRefType())
+                .type(ElasticIndexDocRefEntity.TYPE)
                 .name("DoesNotExist")
                 .build();
-        giveDocumentPermission(adminUser(), elasticIndexConfig.getUuid(), DocumentPermission.READ);
+        authRule.giveDocumentPermission(authRule.adminUser(), elasticIndexConfig.getUuid(), DocumentPermission.READ);
 
-        final Response response = queryClient.getDataSource(adminUser(), elasticIndexConfig);
+        final Response response = queryClient.getDataSource(authRule.adminUser(), elasticIndexConfig);
 
         assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
 
         // Get
-        checkAuditLogs(1);
+        auditLogRule.checkAuditLogs(1);
     }
 
     @Test
@@ -211,15 +235,11 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
 
         final SearchRequest searchRequest = getValidSearchRequest(docRef, speakerFinder, null);
 
-        final Response response = queryClient.search(adminUser(), searchRequest);
+        final Response response = queryClient.search(authRule.adminUser(), searchRequest);
 
         assertEquals(HttpStatus.SC_OK, response.getStatus());
 
-        final String body = response.readEntity(String.class);
-
-        LOGGER.info("BODY - " + body);
-
-        final SearchResponse searchResponse = jacksonObjectMapper.readValue(body, SearchResponse.class);
+        final SearchResponse searchResponse = response.readEntity(SearchResponse.class);
 
         final List<ShakespeareLine> lines = searchResponse.getResults().stream()
                 .map(r -> (FlatResult) r)
@@ -238,7 +258,7 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
         assertEquals("4178", lines.get(0).getLineId());
 
         // Create DocRef, Update Index, Get
-        checkAuditLogs(3);
+        auditLogRule.checkAuditLogs(3);
     }
 
     /**
@@ -251,23 +271,23 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
         // Create a random index config that is not registered with the system
         final DocRef docRef = new DocRef.Builder()
                 .uuid(UUID.randomUUID().toString())
-                .type(getDocRefType())
+                .type(ElasticIndexDocRefEntity.TYPE)
                 .name(UUID.randomUUID().toString())
                 .build();
 
         // Give permission to this non existent document
-        giveDocumentPermission(adminUser(), docRef.getUuid(), DocumentPermission.READ);
+        authRule.giveDocumentPermission(authRule.adminUser(), docRef.getUuid(), DocumentPermission.READ);
 
         final ExpressionOperator speakerFinder = new ExpressionOperator.Builder(ExpressionOperator.Op.AND)
                 .addTerm("aKey", ExpressionTerm.Condition.EQUALS, "aValue")
                 .build();
 
         final SearchRequest searchRequest = getValidSearchRequest(docRef, speakerFinder, null);
-        final Response response = queryClient.search(adminUser(), searchRequest);
+        final Response response = queryClient.search(authRule.adminUser(), searchRequest);
 
         assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
 
-        checkAuditLogs(1);
+        auditLogRule.checkAuditLogs(1);
     }
 
     /**
@@ -288,10 +308,10 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
                 .build();
 
         final SearchRequest searchRequest = getValidSearchRequest(docRef, speakerFinder, null);
-        final Response response = queryClient.search(adminUser(), searchRequest);
+        final Response response = queryClient.search(authRule.adminUser(), searchRequest);
 
         assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
 
-        checkAuditLogs(3);
+        auditLogRule.checkAuditLogs(3);
     }
 }

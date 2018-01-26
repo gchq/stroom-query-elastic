@@ -33,7 +33,6 @@ import javax.servlet.FilterRegistration;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class App extends Application<Config> {

@@ -1,17 +1,35 @@
 package stroom.query.elastic;
 
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import io.dropwizard.testing.junit.DropwizardAppRule;
+import org.junit.ClassRule;
 import stroom.query.elastic.config.Config;
 import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
 import stroom.query.testing.DocRefResourceIT;
+import stroom.query.testing.DropwizardAppWithClientsRule;
+import stroom.query.testing.StroomAuthenticationRule;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
+
 public class ElasticDocRefResourceIT
-        extends DocRefResourceIT<ElasticIndexDocRefEntity, Config, App> {
+        extends DocRefResourceIT<ElasticIndexDocRefEntity, Config> {
+
+    @ClassRule
+    public static final DropwizardAppWithClientsRule<Config> appRule =
+            new DropwizardAppWithClientsRule<>(App.class, resourceFilePath("config.yml"));
+
+    @ClassRule
+    public static StroomAuthenticationRule authRule =
+            new StroomAuthenticationRule(WireMockConfiguration.options().port(10080), ElasticIndexDocRefEntity.TYPE);
+
     public ElasticDocRefResourceIT() {
-        super(App.class, ElasticIndexDocRefEntity.class, ElasticIndexDocRefEntity.TYPE);
+        super(ElasticIndexDocRefEntity.class,
+                appRule,
+                authRule);
     }
 
     @Override
