@@ -21,5 +21,5 @@
 # Exclude tests because we want this to be fast. I guess you'd better test the build before releasing.
 ./gradlew clean build shadowJar -x test -x integrationTest
 
-docker build --tag gchq/stroom-query-elastic-service:SNAPSHOT stroom-query-elastic-svc/.
-docker build --tag gchq/stroom-query-elastic-ui:SNAPSHOT stroom-query-elastic-ui/.
+docker build --tag gchq/stroom-query-elastic-service:LOCAL stroom-query-elastic-svc/.
+docker build --tag gchq/stroom-query-elastic-ui:LOCAL stroom-query-elastic-ui/.
