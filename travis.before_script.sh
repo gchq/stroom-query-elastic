@@ -22,7 +22,7 @@ else
     export JAVA_OPTS=-Xmx1024m
 
     echo "Start all the services we need to run the integration tests in stroom"
-    docker-compose -f stroom-query-elastic-svc/src/integration-test/resources/elasticsearch-test.yml up -d
+    docker-compose -f elasticsearch-test.yml up -d
 fi
 
 exit 0
