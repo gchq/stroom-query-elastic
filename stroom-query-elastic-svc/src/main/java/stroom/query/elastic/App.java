@@ -2,22 +2,16 @@ package stroom.query.elastic;
 
 import event.logging.EventLoggingService;
 import io.dropwizard.Application;
-import io.dropwizard.auth.AuthDynamicFeature;
-import io.dropwizard.auth.AuthValueFactoryProvider;
 import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.elasticsearch.common.collect.Tuple;
-import org.glassfish.jersey.server.filter.RolesAllowedDynamicFeature;
 import stroom.query.audit.AuditedQueryBundle;
 import stroom.query.audit.authorisation.AuthorisationService;
 import stroom.query.audit.rest.AuditedDocRefResourceImpl;
 import stroom.query.audit.rest.AuditedQueryResourceImpl;
-import stroom.query.audit.security.RobustJwtAuthFilter;
-import stroom.query.audit.security.ServiceUser;
-import stroom.query.audit.security.TokenConfig;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.audit.service.QueryService;
 import stroom.query.elastic.config.Config;
@@ -94,10 +88,6 @@ public class App extends Application<Config> {
 
     @Override
     public void run(final Config configuration, final Environment environment) {
-
-        // And we want to configure authentication before the resources
-        configureAuthentication(configuration.getTokenConfig(), environment);
-
         environment.healthChecks().register(
                 "Elastic",
                 new ElasticHealthCheck(transportClientBundle.getTransportClient())
@@ -124,17 +114,7 @@ public class App extends Application<Config> {
 
     }
 
-    private static void configureAuthentication(final TokenConfig tokenConfig,
-                                                final Environment environment) {
-        environment.jersey().register(
-                new AuthDynamicFeature(
-                        new RobustJwtAuthFilter(tokenConfig)
-                ));
-        environment.jersey().register(new AuthValueFactoryProvider.Binder<>(ServiceUser.class));
-        environment.jersey().register(RolesAllowedDynamicFeature.class);
-    }
-
-    private static void configureCors(Environment environment) {
+    private static void configureCors(final Environment environment) {
         FilterRegistration.Dynamic cors = environment.servlets().addFilter("CORS", CrossOriginFilter.class);
         cors.addMappingForUrlPatterns(EnumSet.allOf(DispatcherType.class), true, new String[]{"/*"});
         cors.setInitParameter("allowedMethods", "GET,PUT,POST,DELETE,OPTIONS");

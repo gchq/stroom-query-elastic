@@ -1,8 +1,8 @@
-package stroom.query.elastic;
+package stroom.query.elastic.auth;
 
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import io.dropwizard.testing.junit.DropwizardAppRule;
 import org.junit.ClassRule;
+import stroom.query.elastic.App;
 import stroom.query.elastic.config.Config;
 import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
 import stroom.query.testing.DocRefResourceIT;
@@ -20,7 +20,7 @@ public class ElasticDocRefResourceIT
 
     @ClassRule
     public static final DropwizardAppWithClientsRule<Config> appRule =
-            new DropwizardAppWithClientsRule<>(App.class, resourceFilePath("config.yml"));
+            new DropwizardAppWithClientsRule<>(App.class, resourceFilePath("config_auth.yml"));
 
     @ClassRule
     public static StroomAuthenticationRule authRule =

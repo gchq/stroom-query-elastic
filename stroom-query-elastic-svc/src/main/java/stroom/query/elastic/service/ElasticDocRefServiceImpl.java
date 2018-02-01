@@ -1,6 +1,5 @@
 package stroom.query.elastic.service;
 
-import org.elasticsearch.action.admin.indices.get.GetIndexResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.index.IndexNotFoundException;
@@ -47,7 +46,7 @@ public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexDocRe
 
     @Override
     public Optional<ElasticIndexDocRefEntity> get(final ServiceUser user,
-                                            final String uuid) throws Exception {
+                                                  final String uuid) throws Exception {
         try {
             final GetResponse searchResponse = client
                     .prepareGet(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, uuid)
@@ -64,15 +63,13 @@ public class ElasticDocRefServiceImpl implements DocRefService<ElasticIndexDocRe
 
                 if ((null != indexName) && (null != indexedType)) {
                     try {
-                        final GetIndexResponse getIndexResponse = client.admin().indices()
+                        client.admin().indices()
                                 .prepareGetIndex()
                                 .addIndices(indexName.toString())
                                 .addTypes(indexedType.toString())
                                 .get();
-
-                        LOGGER.info("Mappings Returned " + getIndexResponse);
                     } catch (Exception e) {
-                        LOGGER.warn(String.format("Could not get mappings for index %s", indexName));
+                        LOGGER.debug(String.format("Could not get mappings for index %s", indexName));
                     }
                 }
 

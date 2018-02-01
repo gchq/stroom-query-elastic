@@ -36,7 +36,6 @@ token:
   jwsIssuer: stroom
   algorithm: RS256
 
-
 authorisationService:
   url: http://localhost:10080/api/authorisation/v1
   isAuthorisedPath: /isAuthorised

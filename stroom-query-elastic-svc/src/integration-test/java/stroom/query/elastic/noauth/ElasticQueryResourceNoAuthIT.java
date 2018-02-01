@@ -1,7 +1,5 @@
-package stroom.query.elastic;
+package stroom.query.elastic.noauth;
 
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import io.dropwizard.testing.junit.DropwizardAppRule;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
 import org.glassfish.jersey.client.ClientConfig;
@@ -24,13 +22,16 @@ import stroom.query.api.v2.ResultRequest;
 import stroom.query.api.v2.SearchRequest;
 import stroom.query.api.v2.SearchResponse;
 import stroom.query.api.v2.TableSettings;
-import stroom.query.audit.authorisation.DocumentPermission;
+import stroom.query.audit.rest.AuditedDocRefResourceImpl;
+import stroom.query.audit.rest.AuditedQueryResourceImpl;
+import stroom.query.audit.security.NoAuthValueFactoryProvider;
+import stroom.query.elastic.App;
+import stroom.query.elastic.ShakespeareLine;
 import stroom.query.elastic.config.Config;
 import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
 import stroom.query.elastic.service.ElasticDocRefServiceImpl;
 import stroom.query.testing.DropwizardAppWithClientsRule;
-import stroom.query.testing.QueryResourceIT;
-import stroom.query.testing.StroomAuthenticationRule;
+import stroom.query.testing.QueryResourceNoAuthIT;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -47,23 +48,19 @@ import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static stroom.query.testing.FifoLogbackRule.containsAllOf;
 
-public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEntity, Config> {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ElasticQueryResourceIT.class);
+public class ElasticQueryResourceNoAuthIT extends QueryResourceNoAuthIT<ElasticIndexDocRefEntity, Config> {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ElasticQueryResourceNoAuthIT.class);
 
     @ClassRule
     public static final DropwizardAppWithClientsRule<Config> appRule =
-            new DropwizardAppWithClientsRule<>(App.class, resourceFilePath("config.yml"));
+            new DropwizardAppWithClientsRule<>(App.class, resourceFilePath("config_noauth.yml"));
 
-    @ClassRule
-    public static StroomAuthenticationRule authRule =
-            new StroomAuthenticationRule(WireMockConfiguration.options().port(10080), ElasticIndexDocRefEntity.TYPE);
-
-    public ElasticQueryResourceIT() {
+    public ElasticQueryResourceNoAuthIT() {
         super(ElasticIndexDocRefEntity.class,
                 ElasticIndexDocRefEntity.TYPE,
-                appRule,
-                authRule);
+                appRule);
     }
 
     // This Config is for the valid elastic index, the index and doc ref will be created
@@ -81,7 +78,7 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
             final Client httpClient = ClientBuilder.newClient(new ClientConfig().register(ClientResponse.class));
 
             final String ND_JSON = "application/x-ndjson";
-            final ClassLoader classLoader = ElasticQueryResourceIT.class.getClassLoader();
+            final ClassLoader classLoader = ElasticQueryResourceNoAuthIT.class.getClassLoader();
 
             // Talk directly to Elastic Search to create a fresh populated index for us to connect to
 
@@ -214,28 +211,31 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
                 .type(ElasticIndexDocRefEntity.TYPE)
                 .name("DoesNotExist")
                 .build();
-        authRule.giveDocumentPermission(authRule.adminUser(), elasticIndexConfig.getUuid(), DocumentPermission.READ);
 
-        final Response response = queryClient.getDataSource(authRule.adminUser(), elasticIndexConfig);
+        final Response response = queryClient.getDataSource(NoAuthValueFactoryProvider.ADMIN_USER, elasticIndexConfig);
 
         assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
 
         // Get
-        auditLogRule.checkAuditLogs(1);
+        auditLogRule.check()
+                .thereAreAtLeast(1)
+                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.GET_DATA_SOURCE, elasticIndexConfig.getUuid()));
     }
 
     @Test
-    public void testSearchValid() throws Exception {
+    public void testSearchValid() {
         final DocRef docRef = createDocument();
 
+        final String SPEAKER_TERM = "WARWICK";
+        final String TEXT_TERM = "pluck";
         final ExpressionOperator speakerFinder = new ExpressionOperator.Builder(ExpressionOperator.Op.AND)
-                .addTerm(ShakespeareLine.SPEAKER, ExpressionTerm.Condition.EQUALS, "WARWICK")
-                .addTerm(ShakespeareLine.TEXT_ENTRY, ExpressionTerm.Condition.CONTAINS, "pluck")
+                .addTerm(ShakespeareLine.SPEAKER, ExpressionTerm.Condition.EQUALS, SPEAKER_TERM)
+                .addTerm(ShakespeareLine.TEXT_ENTRY, ExpressionTerm.Condition.CONTAINS, TEXT_TERM)
                 .build();
 
         final SearchRequest searchRequest = getValidSearchRequest(docRef, speakerFinder, null);
 
-        final Response response = queryClient.search(authRule.adminUser(), searchRequest);
+        final Response response = queryClient.search(NoAuthValueFactoryProvider.ADMIN_USER, searchRequest);
 
         assertEquals(HttpStatus.SC_OK, response.getStatus());
 
@@ -258,7 +258,17 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
         assertEquals("4178", lines.get(0).getLineId());
 
         // Create DocRef, Update Index, Get
-        auditLogRule.checkAuditLogs(3);
+
+        auditLogRule.check()
+                .thereAreAtLeast(3)
+                .containsOrdered(containsAllOf(AuditedDocRefResourceImpl.CREATE_DOC_REF, docRef.getUuid()))
+                .containsOrdered(containsAllOf(AuditedDocRefResourceImpl.UPDATE_DOC_REF, docRef.getUuid()))
+                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_SEARCH,
+                        docRef.getUuid(),
+                        ShakespeareLine.SPEAKER,
+                        SPEAKER_TERM,
+                        ShakespeareLine.TEXT_ENTRY,
+                        TEXT_TERM));
     }
 
     /**
@@ -275,19 +285,23 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
                 .name(UUID.randomUUID().toString())
                 .build();
 
-        // Give permission to this non existent document
-        authRule.giveDocumentPermission(authRule.adminUser(), docRef.getUuid(), DocumentPermission.READ);
-
+        final String TERM_KEY = "aKey";
+        final String TERM_VALUE = "aValue";
         final ExpressionOperator speakerFinder = new ExpressionOperator.Builder(ExpressionOperator.Op.AND)
-                .addTerm("aKey", ExpressionTerm.Condition.EQUALS, "aValue")
+                .addTerm(TERM_KEY, ExpressionTerm.Condition.EQUALS, TERM_VALUE)
                 .build();
 
         final SearchRequest searchRequest = getValidSearchRequest(docRef, speakerFinder, null);
-        final Response response = queryClient.search(authRule.adminUser(), searchRequest);
+        final Response response = queryClient.search(NoAuthValueFactoryProvider.ADMIN_USER, searchRequest);
 
         assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
 
-        auditLogRule.checkAuditLogs(1);
+        auditLogRule.check()
+                .thereAreAtLeast(1)
+                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_SEARCH,
+                        docRef.getUuid(),
+                        TERM_KEY,
+                        TERM_VALUE));
     }
 
     /**
@@ -295,7 +309,7 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
      * a docRef that exists, but the index does not exist.
      */
     @Test
-    public void testSearchMissingIndex() throws Exception {
+    public void testSearchMissingIndex() {
 
         final DocRef docRef = createDocument(new ElasticIndexDocRefEntity.Builder()
                 .uuid(UUID.randomUUID().toString())
@@ -303,15 +317,24 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
                 .indexedType(UUID.randomUUID())
                 .build());
 
+        final String TERM_KEY = "aKey";
+        final String TERM_VALUE = "aValue";
         final ExpressionOperator speakerFinder = new ExpressionOperator.Builder(ExpressionOperator.Op.AND)
-                .addTerm("aKey", ExpressionTerm.Condition.EQUALS, "aValue")
+                .addTerm(TERM_KEY, ExpressionTerm.Condition.EQUALS, TERM_VALUE)
                 .build();
 
         final SearchRequest searchRequest = getValidSearchRequest(docRef, speakerFinder, null);
-        final Response response = queryClient.search(authRule.adminUser(), searchRequest);
+        final Response response = queryClient.search(NoAuthValueFactoryProvider.ADMIN_USER, searchRequest);
 
         assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
 
-        auditLogRule.checkAuditLogs(3);
+        auditLogRule.check()
+                .thereAreAtLeast(3)
+                .containsOrdered(containsAllOf(AuditedDocRefResourceImpl.CREATE_DOC_REF, docRef.getUuid()))
+                .containsOrdered(containsAllOf(AuditedDocRefResourceImpl.UPDATE_DOC_REF, docRef.getUuid()))
+                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_SEARCH,
+                        docRef.getUuid(),
+                        TERM_KEY,
+                        TERM_VALUE));
     }
 }
