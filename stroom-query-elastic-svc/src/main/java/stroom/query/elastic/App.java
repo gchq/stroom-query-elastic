@@ -1,19 +1,17 @@
 package stroom.query.elastic;
 
-import event.logging.EventLoggingService;
 import io.dropwizard.Application;
 import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
+import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.collect.Tuple;
+import org.glassfish.hk2.api.TypeLiteral;
+import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import stroom.query.audit.AuditedQueryBundle;
-import stroom.query.audit.authorisation.AuthorisationService;
-import stroom.query.audit.rest.AuditedDocRefResourceImpl;
-import stroom.query.audit.rest.AuditedQueryResourceImpl;
 import stroom.query.audit.service.DocRefService;
-import stroom.query.audit.service.QueryService;
 import stroom.query.elastic.config.Config;
 import stroom.query.elastic.health.ElasticHealthCheck;
 import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
@@ -21,7 +19,6 @@ import stroom.query.elastic.service.ElasticDocRefServiceImpl;
 import stroom.query.elastic.service.ElasticQueryServiceImpl;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 
-import javax.inject.Inject;
 import javax.servlet.DispatcherType;
 import javax.servlet.FilterRegistration;
 import java.util.Arrays;
@@ -48,39 +45,14 @@ public class App extends Application<Config> {
         }
     };
 
-    public static final class AuditedElasticDocRefResource extends AuditedDocRefResourceImpl<ElasticIndexDocRefEntity> {
-
-        @Inject
-        public AuditedElasticDocRefResource(final DocRefService<ElasticIndexDocRefEntity> service,
-                                            final EventLoggingService eventLoggingService,
-                                            final AuthorisationService authorisationService) {
-            super(service, eventLoggingService, authorisationService);
-        }
-    }
-
-    public static final class AuditedElasticQueryResource extends AuditedQueryResourceImpl<ElasticIndexDocRefEntity> {
-
-        @Inject
-        public AuditedElasticQueryResource(final EventLoggingService eventLoggingService,
-                                           final QueryService service,
-                                           final AuthorisationService authorisationService,
-                                           final DocRefService<ElasticIndexDocRefEntity> docRefService) {
-            super(eventLoggingService, service, authorisationService, docRefService);
-        }
-    }
-
     private final AuditedQueryBundle<Config,
             ElasticIndexDocRefEntity,
             ElasticQueryServiceImpl,
-            AuditedElasticQueryResource,
-            ElasticDocRefServiceImpl,
-            AuditedElasticDocRefResource> auditedQueryBundle =
+            ElasticDocRefServiceImpl> auditedQueryBundle =
             new AuditedQueryBundle<>(
                             ElasticIndexDocRefEntity.class,
                             ElasticQueryServiceImpl.class,
-                            AuditedElasticQueryResource.class,
-                            ElasticDocRefServiceImpl.class,
-                            AuditedElasticDocRefResource.class);
+                            ElasticDocRefServiceImpl.class);
 
     public static void main(String[] args) throws Exception {
         new App().run(args);
@@ -93,7 +65,13 @@ public class App extends Application<Config> {
                 new ElasticHealthCheck(transportClientBundle.getTransportClient())
         );
         environment.jersey().register(
-                new Module(transportClientBundle.getTransportClient())
+                new AbstractBinder() {
+                    @Override
+                    protected void configure() {
+                        bind(transportClientBundle.getTransportClient()).to(TransportClient.class);
+                        bind(ElasticDocRefServiceImpl.class).to(new TypeLiteral<DocRefService<ElasticIndexDocRefEntity>>() {});
+                    }
+                }
         );
 
         configureCors(environment);
