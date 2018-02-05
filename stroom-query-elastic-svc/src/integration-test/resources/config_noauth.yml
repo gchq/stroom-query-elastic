@@ -5,10 +5,10 @@ server:
   applicationContextPath: /
   applicationConnectors:
     - type: http
-      port: 8299
+      port: 18299
   adminConnectors:
     - type: http
-      port: 8300
+      port: 18300
 
 logging:
   level: ERROR
