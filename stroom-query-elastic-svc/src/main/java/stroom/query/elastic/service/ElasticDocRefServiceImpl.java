@@ -8,8 +8,8 @@ import org.slf4j.LoggerFactory;
 import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.DocRefInfo;
 import stroom.query.audit.ExportDTO;
-import stroom.query.audit.security.ServiceUser;
 import stroom.query.audit.model.DocRefEntity;
+import stroom.query.audit.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
 
