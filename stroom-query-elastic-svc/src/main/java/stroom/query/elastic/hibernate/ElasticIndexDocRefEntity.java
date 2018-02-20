@@ -1,6 +1,6 @@
 package stroom.query.elastic.hibernate;
 
-import stroom.query.audit.service.DocRefEntity;
+import stroom.query.audit.model.DocRefEntity;
 
 public class ElasticIndexDocRefEntity extends DocRefEntity {
 

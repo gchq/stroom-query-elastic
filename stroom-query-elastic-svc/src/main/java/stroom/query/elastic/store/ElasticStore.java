@@ -3,6 +3,7 @@ package stroom.query.elastic.store;
 import stroom.mapreduce.v2.UnsafePairQueue;
 import stroom.query.api.v2.TableSettings;
 import stroom.query.common.v2.CompiledSorter;
+import stroom.query.common.v2.CompletionListener;
 import stroom.query.common.v2.Coprocessor;
 import stroom.query.common.v2.CoprocessorSettingsMap;
 import stroom.query.common.v2.Data;
@@ -88,6 +89,11 @@ public class ElasticStore implements Store {
     @Override
     public StoreSize getStoreSize() {
         return storeSize;
+    }
+
+    @Override
+    public void registerCompletionListener(CompletionListener completionListener) {
+
     }
 
     public void process(CoprocessorSettingsMap coprocessorSettingsMap) {
