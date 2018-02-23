@@ -21,7 +21,7 @@ if [ -n "$TRAVIS_TAG" ]; then
 
     QUERY_ELASTIC_UI_TAG="gchq/stroom-query-elastic-ui:${TRAVIS_TAG}"
     echo "Building stroom-query-elastic-ui with tag ${QUERY_ELASTIC_UI_TAG}"
-    ./stroom-query-elastic-ui/docker/build ${TRAVIS_TAG}.
+    ./stroom-query-elastic-ui/docker/build.sh ${TRAVIS_TAG}.
     echo "Pushing ${QUERY_ELASTIC_UI_TAG}"
     docker push ${QUERY_ELASTIC_UI_TAG}
 else
