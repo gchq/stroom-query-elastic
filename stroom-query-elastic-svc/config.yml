@@ -30,7 +30,8 @@ logging:
 
 elastic:
   clusterName: ${ELASTIC_CLUSTER_NAME:- docker-cluster}
-  hosts: ${ELASTIC_TRANSPORT_HOSTS:- localhost:9300}
+  transportHosts: ${ELASTIC_TRANSPORT_HOSTS:- localhost:9300}
+  httpHost: ${ELASTIC_HTTP_HOST:- localhost:9200}
 
 token:
   publicKeyUrl: ${JWS_PUBLIC_KEY_URL:- http://stroom-auth-service:8099/token/v1/publickey}

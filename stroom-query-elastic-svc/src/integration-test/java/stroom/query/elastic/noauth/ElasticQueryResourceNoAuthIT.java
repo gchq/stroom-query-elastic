@@ -1,27 +1,14 @@
 package stroom.query.elastic.noauth;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
-import org.glassfish.jersey.client.ClientConfig;
-import org.glassfish.jersey.client.ClientResponse;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
-import stroom.query.api.v2.DocRef;
-import stroom.query.api.v2.ExpressionOperator;
-import stroom.query.api.v2.ExpressionTerm;
-import stroom.query.api.v2.Field;
-import stroom.query.api.v2.FlatResult;
-import stroom.query.api.v2.OffsetRange;
-import stroom.query.api.v2.Query;
-import stroom.query.api.v2.ResultRequest;
-import stroom.query.api.v2.SearchRequest;
-import stroom.query.api.v2.SearchResponse;
-import stroom.query.api.v2.TableSettings;
+import stroom.elastic.test.ElasticTestIndexRule;
+import stroom.query.api.v2.*;
 import stroom.query.audit.rest.AuditedDocRefResourceImpl;
 import stroom.query.audit.rest.AuditedQueryResourceImpl;
 import stroom.query.audit.security.NoAuthValueFactoryProvider;
@@ -29,14 +16,10 @@ import stroom.query.elastic.App;
 import stroom.query.elastic.ShakespeareLine;
 import stroom.query.elastic.config.Config;
 import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
-import stroom.query.elastic.service.ElasticDocRefServiceImpl;
+import stroom.query.elastic.service.ElasticIndexDocRefServiceImpl;
 import stroom.query.testing.DropwizardAppWithClientsRule;
 import stroom.query.testing.QueryResourceNoAuthIT;
 
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Collection;
 import java.util.List;
@@ -47,7 +30,7 @@ import java.util.stream.Collectors;
 import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static stroom.query.elastic.auth.ElasticDocRefResourceIT.LOCAL_ELASTIC_HTTP_HOST;
 import static stroom.query.testing.FifoLogbackRule.containsAllOf;
 
 public class ElasticQueryResourceNoAuthIT extends QueryResourceNoAuthIT<ElasticIndexDocRefEntity, Config> {
@@ -68,64 +51,22 @@ public class ElasticQueryResourceNoAuthIT extends QueryResourceNoAuthIT<ElasticI
     private static final String DATA_INDEX_NAME = "shakespeare";
     private static final String DATA_INDEXED_TYPE = "line";
 
-    private static final int ELASTIC_HTTP_PORT = 19200;
     private static final String ELASTIC_DATA_FILE = "elastic/shakespeare.json";
     private static final String ELASTIC_DATA_MAPPINGS_FULL_FILE = "elastic/shakespeare.mappings.json";
-    
-    @BeforeClass
-    public static void beforeQueryClass() {
-        try {
-            final Client httpClient = ClientBuilder.newClient(new ClientConfig().register(ClientResponse.class));
 
-            final String ND_JSON = "application/x-ndjson";
-            final ClassLoader classLoader = ElasticQueryResourceNoAuthIT.class.getClassLoader();
+    @ClassRule
+    public static ElasticTestIndexRule stroomIndexRule = ElasticTestIndexRule
+            .forIndex(ElasticIndexDocRefServiceImpl.STROOM_INDEX_NAME)
+            .httpUrl(LOCAL_ELASTIC_HTTP_HOST)
+            .build();
 
-            // Talk directly to Elastic Search to create a fresh populated index for us to connect to
-
-            // Delete any existing 'stroom doc ref' index
-            final String elasticDocRefIndexUrl = String.format("http://localhost:%d/%s", ELASTIC_HTTP_PORT, ElasticDocRefServiceImpl.STROOM_INDEX_NAME);
-            httpClient.target(elasticDocRefIndexUrl)
-                    .request()
-                    .header("Content-Type", ND_JSON)
-                    .delete(); // response may be 404 if first time run
-
-            // Delete any existing 'data' index
-            final String elasticDataIndexUrl = String.format("http://localhost:%d/%s", ELASTIC_HTTP_PORT, DATA_INDEX_NAME);
-            httpClient.target(elasticDataIndexUrl)
-                    .request()
-                    .header("Content-Type", ND_JSON)
-                    .delete(); // response may be 404 if first time run
-
-            // Create index with mappings
-            final String mappingsJson = IOUtils.toString(classLoader.getResourceAsStream(ELASTIC_DATA_MAPPINGS_FULL_FILE));
-            final Response createMappingsResponse = httpClient
-                    .target(elasticDataIndexUrl)
-                    .request()
-                    .header("accept", MediaType.APPLICATION_JSON)
-                    .header("Content-Type", ND_JSON)
-                    .put(Entity.json(mappingsJson));
-            assertEquals(String.format("Failed with %s", createMappingsResponse.readEntity(String.class)),
-                    HttpStatus.SC_OK,
-                    createMappingsResponse.getStatus());
-
-            // Post Data
-            final String dataJson = IOUtils.toString(classLoader.getResourceAsStream(ELASTIC_DATA_FILE));
-            final String putDataUrl = String.format("http://localhost:%d/%s/_bulk?pretty", ELASTIC_HTTP_PORT, DATA_INDEXED_TYPE);
-            final Response putDataResponse = httpClient
-                    .target(putDataUrl)
-                    .request()
-                    .header("accept", MediaType.APPLICATION_JSON)
-                    .header("Content-Type", ND_JSON)
-                    .put(Entity.json(dataJson));
-            assertEquals(String.format("Failed with %s", putDataResponse.readEntity(String.class)),
-                    HttpStatus.SC_OK,
-                    putDataResponse.getStatus());
-
-        } catch (Exception e) {
-            LOGGER.error("Could not create index config", e);
-            fail(e.getLocalizedMessage());
-        }
-    }
+    @ClassRule
+    public static ElasticTestIndexRule dataIndexRule = ElasticTestIndexRule
+            .forIndex(DATA_INDEX_NAME)
+            .httpUrl(LOCAL_ELASTIC_HTTP_HOST)
+            .mappingsResource(ELASTIC_DATA_MAPPINGS_FULL_FILE)
+            .dataResource(ELASTIC_DATA_FILE)
+            .build();
 
     @Override
     protected ElasticIndexDocRefEntity getValidEntity(final DocRef docRef) {

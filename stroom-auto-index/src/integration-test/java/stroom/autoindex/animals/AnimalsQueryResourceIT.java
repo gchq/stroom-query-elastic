@@ -3,8 +3,8 @@ package stroom.autoindex.animals;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import org.junit.ClassRule;
 import stroom.autoindex.animals.app.AnimalDocRefEntity;
-import stroom.autoindex.animals.app.App;
-import stroom.autoindex.animals.app.Config;
+import stroom.autoindex.animals.app.AnimalApp;
+import stroom.autoindex.animals.app.AnimalConfig;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.*;
@@ -19,10 +19,10 @@ import java.util.stream.Collectors;
 import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
 import static org.junit.Assert.assertTrue;
 
-public class AnimalsQueryResourceIT extends QueryResourceIT<AnimalDocRefEntity, Config> {
+public class AnimalsQueryResourceIT extends QueryResourceIT<AnimalDocRefEntity, AnimalConfig> {
     @ClassRule
-    public static final DropwizardAppWithClientsRule<Config> appRule =
-            new DropwizardAppWithClientsRule<>(App.class, resourceFilePath("config.yml"));
+    public static final DropwizardAppWithClientsRule<AnimalConfig> appRule =
+            new DropwizardAppWithClientsRule<>(AnimalApp.class, resourceFilePath("animal/config.yml"));
 
     @ClassRule
     public static StroomAuthenticationRule authRule =

@@ -3,4 +3,5 @@ rootProject.name = 'stroom-query-elastic'
 include 'stroom-query-elastic-svc'
 include 'stroom-query-elastic-ui'
 include 'stroom-auto-index'
+include 'elastic-test'
 

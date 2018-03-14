@@ -11,8 +11,8 @@ import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import stroom.query.audit.AuditedQueryBundle;
 import stroom.query.audit.service.DocRefService;
 
-public class App extends Application<Config> {
-    private final AuditedQueryBundle<Config,
+public class AnimalApp extends Application<AnimalConfig> {
+    private final AuditedQueryBundle<AnimalConfig,
             AnimalDocRefServiceImpl,
             AnimalDocRefEntity,
             AnimalQueryServiceImpl> auditedQueryBundle =
@@ -22,7 +22,7 @@ public class App extends Application<Config> {
                     AnimalQueryServiceImpl.class);
 
     @Override
-    public void run(final Config configuration,
+    public void run(final AnimalConfig configuration,
                     final Environment environment) throws Exception {
 
         environment.healthChecks().register("Something", new HealthCheck() {
@@ -42,7 +42,7 @@ public class App extends Application<Config> {
     }
 
     @Override
-    public void initialize(final Bootstrap<Config> bootstrap) {
+    public void initialize(final Bootstrap<AnimalConfig> bootstrap) {
         super.initialize(bootstrap);
 
         // This allows us to use templating in the YAML configuration.

@@ -32,8 +32,8 @@ public class AnimalDocRefServiceImpl implements DocRefService<AnimalDocRefEntity
 
     @Override
     public Optional<AnimalDocRefEntity> createDocument(final ServiceUser user,
-                                                     final String uuid,
-                                                     final String name) throws Exception {
+                                                       final String uuid,
+                                                       final String name) throws Exception {
         final Long now = System.currentTimeMillis();
         data.put(uuid, new AnimalDocRefEntity.Builder()
                 .uuid(uuid)

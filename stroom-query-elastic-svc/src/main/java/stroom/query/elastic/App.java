@@ -15,7 +15,7 @@ import stroom.query.audit.service.DocRefService;
 import stroom.query.elastic.config.Config;
 import stroom.query.elastic.health.ElasticHealthCheck;
 import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
-import stroom.query.elastic.service.ElasticDocRefServiceImpl;
+import stroom.query.elastic.service.ElasticIndexDocRefServiceImpl;
 import stroom.query.elastic.service.ElasticQueryServiceImpl;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 
@@ -32,7 +32,7 @@ public class App extends Application<Config> {
 
         @Override
         protected Map<String, Integer> getHosts(final Config config) {
-            return Arrays.stream(config.getElasticConfig().getHosts().split(ElasticConfig.ENTRY_DELIMITER))
+            return Arrays.stream(config.getElasticConfig().getTransportHosts().split(ElasticConfig.ENTRY_DELIMITER))
                 .map(h -> h.split(ElasticConfig.HOST_PORT_DELIMITER))
                 .filter(h -> (h.length == 2))
                 .map(h -> new Tuple<>(h[0], Integer.parseInt(h[1])))
@@ -46,11 +46,11 @@ public class App extends Application<Config> {
     };
 
     private final AuditedQueryBundle<Config,
-            ElasticDocRefServiceImpl,
+            ElasticIndexDocRefServiceImpl,
             ElasticIndexDocRefEntity,
             ElasticQueryServiceImpl> auditedQueryBundle =
             new AuditedQueryBundle<>(
-                    ElasticDocRefServiceImpl.class,
+                    ElasticIndexDocRefServiceImpl.class,
                     ElasticIndexDocRefEntity.class,
                     ElasticQueryServiceImpl.class);
 
@@ -69,7 +69,7 @@ public class App extends Application<Config> {
                     @Override
                     protected void configure() {
                         bind(transportClientBundle.getTransportClient()).to(TransportClient.class);
-                        bind(ElasticDocRefServiceImpl.class).to(new TypeLiteral<DocRefService<ElasticIndexDocRefEntity>>() {});
+                        bind(ElasticIndexDocRefServiceImpl.class).to(new TypeLiteral<DocRefService<ElasticIndexDocRefEntity>>() {});
                     }
                 }
         );

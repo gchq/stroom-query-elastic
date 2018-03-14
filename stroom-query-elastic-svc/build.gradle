@@ -105,6 +105,7 @@ dependencies {
     testCompile 'org.apache.directory.studio:org.apache.commons.io:2.4'
     testCompile testDeps.wiremock
 
+    integrationTestCompile project(':elastic-test')
     integrationTestCompile testDeps.stroomQueryTesting
     integrationTestCompile testDeps.dropwizard_testing
     integrationTestCompile testDeps.moshi

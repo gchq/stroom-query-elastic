@@ -5,19 +5,19 @@ server:
   applicationContextPath: /
   applicationConnectors:
     - type: http
-      port: 18299
+      port: 8899
   adminConnectors:
     - type: http
-      port: 18300
+      port: 8900
 
 logging:
-  level: ERROR
+  level: ${LOGGING_LEVEL:- ERROR}
   loggers:
     stroom: DEBUG
     io.dropwizard: INFO
     org.eclipse.jetty: INFO
     org.flywaydb: INFO
-    AUDIT:
+    "AUDIT":
       level: INFO
       additive: false
       appenders:
@@ -27,15 +27,11 @@ logging:
       logFormat: "%-6level [%d{HH:mm:ss.SSS}] [%t] %logger{5} - %X{code} %msg %n"
       timeZone: UTC
 
-elastic:
-  clusterName: docker-cluster
-  transportHosts: localhost:19300
-  httpHost: localhost:19200
-
 token:
   publicKeyUrl: http://localhost:10080/testAuthService/publicKey
   jwsIssuer: stroom
   algorithm: RS256
+
 
 authorisationService:
   url: http://localhost:10080/api/authorisation/v1

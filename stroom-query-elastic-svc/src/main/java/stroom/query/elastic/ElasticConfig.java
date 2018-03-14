@@ -11,8 +11,13 @@ public class ElasticConfig {
 
     @Valid
     @NotNull
-    @JsonProperty("hosts")
-    private String hosts;
+    @JsonProperty("transportHosts")
+    private String transportHosts;
+
+    @Valid
+    @NotNull
+    @JsonProperty("httpHost")
+    private String httpHost;
 
     @Valid
     @NotNull
@@ -23,7 +28,11 @@ public class ElasticConfig {
         return clusterName;
     }
 
-    public String getHosts() {
-        return hosts;
+    public String getTransportHosts() {
+        return transportHosts;
+    }
+
+    public String getHttpHost() {
+        return httpHost;
     }
 }

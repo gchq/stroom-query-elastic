@@ -1,9 +1,11 @@
 package stroom.query.elastic.noauth;
 
 import org.junit.ClassRule;
+import stroom.elastic.test.ElasticTestIndexRule;
 import stroom.query.elastic.App;
 import stroom.query.elastic.config.Config;
 import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
+import stroom.query.elastic.service.ElasticIndexDocRefServiceImpl;
 import stroom.query.testing.DocRefResourceNoAuthIT;
 import stroom.query.testing.DropwizardAppWithClientsRule;
 
@@ -12,6 +14,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
+import static stroom.query.elastic.auth.ElasticDocRefResourceIT.LOCAL_ELASTIC_HTTP_HOST;
 
 public class ElasticDocRefResourceNoAuthIT
         extends DocRefResourceNoAuthIT<ElasticIndexDocRefEntity, Config> {
@@ -19,6 +22,12 @@ public class ElasticDocRefResourceNoAuthIT
     @ClassRule
     public static final DropwizardAppWithClientsRule<Config> appRule =
             new DropwizardAppWithClientsRule<>(App.class, resourceFilePath("config_noauth.yml"));
+
+    @ClassRule
+    public static ElasticTestIndexRule stroomIndexRule = ElasticTestIndexRule
+            .forIndex(ElasticIndexDocRefServiceImpl.STROOM_INDEX_NAME)
+            .httpUrl(LOCAL_ELASTIC_HTTP_HOST)
+            .build();
 
     public ElasticDocRefResourceNoAuthIT() {
         super(ElasticIndexDocRefEntity.class,

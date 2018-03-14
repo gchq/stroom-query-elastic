@@ -29,7 +29,8 @@ logging:
 
 elastic:
   clusterName: docker-cluster
-  hosts: localhost:19300
+  transportHosts: localhost:19300
+  httpHost: localhost:19200
 
 token:
   publicKeyUrl: http://localhost:10080/testAuthService/publicKey

@@ -9,7 +9,7 @@ import stroom.query.audit.security.TokenConfig;
 
 import javax.validation.constraints.NotNull;
 
-public class Config extends Configuration implements HasAuthorisationConfig, HasTokenConfig {
+public class AnimalConfig extends Configuration implements HasAuthorisationConfig, HasTokenConfig {
     @NotNull
     @JsonProperty("token")
     private TokenConfig tokenConfig;
