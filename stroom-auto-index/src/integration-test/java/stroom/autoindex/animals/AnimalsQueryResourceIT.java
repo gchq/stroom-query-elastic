@@ -12,24 +12,20 @@ import stroom.autoindex.animals.app.AnimalDocRefEntity;
 import stroom.autoindex.animals.app.AnimalSighting;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
-import stroom.elastic.test.FlatFileTestDataRule;
 import stroom.query.api.v2.*;
 import stroom.query.audit.authorisation.DocumentPermission;
 import stroom.query.audit.rest.AuditedDocRefResourceImpl;
 import stroom.query.testing.DropwizardAppWithClientsRule;
 import stroom.query.testing.QueryResourceIT;
 import stroom.query.testing.StroomAuthenticationRule;
-import stroom.testdata.DataGenerator;
-import stroom.testdata.FlatDataWriterBuilder;
+import stroom.testdata.FlatFileTestDataRule;
 
 import javax.ws.rs.core.Response;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
@@ -50,26 +46,8 @@ public class AnimalsQueryResourceIT extends QueryResourceIT<AnimalDocRefEntity, 
 
     @ClassRule
     public static final FlatFileTestDataRule testDataRule = FlatFileTestDataRule.withTempDirectory()
-            .testDataGenerator(AnimalsQueryResourceIT::generateTestData)
+            .testDataGenerator(AnimalTestData.build())
             .build();
-
-    private static void generateTestData(final Consumer<String> writer) {
-        DataGenerator.buildDefinition()
-                .addFieldDefinition(DataGenerator.randomValueField(AnimalSighting.SPECIES,
-                        Arrays.asList("spider", "whale", "dog", "tiger", "monkey", "lion", "woodlouse", "honey-badger")))
-                .addFieldDefinition(DataGenerator.randomValueField(AnimalSighting.LOCATION,
-                        Arrays.asList("europe", "asia", "america", "antarctica", "africa", "australia")))
-                .addFieldDefinition(DataGenerator.randomValueField(AnimalSighting.OBSERVER,
-                        Arrays.asList("alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel")))
-                .addFieldDefinition(DataGenerator.randomDateTimeField(AnimalSighting.TIME,
-                        LocalDateTime.of(2016, 1, 1, 0, 0, 0),
-                        LocalDateTime.of(2018, 1, 1, 0, 0, 0),
-                        DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                .setDataWriter(FlatDataWriterBuilder.defaultCsvFormat())
-                .rowCount(1000)
-                .consumedBy(writer)
-                .generate();
-    }
 
     public AnimalsQueryResourceIT() {
         super(AnimalDocRefEntity.class,
@@ -155,7 +133,7 @@ public class AnimalsQueryResourceIT extends QueryResourceIT<AnimalDocRefEntity, 
     protected AnimalDocRefEntity getValidEntity(final DocRef docRef) {
         return new AnimalDocRefEntity.Builder()
                 .docRef(docRef)
-                .dataDirectory(String.format("/tmp/%s", UUID.randomUUID().toString()))
+                .dataDirectory(testDataRule.getFolder().getAbsolutePath())
                 .build();
     }
 

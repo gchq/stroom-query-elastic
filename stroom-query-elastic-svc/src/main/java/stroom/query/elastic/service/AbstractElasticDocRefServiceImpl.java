@@ -45,7 +45,7 @@ public abstract class AbstractElasticDocRefServiceImpl<T extends ElasticIndexDoc
     }
 
     private static final Function<String, Object> NULL_SOURCE = (n) -> null;
-    private ElasticIndexDocRefEntity.BaseBuilder<T, ?> build() {
+    private T_BUILDER build() {
         return build(NULL_SOURCE);
     }
 

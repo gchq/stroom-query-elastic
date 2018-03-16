@@ -33,6 +33,7 @@ public class ElasticTestIndexRule implements MethodRule, TestRule {
 
     public static final String ND_JSON = "application/x-ndjson";
 
+    private final Class<?> testClass;
     private final String elasticHttpUrl;
     private final String indexName;
     private final String indexUrl;
@@ -42,6 +43,7 @@ public class ElasticTestIndexRule implements MethodRule, TestRule {
     private final Client httpClient = ClientBuilder.newClient(new ClientConfig().register(ClientResponse.class));
 
     private ElasticTestIndexRule(final Builder builder) {
+        this.testClass = builder.testClass;
         this.elasticHttpUrl = builder.elasticHttpUrl;
         this.indexName = builder.indexName;
         this.indexUrl = String.format("http://%s/%s", elasticHttpUrl, indexName);
@@ -88,7 +90,7 @@ public class ElasticTestIndexRule implements MethodRule, TestRule {
                     .delete(); // response may be 404 if first time run
             response.close();
 
-            final ClassLoader classLoader = ElasticTestIndexRule.class.getClassLoader();
+            final ClassLoader classLoader = testClass.getClassLoader();
 
             // if mappings have been defined, preload them
             if (null != mappingsResource) {
@@ -133,17 +135,21 @@ public class ElasticTestIndexRule implements MethodRule, TestRule {
         // NOOP
     }
 
-    public static Builder forIndex(final String indexName) {
-        return new Builder(indexName);
+    public static Builder forIndex(final Class<?> testClass,
+                                   final String indexName) {
+        return new Builder(testClass, indexName);
     }
 
     public static class Builder {
+        private final Class<?> testClass;
         private String elasticHttpUrl;
         private final String indexName;
         private String mappingsResource;
         private String dataResource;
 
-        private Builder(final String indexName) {
+        private Builder(final Class<?> testClass,
+                        final String indexName) {
+            this.testClass = testClass;
             this.indexName = indexName;
         }
 

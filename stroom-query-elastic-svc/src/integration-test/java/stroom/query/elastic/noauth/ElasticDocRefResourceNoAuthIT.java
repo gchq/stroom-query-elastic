@@ -25,7 +25,7 @@ public class ElasticDocRefResourceNoAuthIT
 
     @ClassRule
     public static ElasticTestIndexRule stroomIndexRule = ElasticTestIndexRule
-            .forIndex(ElasticIndexDocRefServiceImpl.STROOM_INDEX_NAME)
+            .forIndex(ElasticDocRefResourceNoAuthIT.class, ElasticIndexDocRefServiceImpl.STROOM_INDEX_NAME)
             .httpUrl(LOCAL_ELASTIC_HTTP_HOST)
             .build();
 

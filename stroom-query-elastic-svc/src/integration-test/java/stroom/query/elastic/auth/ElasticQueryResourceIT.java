@@ -56,13 +56,13 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
 
     @ClassRule
     public static ElasticTestIndexRule stroomIndexRule = ElasticTestIndexRule
-            .forIndex(ElasticIndexDocRefServiceImpl.STROOM_INDEX_NAME)
+            .forIndex(ElasticQueryResourceIT.class, ElasticIndexDocRefServiceImpl.STROOM_INDEX_NAME)
             .httpUrl(LOCAL_ELASTIC_HTTP_HOST)
             .build();
 
     @ClassRule
     public static ElasticTestIndexRule dataIndexRule = ElasticTestIndexRule
-            .forIndex(DATA_INDEX_NAME)
+            .forIndex(ElasticQueryResourceIT.class, DATA_INDEX_NAME)
             .httpUrl(LOCAL_ELASTIC_HTTP_HOST)
             .mappingsResource(ELASTIC_DATA_MAPPINGS_FULL_FILE)
             .dataResource(ELASTIC_DATA_FILE)

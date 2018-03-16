@@ -25,16 +25,23 @@ public class AutoIndexDocRefServiceImpl
     @Override
     protected AutoIndexDocRefEntity.Builder build(final Function<String, Object> source) {
         return new AutoIndexDocRefEntity.Builder()
-                .wrappedDataSourceURL(source.apply(AutoIndexDocRefEntity.WRAPPED_DATASOURCE_URL));
+                .wrappedDataSourceURL(source.apply(AutoIndexDocRefEntity.WRAPPED_DATASOURCE_URL))
+                .wrappedDocRefType(source.apply(AutoIndexDocRefEntity.WRAPPED_DOC_REF_TYPE))
+                .wrappedDocRefUuid(source.apply(AutoIndexDocRefEntity.WRAPPED_DOC_REF_UUID));
     }
 
     @Override
-    protected void iterateFieldNames(Consumer<String> consumer) {
-
+    protected void iterateFieldNames(final Consumer<String> consumer) {
+        consumer.accept(AutoIndexDocRefEntity.WRAPPED_DATASOURCE_URL);
+        consumer.accept(AutoIndexDocRefEntity.WRAPPED_DOC_REF_TYPE);
+        consumer.accept(AutoIndexDocRefEntity.WRAPPED_DOC_REF_UUID);
     }
 
     @Override
-    protected void exportValues(AutoIndexDocRefEntity instance, BiConsumer<String, String> consumer) {
-
+    protected void exportValues(final AutoIndexDocRefEntity instance,
+                                final BiConsumer<String, String> consumer) {
+        consumer.accept(AutoIndexDocRefEntity.WRAPPED_DATASOURCE_URL, instance.getWrappedDataSourceURL());
+        consumer.accept(AutoIndexDocRefEntity.WRAPPED_DOC_REF_TYPE, instance.getWrappedDocRefType());
+        consumer.accept(AutoIndexDocRefEntity.WRAPPED_DOC_REF_UUID, instance.getWrappedDocRefUuid());
     }
 }
