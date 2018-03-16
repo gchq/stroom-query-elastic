@@ -84,6 +84,7 @@ dependencies {
     compile deps.stroomQueryCommon
     compile deps.stroomQueryAudit
     compile deps.stroomExpression
+    compile deps.stroomTestData
     compile project(':stroom-query-elastic-svc')
 
     compile deps.kafka

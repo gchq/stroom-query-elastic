@@ -55,7 +55,7 @@ public class AnimalDocRefServiceImpl implements DocRefService<AnimalDocRefEntity
                 .map(d -> new AnimalDocRefEntity.Builder(d)
                         .updateTime(System.currentTimeMillis())
                         .updateUser(user.getName())
-                        .species(updatedConfig.getSpecies())
+                        .dataDirectory(updatedConfig.getDataDirectory())
                         .build());
     }
 
@@ -107,7 +107,7 @@ public class AnimalDocRefServiceImpl implements DocRefService<AnimalDocRefEntity
         return get(user, uuid)
                 .map(d -> new ExportDTO.Builder()
                         .value(DocRefEntity.NAME, d.getName())
-                        .value(AnimalDocRefEntity.SPECIES, d.getSpecies())
+                        .value(AnimalDocRefEntity.DATA_DIRECTORY, d.getDataDirectory())
                         .build())
                 .orElse(new ExportDTO.Builder()
                         .message(String.format("Could not find test doc ref: %s", uuid))
@@ -125,7 +125,7 @@ public class AnimalDocRefServiceImpl implements DocRefService<AnimalDocRefEntity
 
             if (index.isPresent()) {
                 final AnimalDocRefEntity indexConfig = index.get();
-                indexConfig.setSpecies(dataMap.get(AnimalDocRefEntity.SPECIES));
+                indexConfig.setDataDirectory(dataMap.get(AnimalDocRefEntity.DATA_DIRECTORY));
                 return update(user, uuid, indexConfig);
             } else {
                 return Optional.empty();
@@ -136,7 +136,7 @@ public class AnimalDocRefServiceImpl implements DocRefService<AnimalDocRefEntity
                     .orElse(Optional.of(new AnimalDocRefEntity.Builder()
                             .uuid(uuid)
                             .name(name)
-                            .species(dataMap.get(AnimalDocRefEntity.SPECIES))
+                            .dataDirectory(dataMap.get(AnimalDocRefEntity.DATA_DIRECTORY))
                             .build()));
         }
     }

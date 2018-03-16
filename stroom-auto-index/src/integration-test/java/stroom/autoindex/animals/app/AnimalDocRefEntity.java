@@ -7,16 +7,16 @@ import java.util.Objects;
 public class AnimalDocRefEntity extends DocRefEntity {
     public static final String TYPE = "AnimalDocRefEntity";
 
-    public static final String SPECIES = "Species";
+    public static final String DATA_DIRECTORY = "Species";
 
-    private String species;
+    private String dataDirectory;
 
-    public String getSpecies() {
-        return species;
+    public String getDataDirectory() {
+        return dataDirectory;
     }
 
-    public void setSpecies(String species) {
-        this.species = species;
+    public void setDataDirectory(String dataDirectory) {
+        this.dataDirectory = dataDirectory;
     }
 
     @Override
@@ -25,19 +25,19 @@ public class AnimalDocRefEntity extends DocRefEntity {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
         AnimalDocRefEntity that = (AnimalDocRefEntity) o;
-        return Objects.equals(species, that.species);
+        return Objects.equals(dataDirectory, that.dataDirectory);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), species);
+        return Objects.hash(super.hashCode(), dataDirectory);
     }
 
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("AnimalDocRefEntity{");
         sb.append("super='").append(super.toString()).append('\'');
-        sb.append("species='").append(species).append('\'');
+        sb.append("dataDirectory='").append(dataDirectory).append('\'');
         sb.append('}');
         return sb.toString();
     }
@@ -52,8 +52,8 @@ public class AnimalDocRefEntity extends DocRefEntity {
             super(instance);
         }
 
-        public Builder species(final String value) {
-            this.instance.species = value;
+        public Builder dataDirectory(final String value) {
+            this.instance.dataDirectory = value;
             return self();
         }
 

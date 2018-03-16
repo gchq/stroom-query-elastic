@@ -54,6 +54,7 @@ ext.versions = [
     //same version for both stroom-query-api and stroom-query-common
     stroomQuery: 'v2.0.0-alpha.30',
     stroomExpression: 'v1.0.1',
+    stroomTestData: 'SNAPSHOT'
 ]
 
 allprojects {
@@ -90,6 +91,7 @@ ext.deps = [
     stroomQueryApi: "stroom:stroom-query-api:$versions.stroomQuery",
     stroomQueryCommon: "stroom:stroom-query-common:$versions.stroomQuery",
     stroomQueryAudit: "stroom:stroom-query-audit:$versions.stroomQuery",
+    stroomTestData: "stroom:stroom-test-data:$versions.stroomTestData",
 
     elasticSearch: "org.elasticsearch.client:transport:$versions.elasticSearch",
     dropwizard_core: "io.dropwizard:dropwizard-core:$versions.dropwizard",

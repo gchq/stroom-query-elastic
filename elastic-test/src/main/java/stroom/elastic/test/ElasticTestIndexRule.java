@@ -57,14 +57,21 @@ public class ElasticTestIndexRule implements MethodRule, TestRule {
     }
 
     @Override
-    public Statement apply(final Statement base,
+    public Statement apply(final Statement statement,
+                           final FrameworkMethod method,
+                           final Object target) {
+        return apply(statement, null);
+    }
+
+    @Override
+    public Statement apply(final Statement statement,
                            final Description description) {
         return new Statement() {
             @Override
             public void evaluate() throws Throwable {
                 try {
                     before();
-                    base.evaluate();
+                    statement.evaluate();
                 } finally {
                     after();
                 }
@@ -72,7 +79,7 @@ public class ElasticTestIndexRule implements MethodRule, TestRule {
         };
     }
 
-    protected void before() {
+    private void before() {
         try {
             // Delete any existing index with this name
             final Response response = httpClient.target(indexUrl)
@@ -122,15 +129,8 @@ public class ElasticTestIndexRule implements MethodRule, TestRule {
         }
     }
 
-    protected void after() {
+    private void after() {
         // NOOP
-    }
-
-    @Override
-    public Statement apply(final Statement base,
-                           final FrameworkMethod method,
-                           final Object target) {
-        return apply(base, null);
     }
 
     public static Builder forIndex(final String indexName) {
@@ -143,7 +143,7 @@ public class ElasticTestIndexRule implements MethodRule, TestRule {
         private String mappingsResource;
         private String dataResource;
 
-        public Builder(final String indexName) {
+        private Builder(final String indexName) {
             this.indexName = indexName;
         }
 

@@ -1,7 +1,6 @@
 package stroom.autoindex;
 
 import org.elasticsearch.client.transport.TransportClient;
-import stroom.query.audit.model.DocRefEntity;
 import stroom.query.elastic.service.AbstractElasticDocRefServiceImpl;
 
 import javax.inject.Inject;
