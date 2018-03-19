@@ -21,12 +21,13 @@ else
     # Increase the size of the heap
     export JAVA_OPTS=-Xmx1024m
 
+    # This is a temporary measure until the library is published
     echo "Clone build and publish the stroom-test-data library"
     mkdir -p ../git_work
     pushd ../git_work
     git clone https://github.com/gchq/stroom-test-data.git
     pushd stroom-test-data
-    ./gradlew clean build publishToMavenLocal
+    ./gradlew clean build publishToMavenLocal -x javadoc
     popd
     popd
 
