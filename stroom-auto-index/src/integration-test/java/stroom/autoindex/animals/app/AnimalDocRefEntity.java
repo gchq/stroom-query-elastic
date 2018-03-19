@@ -5,7 +5,7 @@ import stroom.query.audit.model.DocRefEntity;
 import java.util.Objects;
 
 public class AnimalDocRefEntity extends DocRefEntity {
-    public static final String TYPE = "AnimalDocRefEntity";
+    public static final String TYPE = "AnimalHuntingGroup";
 
     public static final String DATA_DIRECTORY = "Species";
 

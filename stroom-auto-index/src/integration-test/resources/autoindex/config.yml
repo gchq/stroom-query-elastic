@@ -28,13 +28,13 @@ logging:
       timeZone: UTC
 
 token:
-  publicKeyUrl: http://localhost:11080/testAuthService/publicKey
+  publicKeyUrl: http://localhost:10080/testAuthService/publicKey
   jwsIssuer: stroom
   algorithm: RS256
 
 
 authorisationService:
-  url: http://localhost:11080/api/authorisation/v1
+  url: http://localhost:10080/api/authorisation/v1
   isAuthorisedPath: /isAuthorised
 
 
@@ -42,3 +42,7 @@ elastic:
   clusterName: docker-cluster
   transportHosts: localhost:19300
   httpHost: localhost:19200
+
+queryResourceUrlsByType:
+  ElasticIndex: http://localhost:18299
+  AnimalHuntingGroup: http://localhost:8899

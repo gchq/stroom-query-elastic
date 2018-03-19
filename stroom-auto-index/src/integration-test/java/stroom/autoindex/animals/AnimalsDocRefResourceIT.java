@@ -2,6 +2,7 @@ package stroom.autoindex.animals;
 
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import org.junit.ClassRule;
+import stroom.autoindex.TestConstants;
 import stroom.autoindex.animals.app.AnimalApp;
 import stroom.autoindex.animals.app.AnimalConfig;
 import stroom.autoindex.animals.app.AnimalDocRefEntity;
@@ -19,11 +20,13 @@ public class AnimalsDocRefResourceIT extends DocRefResourceIT<AnimalDocRefEntity
 
     @ClassRule
     public static final DropwizardAppWithClientsRule<AnimalConfig> appRule =
-            new DropwizardAppWithClientsRule<>(AnimalApp.class, resourceFilePath("animal/config.yml"));
+            new DropwizardAppWithClientsRule<>(AnimalApp.class, resourceFilePath(TestConstants.ANIMALS_APP_CONFIG));
 
     @ClassRule
-    public static StroomAuthenticationRule authRule =
-            new StroomAuthenticationRule(WireMockConfiguration.options().port(10080), AnimalDocRefEntity.TYPE);
+    public static final StroomAuthenticationRule authRule =
+            new StroomAuthenticationRule(
+                    WireMockConfiguration.options().port(TestConstants.TEST_AUTH_PORT),
+                    AnimalDocRefEntity.TYPE);
 
     public AnimalsDocRefResourceIT() {
         super(AnimalDocRefEntity.class,

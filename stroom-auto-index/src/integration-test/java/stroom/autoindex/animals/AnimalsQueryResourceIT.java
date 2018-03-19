@@ -6,6 +6,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import stroom.autoindex.TestConstants;
 import stroom.autoindex.animals.app.AnimalApp;
 import stroom.autoindex.animals.app.AnimalConfig;
 import stroom.autoindex.animals.app.AnimalDocRefEntity;
@@ -13,8 +14,8 @@ import stroom.autoindex.animals.app.AnimalSighting;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.*;
-import stroom.query.audit.authorisation.DocumentPermission;
 import stroom.query.audit.rest.AuditedDocRefResourceImpl;
+import stroom.query.audit.rest.AuditedQueryResourceImpl;
 import stroom.query.testing.DropwizardAppWithClientsRule;
 import stroom.query.testing.QueryResourceIT;
 import stroom.query.testing.StroomAuthenticationRule;
@@ -38,11 +39,13 @@ public class AnimalsQueryResourceIT extends QueryResourceIT<AnimalDocRefEntity, 
 
     @ClassRule
     public static final DropwizardAppWithClientsRule<AnimalConfig> appRule =
-            new DropwizardAppWithClientsRule<>(AnimalApp.class, resourceFilePath("animal/config.yml"));
+            new DropwizardAppWithClientsRule<>(AnimalApp.class, resourceFilePath(TestConstants.ANIMALS_APP_CONFIG));
 
     @ClassRule
     public static final StroomAuthenticationRule authRule =
-            new StroomAuthenticationRule(WireMockConfiguration.options().port(10080), AnimalDocRefEntity.TYPE);
+            new StroomAuthenticationRule(
+                    WireMockConfiguration.options().port(TestConstants.TEST_AUTH_PORT),
+                    AnimalDocRefEntity.TYPE);
 
     @ClassRule
     public static final FlatFileTestDataRule testDataRule = FlatFileTestDataRule.withTempDirectory()
@@ -115,6 +118,9 @@ public class AnimalsQueryResourceIT extends QueryResourceIT<AnimalDocRefEntity, 
         resultsSet.stream()
                 .map(Object::toString)
                 .forEach(LOGGER::info);
+
+        auditLogRule.check().thereAreAtLeast(1)
+                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_SEARCH, docRef.getUuid()));
     }
 
     @Override
@@ -178,49 +184,5 @@ public class AnimalsQueryResourceIT extends QueryResourceIT<AnimalDocRefEntity, 
                                 .build())
                         .build())
                 .build();
-    }
-
-    /**
-     * Utility function to randomly generate a new annotations index doc ref.
-     * It assumes that the creation of documents works, the detail of that is tested in another suite of tests.
-     * Once the document is created, the passed in doc ref entity is then used to flesh out the implementation
-     * specific details.
-     * @param docRefEntity The implementation specific entity, used to update the doc ref so it can be used.
-     * @return The DocRef of the newly created annotations index.
-     */
-    protected DocRef createDocument(final AnimalDocRefEntity docRefEntity) {
-        // Generate UUID's for the doc ref and it's parent folder
-        final String parentFolderUuid = UUID.randomUUID().toString();
-        final DocRef docRef = new DocRef.Builder()
-                .uuid(UUID.randomUUID().toString())
-                .type(AnimalDocRefEntity.TYPE)
-                .name(UUID.randomUUID().toString())
-                .build();
-
-        // Ensure admin user can create the document in the folder
-        authRule.giveFolderCreatePermission(authRule.adminUser(), parentFolderUuid);
-
-        // Create a doc ref to hang the search from
-        final Response createResponse = docRefClient.createDocument(
-                authRule.adminUser(),
-                docRef.getUuid(),
-                docRef.getName(),
-                parentFolderUuid);
-        assertEquals(HttpStatus.OK_200, createResponse.getStatus());
-        createResponse.close();
-
-        // Give admin all the roles required to manipulate the document and it's underlying data
-        authRule.giveDocumentPermission(authRule.adminUser(), docRef.getUuid(), DocumentPermission.READ);
-        authRule.giveDocumentPermission(authRule.adminUser(), docRef.getUuid(), DocumentPermission.UPDATE);
-
-        final AnimalDocRefEntity docRefEntityToUse = (docRefEntity != null) ? docRefEntity : getValidEntity(docRef);
-        final Response updateIndexResponse =
-                docRefClient.update(authRule.adminUser(),
-                        docRef.getUuid(),
-                        docRefEntityToUse);
-        assertEquals(HttpStatus.OK_200, updateIndexResponse.getStatus());
-        updateIndexResponse.close();
-
-        return docRef;
     }
 }

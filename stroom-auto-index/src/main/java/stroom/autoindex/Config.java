@@ -10,6 +10,7 @@ import stroom.query.elastic.ElasticConfig;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
+import java.util.Map;
 
 public class Config extends Configuration implements HasAuthorisationConfig, HasTokenConfig {
     @Valid
@@ -24,6 +25,12 @@ public class Config extends Configuration implements HasAuthorisationConfig, Has
     @NotNull
     @JsonProperty("authorisationService")
     private AuthorisationServiceConfig authorisationServiceConfig;
+
+    private Map<String, String> queryResourceUrlsByType;
+
+    public Map<String, String> getQueryResourceUrlsByType() {
+        return queryResourceUrlsByType;
+    }
 
     @Override
     public TokenConfig getTokenConfig() {

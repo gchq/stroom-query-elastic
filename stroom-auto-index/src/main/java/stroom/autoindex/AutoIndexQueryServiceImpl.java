@@ -19,12 +19,12 @@ public class AutoIndexQueryServiceImpl implements QueryService {
 
     private final DocRefService<AutoIndexDocRefEntity> docRefService;
 
-    private final Function<String, QueryResourceHttpClient> queryClientCache;
+    private final Function<String, Optional<QueryResourceHttpClient>> queryClientCache;
 
     @Inject
     public AutoIndexQueryServiceImpl(final DocRefService<AutoIndexDocRefEntity> docRefService,
                                      @Named(QUERY_HTTP_CLIENT_CACHE)
-                                     final Function<String, QueryResourceHttpClient> queryClientCache) {
+                                     final Function<String, Optional<QueryResourceHttpClient>> queryClientCache) {
         this.docRefService = docRefService;
         this.queryClientCache = queryClientCache;
     }
@@ -32,7 +32,7 @@ public class AutoIndexQueryServiceImpl implements QueryService {
     @Override
     public Optional<DataSource> getDataSource(final ServiceUser user,
                                               final DocRef docRef) throws Exception {
-        return getUnderlyingDocRef(user, docRef.getUuid())
+        return getUnderlyingDocRef(user, docRef.getUuid(), AutoIndexDocRefEntity::getRawDocRef)
                 .map(d -> d.client.getDataSource(user, d.docRef))
                 .filter(r -> r.getStatus() == HttpStatus.OK_200)
                 .map(r -> r.readEntity(DataSource.class));
@@ -41,7 +41,7 @@ public class AutoIndexQueryServiceImpl implements QueryService {
     @Override
     public Optional<SearchResponse> search(final ServiceUser user,
                                            final SearchRequest request) throws Exception {
-        return getUnderlyingDocRef(user, request.getQuery().getDataSource().getUuid())
+        return getUnderlyingDocRef(user, request.getQuery().getDataSource().getUuid(), AutoIndexDocRefEntity::getRawDocRef)
                 .map(d -> {
                     // Translate the request to query the underlying document
                     final Query oQuery = request.getQuery();
@@ -50,15 +50,16 @@ public class AutoIndexQueryServiceImpl implements QueryService {
                     oQuery.getParams().forEach(queryBuilder::addParams);
                     queryBuilder.dataSource(d.docRef);
 
-                    final SearchRequest xRequest = new SearchRequest.Builder()
+                    final SearchRequest.Builder xRequestBuilder = new SearchRequest.Builder()
                             .dateTimeLocale(request.getDateTimeLocale())
                             .incremental(request.incremental())
                             .key(request.getKey())
                             .timeout(request.getTimeout())
-                            .query(queryBuilder.build())
-                            .build();
+                            .query(queryBuilder.build());
 
-                    return d.client.search(user, xRequest);
+                    request.getResultRequests().forEach(xRequestBuilder::addResultRequests);
+
+                    return d.client.search(user, xRequestBuilder.build());
                 })
                 .filter(r -> r.getStatus() == HttpStatus.OK_200)
                 .map(r -> r.readEntity(SearchResponse.class));
@@ -94,31 +95,27 @@ public class AutoIndexQueryServiceImpl implements QueryService {
     /**
      * Used to take the outer doc ref UUID and lookup the wrapped Doc Ref details.
      * @param user The logged in user
+     * @param docRefExtractor Method on AutoIndexDocRefEntity for pulling out the doc ref
      * @param outerDocRefUuid The UUID of the outer document
      * @return Effectively a tuple that contains the wrapped Doc Ref and a HTTP client for querying the underlying datasource
      * @throws Exception If something goes wrong
      */
     private Optional<UnderlyingDocRef> getUnderlyingDocRef(final ServiceUser user,
-                                                           final String outerDocRefUuid) throws Exception {
+                                                           final String outerDocRefUuid,
+                                                           final Function<AutoIndexDocRefEntity, DocRef> docRefExtractor) throws Exception {
         final Optional<AutoIndexDocRefEntity> docRefEntity = docRefService.get(user, outerDocRefUuid);
 
         if (!docRefEntity.isPresent()) {
             return Optional.empty();
         }
 
-        final DocRef underlyingDocRef = docRefEntity
-                .map(d -> new DocRef.Builder()
-                        .type(d.getWrappedDocRefType())
-                        .uuid(d.getWrappedDocRefUuid())
-                        .build()
-                )
-                .orElseThrow(() -> new RuntimeException("Could not get underlying Doc Ref"));
+        final DocRef rawDocRef = docRefEntity
+                .map(docRefExtractor)
+                .orElseThrow(() -> new RuntimeException("Underlying Doc ref not specified"));
 
-        final QueryResourceHttpClient client = docRefEntity
-                .map(AutoIndexDocRefEntity::getWrappedDataSourceURL)
-                .map(queryClientCache)
+        final QueryResourceHttpClient client = queryClientCache.apply(rawDocRef.getType())
                 .orElseThrow(() -> new RuntimeException("Could not get HTTP Client for Query Resource"));
 
-        return Optional.of(new UnderlyingDocRef(underlyingDocRef, client));
+        return Optional.of(new UnderlyingDocRef(rawDocRef, client));
     }
 }

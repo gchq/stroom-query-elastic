@@ -18,6 +18,7 @@ import stroom.query.elastic.transportClient.TransportClientBundle;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -63,12 +64,14 @@ public class App extends Application<Config> {
             protected void configure() {
                 final ConcurrentHashMap<String, QueryResourceHttpClient> cache =
                         new ConcurrentHashMap<>();
-                final Function<String, QueryResourceHttpClient> cacheNamed =
-                        (s) -> cache.computeIfAbsent(s, QueryResourceHttpClient::new);
+                final Function<String, Optional<QueryResourceHttpClient>> cacheNamed =
+                        (type) -> Optional.ofNullable(configuration.getQueryResourceUrlsByType())
+                                .map(m -> m.get(type))
+                                .map(url -> cache.computeIfAbsent(url, QueryResourceHttpClient::new));
 
                 bind(cacheNamed)
                         .named(AutoIndexQueryServiceImpl.QUERY_HTTP_CLIENT_CACHE)
-                        .to(new TypeLiteral<Function<String, QueryResourceHttpClient>>() {});
+                        .to(new TypeLiteral<Function<String, Optional<QueryResourceHttpClient>>>() {});
                 bind(transportClientBundle.getTransportClient()).to(TransportClient.class);
                 bind(AutoIndexDocRefServiceImpl.class).to(new TypeLiteral<DocRefService<AutoIndexDocRefEntity>>(){});
             }

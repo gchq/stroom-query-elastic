@@ -21,8 +21,19 @@ else
     # Increase the size of the heap
     export JAVA_OPTS=-Xmx1024m
 
+    echo "Clone build and publish the stroom-test-data library"
+    mkdir -p ../git_work
+    pushd ../git_work
+    git clone https://github.com/gchq/stroom-test-data.git
+    pushd stroom-test-data
+    ./gradlew clean build publishToMavenLocal
+    popd
+    popd
+
     echo "Start all the services we need to run the integration tests in stroom"
     docker-compose -f elasticsearch-test.yml up -d
+
+
 fi
 
 exit 0

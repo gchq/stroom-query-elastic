@@ -5,34 +5,38 @@ import org.junit.ClassRule;
 import org.junit.rules.TemporaryFolder;
 import stroom.autoindex.animals.app.AnimalDocRefEntity;
 import stroom.elastic.test.ElasticTestIndexRule;
+import stroom.query.api.v2.DocRef;
+import stroom.query.audit.model.DocRefEntity;
 import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
 import stroom.query.elastic.service.ElasticIndexDocRefServiceImpl;
 import stroom.query.testing.DocRefResourceIT;
 import stroom.query.testing.DropwizardAppWithClientsRule;
 import stroom.query.testing.StroomAuthenticationRule;
 
+import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
 
 public class AutoIndexDocRefResourceIT extends DocRefResourceIT<AutoIndexDocRefEntity, Config> {
 
-    public static final String LOCAL_ELASTIC_HTTP_HOST = "localhost:19200";
-
     @ClassRule
     public static final DropwizardAppWithClientsRule<Config> appRule =
-            new DropwizardAppWithClientsRule<>(App.class, resourceFilePath("autoindex/config.yml"));
+            new DropwizardAppWithClientsRule<>(App.class, resourceFilePath(TestConstants.AUTO_INDEX_APP_CONFIG));
 
     @ClassRule
-    public static StroomAuthenticationRule authRule =
-            new StroomAuthenticationRule(WireMockConfiguration.options().port(10080), AutoIndexDocRefEntity.TYPE);
+    public static final StroomAuthenticationRule authRule =
+            new StroomAuthenticationRule(
+                    WireMockConfiguration.options().port(TestConstants.TEST_AUTH_PORT),
+                    AutoIndexDocRefEntity.TYPE);
 
     @ClassRule
     public static final ElasticTestIndexRule stroomIndexRule = ElasticTestIndexRule
             .forIndex(AutoIndexDocRefResourceIT.class, ElasticIndexDocRefServiceImpl.STROOM_INDEX_NAME)
-            .httpUrl(LOCAL_ELASTIC_HTTP_HOST)
+            .httpUrl(TestConstants.LOCAL_ELASTIC_HTTP_HOST)
             .build();
 
     @ClassRule
@@ -49,20 +53,34 @@ public class AutoIndexDocRefResourceIT extends DocRefResourceIT<AutoIndexDocRefE
         return new AutoIndexDocRefEntity.Builder()
                 .indexedType(UUID.randomUUID().toString())
                 .indexName(UUID.randomUUID().toString())
-                .wrappedDataSourceURL("http://localhost:8199/")
-                .wrappedDocRefType(AnimalDocRefEntity.TYPE)
-                .wrappedDocRefUuid(UUID.randomUUID().toString())
+                .rawDocRef(new DocRef.Builder()
+                        .uuid(UUID.randomUUID().toString())
+                        .type(AnimalDocRefEntity.TYPE)
+                        .name(UUID.randomUUID().toString())
+                        .build())
+                .indexDocRef(new DocRef.Builder()
+                        .uuid(UUID.randomUUID().toString())
+                        .type(ElasticIndexDocRefEntity.TYPE)
+                        .name(UUID.randomUUID().toString())
+                        .build())
                 .build();
     }
 
     @Override
     protected Map<String, String> exportValues(final AutoIndexDocRefEntity docRefEntity) {
         final Map<String, String> values = new HashMap<>();
+        Stream.of(
+                new AbstractMap.SimpleEntry<>(AutoIndexDocRefEntity.RAW_PREFIX, docRefEntity.getRawDocRef()),
+                new AbstractMap.SimpleEntry<>(AutoIndexDocRefEntity.INDEX_PREFIX, docRefEntity.getIndexDocRef())
+        )
+                .forEach(entry -> {
+                    values.put(entry.getKey() + DocRefEntity.UUID, entry.getValue().getUuid());
+                    values.put(entry.getKey() + DocRefEntity.NAME, entry.getValue().getName());
+                    values.put(entry.getKey() + AutoIndexDocRefEntity.DOC_REF_TYPE, entry.getValue().getType());
+                });
+
         values.put(ElasticIndexDocRefEntity.INDEX_NAME, docRefEntity.getIndexName());
         values.put(ElasticIndexDocRefEntity.INDEXED_TYPE, docRefEntity.getIndexedType());
-        values.put(AutoIndexDocRefEntity.WRAPPED_DATASOURCE_URL, docRefEntity.getWrappedDataSourceURL());
-        values.put(AutoIndexDocRefEntity.WRAPPED_DOC_REF_UUID, docRefEntity.getWrappedDocRefUuid());
-        values.put(AutoIndexDocRefEntity.WRAPPED_DOC_REF_TYPE, docRefEntity.getWrappedDocRefType());
         return values;
     }
 }
