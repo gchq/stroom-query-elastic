@@ -32,7 +32,7 @@ else
     popd
 
     echo "Start all the services we need to run the integration tests in stroom"
-    docker-compose -f elasticsearch-test.yml up -d
+    docker-compose -f elasticsearch-mysql-test.yml up -d
 
 
 fi

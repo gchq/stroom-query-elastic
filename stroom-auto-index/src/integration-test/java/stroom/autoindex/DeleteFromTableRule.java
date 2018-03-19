@@ -41,10 +41,9 @@ public class DeleteFromTableRule<CONFIG extends Configuration & HasJooqFactory &
     }
 
     private void before() throws Throwable {
-        final org.jooq.Configuration jooqConfig =
-                appRule.getConfiguration().getJooqFactory().build(appRule.getEnvironment(),
-                        appRule.getConfiguration().getDataSourceFactory());
-        DSL.using(jooqConfig)
+        DSL.using(appRule.getConfiguration().getDataSourceFactory().getUrl(),
+                appRule.getConfiguration().getDataSourceFactory().getUser(),
+                appRule.getConfiguration().getDataSourceFactory().getPassword())
                 .transaction(c -> this.tablesToClear.stream()
                         .map(DSL::table)
                         .forEach(t -> DSL.using(c).deleteFrom(t).execute()));
