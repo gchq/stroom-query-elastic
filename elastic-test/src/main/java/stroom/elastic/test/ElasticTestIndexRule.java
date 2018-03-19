@@ -71,12 +71,8 @@ public class ElasticTestIndexRule implements MethodRule, TestRule {
         return new Statement() {
             @Override
             public void evaluate() throws Throwable {
-                try {
-                    before();
-                    statement.evaluate();
-                } finally {
-                    after();
-                }
+                before();
+                statement.evaluate();
             }
         };
     }
@@ -129,10 +125,6 @@ public class ElasticTestIndexRule implements MethodRule, TestRule {
             LOGGER.error("Could not create index config", e);
             fail(e.getLocalizedMessage());
         }
-    }
-
-    private void after() {
-        // NOOP
     }
 
     public static Builder forIndex(final Class<?> testClass,

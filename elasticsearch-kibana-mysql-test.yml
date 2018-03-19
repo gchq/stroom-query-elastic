@@ -22,3 +22,15 @@ services:
       - "19300:9300"
     environment:
       ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+
+  stroom-autoindex-test-db:
+    image:  "${MARIADB_DOCKER_REPO:-mariadb}:10.3.0"
+    container_name: stroom-autoindex-test-db
+    ports:
+        # Expose mysql on 7450
+      - "7450:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=my-secret-pw
+      - MYSQL_USER=stroomuser
+      - MYSQL_PASSWORD=stroompassword1
+      - MYSQL_DATABASE=test

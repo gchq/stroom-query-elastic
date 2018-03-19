@@ -55,7 +55,7 @@ public class AutoIndexQueryResourceIT {
                     AutoIndexDocRefEntity.TYPE);
 
     /**
-     * The auto index application
+     * The auto index application, it's client, and a rule to clear the doc ref database table
      */
     @ClassRule
     public static final DropwizardAppWithClientsRule<Config> autoIndexAppRule =
@@ -66,6 +66,11 @@ public class AutoIndexQueryResourceIT {
 
     private static QueryResourceHttpClient autoIndexQueryClient =
             new QueryResourceHttpClient(TestConstants.AUTO_INDEX_APP_HOST);
+
+    @Rule
+    public final DeleteFromTableRule<Config> clearDbRule = DeleteFromTableRule.withApp(autoIndexAppRule)
+            .table(AutoIndexDocRefEntity.TABLE_NAME)
+            .build();
 
     /**
      * The Elastic application, and it's client
@@ -225,8 +230,6 @@ public class AutoIndexQueryResourceIT {
         final AutoIndexDocRefEntity autoIndexDocRefEntity = new AutoIndexDocRefEntity.Builder()
                 .uuid(UUID.randomUUID().toString())
                 .name(UUID.randomUUID().toString())
-                .indexedType(UUID.randomUUID().toString())
-                .indexName(UUID.randomUUID().toString())
                 .rawDocRef(animalDocRef)
                 .indexDocRef(elasticDocRef)
                 .build();

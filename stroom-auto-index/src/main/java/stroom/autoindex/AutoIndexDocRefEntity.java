@@ -1,7 +1,12 @@
 package stroom.autoindex;
 
+import org.jooq.Field;
 import stroom.query.api.v2.DocRef;
-import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
+import stroom.query.audit.model.DocRefEntity;
+import stroom.query.jooq.DocRefJooqEntity;
+import stroom.query.jooq.JooqEntity;
+
+import static org.jooq.impl.DSL.field;
 
 /**
  * This doc ref encapsulates an auto index configuration between two doc refs.
@@ -10,12 +15,23 @@ import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
  * The Index datasource will be gradually populated from the raw datasource, and used for
  * querying data within the populated tracker windows.
  */
-public class AutoIndexDocRefEntity extends ElasticIndexDocRefEntity {
-    public static final String DOC_REF_TYPE = "type";
+@JooqEntity(tableName=AutoIndexDocRefEntity.TABLE_NAME)
+public class AutoIndexDocRefEntity extends DocRefJooqEntity {
+    public static final String TABLE_NAME = "auto_index_doc_ref";
+
+    private static final String DOC_REF_TYPE = "type";
     public static final String TYPE = "AutoIndex";
 
-    public static final String RAW_PREFIX = "raw-";
-    public static final String INDEX_PREFIX = "index-";
+    private static final String RAW_PREFIX = "raw_";
+    private static final String INDEX_PREFIX = "index_";
+
+    public static final Field<String> RAW_DOC_REF_TYPE = field(RAW_PREFIX + DOC_REF_TYPE, String.class);
+    public static final Field<String> RAW_DOC_REF_UUID = field(RAW_PREFIX + DocRefEntity.UUID, String.class);
+    public static final Field<String> RAW_DOC_REF_NAME = field(RAW_PREFIX + DocRefEntity.NAME, String.class);
+
+    public static final Field<String> INDEX_DOC_REF_TYPE = field(INDEX_PREFIX + DOC_REF_TYPE, String.class);
+    public static final Field<String> INDEX_DOC_REF_UUID = field(INDEX_PREFIX + DocRefEntity.UUID, String.class);
+    public static final Field<String> INDEX_DOC_REF_NAME = field(INDEX_PREFIX + DocRefEntity.NAME, String.class);
 
     /**
      * This is the Doc Ref of the slow data source
@@ -35,7 +51,7 @@ public class AutoIndexDocRefEntity extends ElasticIndexDocRefEntity {
         return indexDocRef;
     }
 
-    public static final class Builder extends ElasticIndexDocRefEntity.BaseBuilder<AutoIndexDocRefEntity, Builder> {
+    public static final class Builder extends BaseBuilder<AutoIndexDocRefEntity, Builder> {
 
         public Builder() {
             this(new AutoIndexDocRefEntity());

@@ -84,6 +84,7 @@ dependencies {
     compile deps.stroomQueryCommon
     compile deps.stroomQueryAudit
     compile deps.stroomExpression
+    compile deps.stroomQueryJooq
     compile deps.stroomTestData
     compile project(':stroom-query-elastic-svc')
 
@@ -101,6 +102,7 @@ dependencies {
     compile deps.elasticSearch
 
     runtime deps.mysql_connector_java
+    runtime deps.mariadb_connector
 
     testCompile testDeps.junit
     testCompile testDeps.assertj
