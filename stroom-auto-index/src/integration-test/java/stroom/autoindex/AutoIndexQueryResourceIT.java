@@ -8,6 +8,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.autoindex.animals.AnimalTestData;
+import stroom.autoindex.animals.AnimalsQueryResourceIT;
 import stroom.autoindex.animals.app.AnimalApp;
 import stroom.autoindex.animals.app.AnimalConfig;
 import stroom.autoindex.animals.app.AnimalDocRefEntity;
@@ -165,7 +166,8 @@ public class AutoIndexQueryResourceIT {
                 )
                 .build();
 
-        final SearchRequest searchRequest = getValidSearchRequest(autoIndex.docRef, expressionOperator, offset);
+        final SearchRequest searchRequest = AnimalsQueryResourceIT
+                .getTestSearchRequest(autoIndex.docRef, expressionOperator, offset);
 
         final Response response = autoIndexQueryClient.search(authRule.adminUser(), searchRequest);
         assertEquals(HttpStatus.OK_200, response.getStatus());
@@ -180,7 +182,6 @@ public class AutoIndexQueryResourceIT {
 
             final FlatResult flatResult = (FlatResult) result;
             flatResult.getValues().stream()
-                    //.map(objects -> objects.get(1))
                     .map(o -> new AnimalSighting.Builder()
                             .species(o.get(3).toString())
                             .location(o.get(4).toString())
@@ -320,48 +321,5 @@ public class AutoIndexQueryResourceIT {
                 .containsOrdered(containsAllOf(AuditedDocRefResourceImpl.UPDATE_DOC_REF, docRef.getUuid()));
 
         return docRef;
-    }
-
-    private SearchRequest getValidSearchRequest(final DocRef docRef,
-                                                final ExpressionOperator expressionOperator,
-                                                final OffsetRange offsetRange) {
-        final String queryKey = UUID.randomUUID().toString();
-        return new SearchRequest.Builder()
-                .query(new Query.Builder()
-                        .dataSource(docRef)
-                        .expression(expressionOperator)
-                        .build())
-                .key(queryKey)
-                .dateTimeLocale("en-gb")
-                .incremental(true)
-                .addResultRequests(new ResultRequest.Builder()
-                        .fetch(ResultRequest.Fetch.ALL)
-                        .resultStyle(ResultRequest.ResultStyle.FLAT)
-                        .componentId("componentId")
-                        .requestedRange(offsetRange)
-                        .addMappings(new TableSettings.Builder()
-                                .queryId(queryKey)
-                                .extractValues(false)
-                                .showDetail(false)
-                                .addFields(new Field.Builder()
-                                        .name(AnimalSighting.SPECIES)
-                                        .expression("${" + AnimalSighting.SPECIES + "}")
-                                        .build())
-                                .addFields(new Field.Builder()
-                                        .name(AnimalSighting.LOCATION)
-                                        .expression("${" + AnimalSighting.LOCATION + "}")
-                                        .build())
-                                .addFields(new Field.Builder()
-                                        .name(AnimalSighting.OBSERVER)
-                                        .expression("${" + AnimalSighting.OBSERVER + "}")
-                                        .build())
-                                .addFields(new Field.Builder()
-                                        .name(AnimalSighting.TIME)
-                                        .expression("${" + AnimalSighting.TIME + "}")
-                                        .build())
-                                .addMaxResults(1000)
-                                .build())
-                        .build())
-                .build();
     }
 }

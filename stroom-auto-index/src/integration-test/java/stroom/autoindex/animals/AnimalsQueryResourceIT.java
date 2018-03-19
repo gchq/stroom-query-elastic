@@ -146,6 +146,12 @@ public class AnimalsQueryResourceIT extends QueryResourceIT<AnimalDocRefEntity, 
     protected SearchRequest getValidSearchRequest(final DocRef docRef,
                                                   final ExpressionOperator expressionOperator,
                                                   final OffsetRange offsetRange) {
+        return AnimalsQueryResourceIT.getTestSearchRequest(docRef, expressionOperator, offsetRange);
+    }
+
+    public static SearchRequest getTestSearchRequest(final DocRef docRef,
+                                                     final ExpressionOperator expressionOperator,
+                                                     final OffsetRange offsetRange) {
         final String queryKey = UUID.randomUUID().toString();
         return new SearchRequest.Builder()
                 .query(new Query.Builder()
