@@ -1,5 +1,8 @@
 package stroom.autoindex;
 
+/**
+ * A series of configuration values, must be kept in sync with the configuration resources
+ */
 public interface TestConstants {
     String ELASTIC_APP_CONFIG = "elastic/config.yml";
     String ANIMALS_APP_CONFIG = "animal/config.yml";

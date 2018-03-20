@@ -10,6 +10,7 @@ import org.glassfish.hk2.api.TypeLiteral;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import stroom.query.audit.client.QueryResourceHttpClient;
 import stroom.query.audit.service.DocRefService;
+import stroom.query.jooq.AuditedJooqDocRefBundle;
 
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,9 +20,9 @@ public class App extends Application<Config> {
 
 
     private final AuditedJooqDocRefBundle<Config,
-            AutoIndexDocRefServiceImpl,
-            AutoIndexDocRefEntity,
-            AutoIndexQueryServiceImpl> auditedQueryBundle =
+                AutoIndexDocRefServiceImpl,
+                AutoIndexDocRefEntity,
+                AutoIndexQueryServiceImpl> auditedQueryBundle =
             new AuditedJooqDocRefBundle<>(
                     AutoIndexDocRefServiceImpl.class,
                     AutoIndexDocRefEntity.class,

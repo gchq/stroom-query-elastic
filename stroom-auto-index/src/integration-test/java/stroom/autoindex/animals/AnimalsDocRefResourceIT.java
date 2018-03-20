@@ -24,12 +24,11 @@ public class AnimalsDocRefResourceIT extends DocRefResourceIT<AnimalDocRefEntity
 
     @ClassRule
     public static final StroomAuthenticationRule authRule =
-            new StroomAuthenticationRule(
-                    WireMockConfiguration.options().port(TestConstants.TEST_AUTH_PORT),
-                    AnimalDocRefEntity.TYPE);
+            new StroomAuthenticationRule(WireMockConfiguration.options().port(TestConstants.TEST_AUTH_PORT));
 
     public AnimalsDocRefResourceIT() {
-        super(AnimalDocRefEntity.class,
+        super(AnimalDocRefEntity.TYPE,
+                AnimalDocRefEntity.class,
                 appRule,
                 authRule);
     }

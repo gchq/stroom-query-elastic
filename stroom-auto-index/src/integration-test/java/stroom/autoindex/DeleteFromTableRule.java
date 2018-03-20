@@ -7,7 +7,6 @@ import org.junit.rules.MethodRule;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.Statement;
 import stroom.query.jooq.HasDataSourceFactory;
-import stroom.query.jooq.HasJooqFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +16,7 @@ import java.util.List;
  * @param <CONFIG> The Dropwizard Configuration that contains the jOOQ Factory and Data Source Factory required to
  *                connect to the database.
  */
-public class DeleteFromTableRule<CONFIG extends Configuration & HasJooqFactory & HasDataSourceFactory> implements MethodRule {
+public class DeleteFromTableRule<CONFIG extends Configuration & HasDataSourceFactory> implements MethodRule {
 
     private final DropwizardAppRule<CONFIG> appRule;
     private final List<String> tablesToClear;
@@ -49,12 +48,12 @@ public class DeleteFromTableRule<CONFIG extends Configuration & HasJooqFactory &
                         .forEach(t -> DSL.using(c).deleteFrom(t).execute()));
     }
 
-    static <C extends Configuration & HasJooqFactory & HasDataSourceFactory>
+    static <C extends Configuration & HasDataSourceFactory>
     Builder<C> withApp(final DropwizardAppRule<C> appRule) {
         return new Builder<>(appRule);
     }
 
-    static final class Builder<C extends Configuration & HasJooqFactory & HasDataSourceFactory> {
+    static final class Builder<C extends Configuration & HasDataSourceFactory> {
         private final DropwizardAppRule<C> appRule;
         private final List<String> tablesToClear;
 

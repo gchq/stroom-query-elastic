@@ -5,6 +5,7 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import stroom.autoindex.animals.app.AnimalDocRefEntity;
+import stroom.autoindex.tracker.AutoIndexTracker;
 import stroom.elastic.test.ElasticTestIndexRule;
 import stroom.query.api.v2.DocRef;
 import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
@@ -27,9 +28,7 @@ public class AutoIndexDocRefResourceIT extends DocRefResourceIT<AutoIndexDocRefE
 
     @ClassRule
     public static final StroomAuthenticationRule authRule =
-            new StroomAuthenticationRule(
-                    WireMockConfiguration.options().port(TestConstants.TEST_AUTH_PORT),
-                    AutoIndexDocRefEntity.TYPE);
+            new StroomAuthenticationRule(WireMockConfiguration.options().port(TestConstants.TEST_AUTH_PORT));
 
     @ClassRule
     public static final ElasticTestIndexRule stroomIndexRule = ElasticTestIndexRule
@@ -40,13 +39,17 @@ public class AutoIndexDocRefResourceIT extends DocRefResourceIT<AutoIndexDocRefE
     @Rule
     public final DeleteFromTableRule<Config> clearDbRule = DeleteFromTableRule.withApp(appRule)
             .table(AutoIndexDocRefEntity.TABLE_NAME)
+            .table(AutoIndexTracker.TABLE_NAME)
             .build();
 
     @ClassRule
     public static TemporaryFolder temporaryFolder;
 
     public AutoIndexDocRefResourceIT() {
-        super(AutoIndexDocRefEntity.class, appRule, authRule);
+        super(AutoIndexDocRefEntity.TYPE,
+                AutoIndexDocRefEntity.class,
+                appRule,
+                authRule);
     }
 
     @Override

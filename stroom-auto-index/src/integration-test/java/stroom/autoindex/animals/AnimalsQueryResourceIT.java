@@ -43,9 +43,7 @@ public class AnimalsQueryResourceIT extends QueryResourceIT<AnimalDocRefEntity, 
 
     @ClassRule
     public static final StroomAuthenticationRule authRule =
-            new StroomAuthenticationRule(
-                    WireMockConfiguration.options().port(TestConstants.TEST_AUTH_PORT),
-                    AnimalDocRefEntity.TYPE);
+            new StroomAuthenticationRule(WireMockConfiguration.options().port(TestConstants.TEST_AUTH_PORT));
 
     @ClassRule
     public static final FlatFileTestDataRule testDataRule = FlatFileTestDataRule.withTempDirectory()

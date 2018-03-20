@@ -34,7 +34,7 @@ public class AnimalTestData implements Consumer<Consumer<String>> {
                         DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                 .setDataWriter(FlatDataWriterBuilder.defaultCsvFormat())
                 .rowCount(1000)
-                .consumedBy(writer)
+                .consumedBy(s -> s.forEach(writer))
                 .generate();
     }
 }

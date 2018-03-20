@@ -14,3 +14,10 @@ CREATE TABLE auto_index_doc_ref (
     index_name      VARCHAR(255),
     PRIMARY KEY     (uuid)
 ) ENGINE=InnoDB DEFAULT CHARSET latin1;
+
+CREATE TABLE tracker_window (
+    docRefUuid      VARCHAR(255) NOT NULL,
+    fromTime        BIGINT UNSIGNED NOT NULL,
+    toTime          BIGINT UNSIGNED NOT NULL,
+    PRIMARY KEY     (docRefUuid, fromTime)
+) ENGINE=InnoDB DEFAULT CHARSET latin1;

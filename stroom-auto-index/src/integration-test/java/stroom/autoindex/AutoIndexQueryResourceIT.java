@@ -13,6 +13,7 @@ import stroom.autoindex.animals.app.AnimalApp;
 import stroom.autoindex.animals.app.AnimalConfig;
 import stroom.autoindex.animals.app.AnimalDocRefEntity;
 import stroom.autoindex.animals.app.AnimalSighting;
+import stroom.autoindex.tracker.AutoIndexTracker;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.elastic.test.ElasticTestIndexRule;
@@ -51,9 +52,7 @@ public class AutoIndexQueryResourceIT {
      */
     @ClassRule
     public static final StroomAuthenticationRule authRule =
-            new StroomAuthenticationRule(
-                    WireMockConfiguration.options().port(TestConstants.TEST_AUTH_PORT),
-                    AutoIndexDocRefEntity.TYPE);
+            new StroomAuthenticationRule(WireMockConfiguration.options().port(TestConstants.TEST_AUTH_PORT));
 
     /**
      * The auto index application, it's client, and a rule to clear the doc ref database table
@@ -71,6 +70,7 @@ public class AutoIndexQueryResourceIT {
     @Rule
     public final DeleteFromTableRule<Config> clearDbRule = DeleteFromTableRule.withApp(autoIndexAppRule)
             .table(AutoIndexDocRefEntity.TABLE_NAME)
+            .table(AutoIndexTracker.TABLE_NAME)
             .build();
 
     /**
@@ -281,11 +281,10 @@ public class AutoIndexQueryResourceIT {
                 .build();
 
         // Ensure admin user can create the document in the folder
-        authRule.givePermission(authRule.adminUser(), new DocRef.Builder()
-                        .type(DocumentPermission.FOLDER)
-                        .uuid(parentFolderUuid)
-                        .build(),
-                DocumentPermission.CREATE.getTypedPermission(docRefType));
+        authRule.permitAdminUser()
+                .createInFolder(parentFolderUuid)
+                .docRefType(docRefType)
+                .done();
 
         // Create a doc ref to hang the search from
         final Response createResponse = docRefClient.createDocument(
@@ -297,16 +296,11 @@ public class AutoIndexQueryResourceIT {
         createResponse.close();
 
         // Give admin all the roles required to manipulate the document and it's underlying data
-        authRule.givePermission(authRule.adminUser(), new DocRef.Builder()
-                        .type(docRefType)
-                        .uuid(docRef.getUuid())
-                        .build(),
-                DocumentPermission.READ.getName());
-        authRule.givePermission(authRule.adminUser(), new DocRef.Builder()
-                        .type(docRefType)
-                        .uuid(docRef.getUuid())
-                        .build(),
-                DocumentPermission.UPDATE.getName());
+        authRule.permitAdminUser()
+                .docRef(docRef)
+                .permission(DocumentPermission.READ)
+                .permission(DocumentPermission.UPDATE)
+                .done();
 
         final Response updateIndexResponse =
                 docRefClient.update(authRule.adminUser(),
