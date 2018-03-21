@@ -12,7 +12,6 @@ import stroom.query.testing.DropwizardAppWithClientsRule;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 import java.util.Collections;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -22,7 +21,7 @@ import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-public class TrackerDaoIT {
+public class AutoIndexTrackerDaoIT {
 
     /**
      * Having the app rule will ensure the database gets migrated, it also gives us access to the configuration

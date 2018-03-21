@@ -52,7 +52,7 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
 
     @ClassRule
     public static StroomAuthenticationRule authRule =
-            new StroomAuthenticationRule(WireMockConfiguration.options().port(10080), ElasticIndexDocRefEntity.TYPE);
+            new StroomAuthenticationRule(WireMockConfiguration.options().port(10080));
 
     @ClassRule
     public static ElasticTestIndexRule stroomIndexRule = ElasticTestIndexRule
@@ -159,7 +159,10 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
                 .type(ElasticIndexDocRefEntity.TYPE)
                 .name("DoesNotExist")
                 .build();
-        authRule.giveDocumentPermission(authRule.adminUser(), elasticIndexConfig.getUuid(), DocumentPermission.READ);
+        authRule.permitAdminUser()
+                .docRef(elasticIndexConfig)
+                .permission(DocumentPermission.READ)
+                .done();
 
         final Response response = queryClient.getDataSource(authRule.adminUser(), elasticIndexConfig);
 
@@ -235,7 +238,10 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
                 .build();
 
         // Give permission to this non existent document
-        authRule.giveDocumentPermission(authRule.adminUser(), docRef.getUuid(), DocumentPermission.READ);
+        authRule.permitAdminUser()
+                .docRef(docRef)
+                .permission(DocumentPermission.READ)
+                .done();
 
         final String TERM_KEY = "aKey";
         final String TERM_VALUE = "aValue";

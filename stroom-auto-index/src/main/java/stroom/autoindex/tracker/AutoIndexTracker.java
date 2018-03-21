@@ -3,8 +3,6 @@ package stroom.autoindex.tracker;
 import stroom.query.api.v2.DocRef;
 
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Each instance shows which time windows have been indexed from the raw data source into the indexed data source.
@@ -38,12 +36,10 @@ public class AutoIndexTracker {
 
     /**
      * Getter for windows
-     * @return a copied sorted list of the windows, sorted by 'from' time
+     * @return a copied list of the windows
      */
     public List<TrackerWindow> getWindows() {
-        return this.windows.stream()
-                .sorted(Comparator.comparing(TrackerWindow::getFrom))
-                .collect(Collectors.toList());
+        return Collections.unmodifiableList(this.windows);
     }
 
     @Override

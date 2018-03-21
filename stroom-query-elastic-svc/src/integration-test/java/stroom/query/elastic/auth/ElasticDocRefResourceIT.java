@@ -28,7 +28,7 @@ public class ElasticDocRefResourceIT
 
     @ClassRule
     public static final StroomAuthenticationRule authRule =
-            new StroomAuthenticationRule(WireMockConfiguration.options().port(10080), ElasticIndexDocRefEntity.TYPE);
+            new StroomAuthenticationRule(WireMockConfiguration.options().port(10080));
 
     @ClassRule
     public static final ElasticTestIndexRule stroomIndexRule = ElasticTestIndexRule
@@ -37,7 +37,8 @@ public class ElasticDocRefResourceIT
             .build();
 
     public ElasticDocRefResourceIT() {
-        super(ElasticIndexDocRefEntity.class,
+        super(ElasticIndexDocRefEntity.TYPE,
+                ElasticIndexDocRefEntity.class,
                 appRule,
                 authRule);
     }

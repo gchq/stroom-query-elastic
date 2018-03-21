@@ -3,56 +3,49 @@ package stroom.autoindex.tracker;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.stream.Stream;
 
 /**
  * A class that can be used to determine overlaps between windows of any type and merge them down
  * to a reduced set of windows that cover the same space.
- * @param <CONTAINER> The class that contains the comparables.
+ * @param <HAS_BOUNDS> The class that contains the comparables.
  * @param <COMPARABLE> The type of the property that defines the window
  */
-public class WindowMerger<CONTAINER, COMPARABLE> {
+class WindowMerger<COMPARABLE, HAS_BOUNDS extends HasBounds<COMPARABLE>> {
 
     private final Comparator<COMPARABLE> comparator;
-    private final Function<CONTAINER, COMPARABLE> fromSupplier;
-    private final Function<CONTAINER, COMPARABLE> toSupplier;
-    private final BiFunction<COMPARABLE, COMPARABLE, CONTAINER> newValueGenerator;
+    private final BiFunction<COMPARABLE, COMPARABLE, HAS_BOUNDS> newValueGenerator;
 
-    private WindowMerger(final Builder<CONTAINER, COMPARABLE> builder) {
+    private WindowMerger(final Builder<COMPARABLE, HAS_BOUNDS> builder) {
         this.comparator = builder.comparator;
         this.newValueGenerator = builder.newValueGenerator;
-        this.fromSupplier = builder.fromSupplier;
-        this.toSupplier = builder.toSupplier;
     }
 
-
     public class MergeProcessBuilder {
-        private final CONTAINER windowToAdd;
-        private final List<CONTAINER> existingWindows = new ArrayList<>();
-        private Consumer<CONTAINER> deletionHandler;
+        private final HAS_BOUNDS windowToAdd;
+        private final List<HAS_BOUNDS> existingWindows = new ArrayList<>();
+        private Consumer<HAS_BOUNDS> deletionHandler;
 
-        public MergeProcessBuilder(final CONTAINER windowToAdd) {
+        MergeProcessBuilder(final HAS_BOUNDS windowToAdd) {
             this.windowToAdd = windowToAdd;
         }
 
-        public MergeProcessBuilder with(final List<CONTAINER> existingWindows) {
+        MergeProcessBuilder with(final List<HAS_BOUNDS> existingWindows) {
             this.existingWindows.addAll(existingWindows);
             return this;
         }
 
-        public MergeProcessBuilder with(final CONTAINER ... existingWindows) {
+        MergeProcessBuilder with(final HAS_BOUNDS ... existingWindows) {
             this.existingWindows.addAll(Arrays.asList(existingWindows));
             return this;
         }
 
 
-        public MergeProcessBuilder deleteWith(final Consumer<CONTAINER> deletionHandler) {
+        MergeProcessBuilder deleteWith(final Consumer<HAS_BOUNDS> deletionHandler) {
             this.deletionHandler = deletionHandler;
             return this;
         }
 
-        public Optional<CONTAINER> execute() {
+        Optional<HAS_BOUNDS> execute() {
             Objects.requireNonNull(this.windowToAdd, "Must specific window to merge");
             Objects.requireNonNull(this.deletionHandler, "Must specific a deletion handler");
 
@@ -60,7 +53,7 @@ public class WindowMerger<CONTAINER, COMPARABLE> {
         }
     }
 
-    public MergeProcessBuilder merge(final CONTAINER windowToAdd) {
+    MergeProcessBuilder merge(final HAS_BOUNDS windowToAdd) {
         return new MergeProcessBuilder(windowToAdd);
     }
 
@@ -76,12 +69,12 @@ public class WindowMerger<CONTAINER, COMPARABLE> {
      * @return The time window that should be added, it is optional because a new time window may already
      * be completely subsumed by an existing one.
      */
-    private Optional<CONTAINER> mergeWindows(final CONTAINER windowToAdd,
-                                            final List<CONTAINER> existingWindows,
-                                            final Consumer<CONTAINER> deletionHandler) {
-        CONTAINER windowToReturn = windowToAdd;
+    private Optional<HAS_BOUNDS> mergeWindows(final HAS_BOUNDS windowToAdd,
+                                            final List<HAS_BOUNDS> existingWindows,
+                                            final Consumer<HAS_BOUNDS> deletionHandler) {
+        HAS_BOUNDS windowToReturn = windowToAdd;
 
-        for (final CONTAINER existingWindow : existingWindows) {
+        for (final HAS_BOUNDS existingWindow : existingWindows) {
             final Optional<OverlapStyle> overlapStyle = determineOverlap(windowToReturn, existingWindow);
 
             // This would be odd...
@@ -98,14 +91,14 @@ public class WindowMerger<CONTAINER, COMPARABLE> {
                 case OVERLAP_START:
                     deletionHandler.accept(existingWindow);
                     windowToReturn = newValueGenerator.apply(
-                            fromSupplier.apply(existingWindow),
-                            toSupplier.apply(windowToReturn));
+                            existingWindow.getFrom(),
+                            windowToReturn.getTo());
                     break;
                 case OVERLAP_END:
                     deletionHandler.accept(existingWindow);
                     windowToReturn = newValueGenerator.apply(
-                            fromSupplier.apply(windowToReturn),
-                            toSupplier.apply(existingWindow));
+                            windowToReturn.getFrom(),
+                            existingWindow.getTo());
                     break;
             }
         }
@@ -113,22 +106,22 @@ public class WindowMerger<CONTAINER, COMPARABLE> {
         return Optional.of(windowToReturn);
     }
 
-    Optional<OverlapStyle> determineOverlap(final CONTAINER newWindow,
-                                         final CONTAINER existingWindow) {
-        if (comparator.compare(toSupplier.apply(existingWindow), fromSupplier.apply(newWindow)) < 0) {
+    Optional<OverlapStyle> determineOverlap(final HAS_BOUNDS newWindow,
+                                         final HAS_BOUNDS existingWindow) {
+        if (comparator.compare(existingWindow.getTo(), newWindow.getFrom()) < 0) {
             return OverlapStyle.NO_OVERLAP.opt();
-        } else if (comparator.compare(fromSupplier.apply(existingWindow), toSupplier.apply(newWindow)) > 0) {
+        } else if (comparator.compare(existingWindow.getFrom(), newWindow.getTo()) > 0) {
             return OverlapStyle.NO_OVERLAP.opt();
-        } else if (comparator.compare(fromSupplier.apply(existingWindow), fromSupplier.apply(newWindow)) > 0) {
-            if (comparator.compare(toSupplier.apply(existingWindow), toSupplier.apply(newWindow)) < 0) {
+        } else if (comparator.compare(existingWindow.getFrom(), newWindow.getFrom()) > 0) {
+            if (comparator.compare(existingWindow.getTo(), newWindow.getTo()) < 0) {
                 return OverlapStyle.EXISTING_SUBSUMED_BY_NEW.opt();
-            } else if (comparator.compare(toSupplier.apply(existingWindow), toSupplier.apply(newWindow)) > 0) {
+            } else if (comparator.compare(existingWindow.getTo(), newWindow.getTo()) > 0) {
                 return OverlapStyle.OVERLAP_END.opt();
             }
-        } else if (comparator.compare(fromSupplier.apply(existingWindow), fromSupplier.apply(newWindow)) < 0) {
-            if (comparator.compare(toSupplier.apply(existingWindow), toSupplier.apply(newWindow)) < 0) {
+        } else if (comparator.compare(existingWindow.getFrom(), newWindow.getFrom()) < 0) {
+            if (comparator.compare(existingWindow.getTo(), newWindow.getTo()) < 0) {
                 return OverlapStyle.OVERLAP_START.opt();
-            } else if (comparator.compare(toSupplier.apply(existingWindow), toSupplier.apply(newWindow)) > 0) {
+            } else if (comparator.compare(existingWindow.getTo(), newWindow.getTo()) > 0) {
                 return OverlapStyle.NEW_SUBSUMED_BY_EXISTING.opt();
             }
         }
@@ -149,41 +142,27 @@ public class WindowMerger<CONTAINER, COMPARABLE> {
         }
     }
 
-    public static <C, T> Builder<C, T>
-    withValueGenerator(final BiFunction<T, T, C> newValueGenerator) {
+    public static <C, H extends HasBounds<C>> Builder<C, H>
+    withValueGenerator(final BiFunction<C, C, H> newValueGenerator) {
         return new Builder<>(newValueGenerator);
     }
 
-    public static class Builder<C, T> {
-        private final BiFunction<T, T, C> newValueGenerator;
-        private Comparator<T> comparator;
-        private Function<C, T> fromSupplier;
-        private Function<C, T> toSupplier;
+    public static class Builder<C, H extends HasBounds<C>> {
+        private final BiFunction<C, C, H> newValueGenerator;
+        private Comparator<C> comparator;
 
-        private Builder(final BiFunction<T, T, C> newValueGenerator) {
+        private Builder(final BiFunction<C, C, H> newValueGenerator) {
             this.newValueGenerator = newValueGenerator;
         }
 
-        public Builder<C, T> comparator(final Comparator<T> value) {
+        public Builder<C, H> comparator(final Comparator<C> value) {
             this.comparator = value;
             return this;
         }
 
-        public Builder<C, T> from(final Function<C, T> value) {
-            this.fromSupplier = value;
-            return this;
-        }
-
-        public Builder<C, T> to(final Function<C, T> value) {
-            this.toSupplier = value;
-            return this;
-        }
-
-        public WindowMerger<C, T> build() {
+        public WindowMerger<C, H> build() {
             Objects.requireNonNull(this.newValueGenerator);
             Objects.requireNonNull(this.comparator);
-            Objects.requireNonNull(this.fromSupplier);
-            Objects.requireNonNull(this.toSupplier);
 
             return new WindowMerger<>(this);
         }

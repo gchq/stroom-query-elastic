@@ -8,7 +8,7 @@ import java.util.Optional;
  * Each instance encapsulates a single window of time for which data
  * has been extracted from the raw data source into the index source.
  */
-public class TrackerWindow {
+public class TrackerWindow implements HasBounds<LocalDateTime> {
     private final LocalDateTime from;
     private final LocalDateTime to;
 
@@ -18,10 +18,12 @@ public class TrackerWindow {
         this.to = to;
     }
 
+    @Override
     public LocalDateTime getFrom() {
         return from;
     }
 
+    @Override
     public LocalDateTime getTo() {
         return to;
     }

@@ -5,13 +5,13 @@ import org.jooq.impl.DSL;
 import org.jooq.types.ULong;
 
 import javax.inject.Inject;
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static stroom.autoindex.tracker.TimeUtils.dateTimeFromULong;
+import static stroom.autoindex.tracker.TimeUtils.getEpochSecondsULong;
 
 public class AutoIndexTrackerDaoImpl implements AutoIndexTrackerDao {
     private final DSLContext database;
@@ -25,11 +25,9 @@ public class AutoIndexTrackerDaoImpl implements AutoIndexTrackerDao {
     private static final Field<ULong> FIELD_FROM = DSL.field(FROM, ULong.class);
     private static final Field<ULong> FIELD_TO = DSL.field(TO, ULong.class);
 
-    private static final WindowMerger<TrackerWindow, LocalDateTime> dateTimeMerger =
-            WindowMerger.<TrackerWindow, LocalDateTime>withValueGenerator((from, to) -> TrackerWindow.from(from).to(to))
+    private static final WindowMerger<LocalDateTime, TrackerWindow> dateTimeMerger =
+            WindowMerger.<LocalDateTime, TrackerWindow>withValueGenerator((from, to) -> TrackerWindow.from(from).to(to))
                     .comparator(LocalDateTime::compareTo)
-                    .from(TrackerWindow::getFrom)
-                    .to(TrackerWindow::getTo)
                     .build();
 
     private AutoIndexTrackerDaoImpl(final DSLContext database) {
@@ -58,7 +56,7 @@ public class AutoIndexTrackerDaoImpl implements AutoIndexTrackerDao {
                     .deleteWith(tw -> DSL.using(c)
                             .deleteFrom(WINDOW_TABLE)
                             .where(FIELD_DOC_REF_UUID.equal(docRefUuid)
-                                    .and(FIELD_FROM.equal(getEpochMillis(tw.getFrom()))))
+                                    .and(FIELD_FROM.equal(getEpochSecondsULong(tw.getFrom()))))
                             .execute())
                     .execute();
 
@@ -66,7 +64,7 @@ public class AutoIndexTrackerDaoImpl implements AutoIndexTrackerDao {
             windowToAdd.ifPresent(tw ->
                     DSL.using(c).insertInto(WINDOW_TABLE)
                             .columns(FIELD_DOC_REF_UUID, FIELD_FROM, FIELD_TO)
-                            .values(docRefUuid, getEpochMillis(tw.getFrom()), getEpochMillis(tw.getTo()))
+                            .values(docRefUuid, getEpochSecondsULong(tw.getFrom()), getEpochSecondsULong(tw.getTo()))
                             .execute()
             );
 
@@ -95,23 +93,12 @@ public class AutoIndexTrackerDaoImpl implements AutoIndexTrackerDao {
                 .fetch();
 
         final List<TrackerWindow> windows = results.stream()
-                .map(r -> TrackerWindow.from(fromLong(r.get(FIELD_FROM))).to(fromLong(r.get(FIELD_TO))))
+                .map(r -> TrackerWindow.from(dateTimeFromULong(r.get(FIELD_FROM))).to(dateTimeFromULong(r.get(FIELD_TO))))
                 .filter(TrackerWindow::isBound)
                 .collect(Collectors.toList());
 
         return new AutoIndexTracker(docRefUuid)
                 .withWindows(windows);
-    }
-
-    private LocalDateTime fromLong(final ULong longValue) {
-        return Optional.ofNullable(longValue)
-                .map(ULong::longValue)
-                .map(l ->  Instant.ofEpochSecond(l).atZone(ZoneId.systemDefault()).toLocalDateTime())
-                .orElse(null);
-    }
-
-    private ULong getEpochMillis(final LocalDateTime dateTime) {
-        return ULong.valueOf(dateTime.atZone(ZoneOffset.systemDefault()).toInstant().getEpochSecond());
     }
 
     /**

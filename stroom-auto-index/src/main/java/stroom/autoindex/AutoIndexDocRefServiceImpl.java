@@ -1,10 +1,12 @@
 package stroom.autoindex;
 
 import org.jooq.Configuration;
+import org.jooq.types.ULong;
 import stroom.query.api.v2.DocRef;
 import stroom.query.jooq.DocRefServiceJooqImpl;
 
 import javax.inject.Inject;
+import java.time.temporal.ChronoUnit;
 
 public class AutoIndexDocRefServiceImpl
         extends DocRefServiceJooqImpl<AutoIndexDocRefEntity> {
@@ -13,6 +15,14 @@ public class AutoIndexDocRefServiceImpl
     public AutoIndexDocRefServiceImpl(final Configuration jooqConfiguration) {
         super(AutoIndexDocRefEntity.TYPE,
                 dataMap -> new AutoIndexDocRefEntity.Builder()
+                        .timeFieldName(dataMap.getValue(AutoIndexDocRefEntity.TIME_FIELD_NAME_FIELD).orElse(null))
+                        .indexWindowAmount(dataMap.getValue(AutoIndexDocRefEntity.INDEXING_WINDOW_AMOUNT_FIELD)
+                                .orElse(ULong.valueOf(1L))
+                                .longValue())
+                        .indexWindowUnits(dataMap.getValue(AutoIndexDocRefEntity.INDEXING_WINDOW_UNIT_FIELD)
+                                .map(ChronoUnit::valueOf)
+                                .orElse(ChronoUnit.DAYS
+                        ))
                         .rawDocRef(new DocRef.Builder()
                                 .type(dataMap.getValue(AutoIndexDocRefEntity.RAW_DOC_REF_TYPE).orElse(null))
                                 .uuid(dataMap.getValue(AutoIndexDocRefEntity.RAW_DOC_REF_UUID).orElse(null))
@@ -24,6 +34,10 @@ public class AutoIndexDocRefServiceImpl
                                 .name(dataMap.getValue(AutoIndexDocRefEntity.INDEX_DOC_REF_NAME).orElse(null))
                                 .build()),
                 (entity, consumer) -> {
+                    consumer.setValue(AutoIndexDocRefEntity.INDEXING_WINDOW_AMOUNT_FIELD, ULong.valueOf(entity.getIndexWindowAmount()));
+                    consumer.setValue(AutoIndexDocRefEntity.INDEXING_WINDOW_UNIT_FIELD, entity.getIndexWindowUnit().name());
+                    consumer.setValue(AutoIndexDocRefEntity.TIME_FIELD_NAME_FIELD, entity.getTimeFieldName());
+
                     consumer.setValue(AutoIndexDocRefEntity.RAW_DOC_REF_TYPE, entity.getRawDocRef().getType());
                     consumer.setValue(AutoIndexDocRefEntity.RAW_DOC_REF_UUID, entity.getRawDocRef().getUuid());
                     consumer.setValue(AutoIndexDocRefEntity.RAW_DOC_REF_NAME, entity.getRawDocRef().getName());

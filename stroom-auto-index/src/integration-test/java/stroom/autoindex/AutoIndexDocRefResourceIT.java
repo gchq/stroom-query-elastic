@@ -5,6 +5,7 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import stroom.autoindex.animals.app.AnimalDocRefEntity;
+import stroom.autoindex.animals.app.AnimalSighting;
 import stroom.autoindex.tracker.AutoIndexTracker;
 import stroom.elastic.test.ElasticTestIndexRule;
 import stroom.query.api.v2.DocRef;
@@ -14,6 +15,7 @@ import stroom.query.testing.DocRefResourceIT;
 import stroom.query.testing.DropwizardAppWithClientsRule;
 import stroom.query.testing.StroomAuthenticationRule;
 
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -55,6 +57,9 @@ public class AutoIndexDocRefResourceIT extends DocRefResourceIT<AutoIndexDocRefE
     @Override
     protected AutoIndexDocRefEntity createPopulatedEntity() {
         return new AutoIndexDocRefEntity.Builder()
+                .indexWindowAmount(4)
+                .indexWindowUnits(ChronoUnit.HOURS)
+                .timeFieldName(AnimalSighting.TIME)
                 .rawDocRef(new DocRef.Builder()
                         .uuid(UUID.randomUUID().toString())
                         .type(AnimalDocRefEntity.TYPE)
@@ -71,6 +76,10 @@ public class AutoIndexDocRefResourceIT extends DocRefResourceIT<AutoIndexDocRefE
     @Override
     protected Map<String, String> exportValues(final AutoIndexDocRefEntity entity) {
         final Map<String, String> values = new HashMap<>();
+
+        values.put(AutoIndexDocRefEntity.INDEXING_WINDOW_AMOUNT_FIELD.getName(), Long.toString(entity.getIndexWindowAmount()));
+        values.put(AutoIndexDocRefEntity.INDEXING_WINDOW_UNIT_FIELD.getName(), entity.getIndexWindowUnit().name());
+        values.put(AutoIndexDocRefEntity.TIME_FIELD_NAME_FIELD.getName(), entity.getTimeFieldName());
 
         values.put(AutoIndexDocRefEntity.RAW_DOC_REF_TYPE.getName(), entity.getRawDocRef().getType());
         values.put(AutoIndexDocRefEntity.RAW_DOC_REF_UUID.getName(), entity.getRawDocRef().getUuid());

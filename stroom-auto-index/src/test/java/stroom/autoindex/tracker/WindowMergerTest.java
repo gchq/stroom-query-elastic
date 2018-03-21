@@ -3,89 +3,26 @@ package stroom.autoindex.tracker;
 import org.junit.Test;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class WindowMergerTest {
 
-    /**
-     * A simple class that contains a to/from window based on integers.
-     */
-    private static class IntegerWindow {
-        final Integer from;
-        final Integer to;
-
-        IntegerWindow(final Integer from, final Integer to) {
-            this.from = from;
-            this.to = to;
-        }
-
-        private Integer getFrom() {
-            return from;
-        }
-
-        private Integer getTo() {
-            return to;
-        }
-
-        @Override
-        public String toString() {
-            final StringBuilder sb = new StringBuilder("IntegerWindow{");
-            sb.append("from=").append(from);
-            sb.append(", to=").append(to);
-            sb.append('}');
-            return sb.toString();
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            IntegerWindow that = (IntegerWindow) o;
-            return Objects.equals(from, that.from) &&
-                    Objects.equals(to, that.to);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(from, to);
-        }
-
-        private static Builder from(final Integer from) {
-            return new Builder(from);
-        }
-
-        private static class Builder {
-            final Integer from;
-
-            private Builder(final Integer from) {
-                this.from = from;
-            }
-
-            private IntegerWindow to(final Integer to) {
-                return new IntegerWindow(this.from, to);
-            }
-        }
-    }
-
     // Classes under test
-    private final WindowMerger<IntegerWindow, Integer> integerMerger =
-            WindowMerger.<IntegerWindow, Integer>withValueGenerator((from, to) -> IntegerWindow.from(from).to(to))
+    private final WindowMerger<Integer, IntegerWindow> integerMerger =
+            WindowMerger.<Integer, IntegerWindow>withValueGenerator((from, to) -> IntegerWindow.from(from).to(to))
                     .comparator(Integer::compare)
-                    .from(IntegerWindow::getFrom)
-                    .to(IntegerWindow::getTo)
                     .build();
 
-    private final WindowMerger<TrackerWindow, LocalDateTime> dateTimeMerger =
-            WindowMerger.<TrackerWindow, LocalDateTime>withValueGenerator((from, to) -> TrackerWindow.from(from).to(to))
+    private final WindowMerger<LocalDateTime, TrackerWindow> dateTimeMerger =
+            WindowMerger.<LocalDateTime, TrackerWindow>withValueGenerator((from, to) -> TrackerWindow.from(from).to(to))
                     .comparator(LocalDateTime::compareTo)
-                    .from(TrackerWindow::getFrom)
-                    .to(TrackerWindow::getTo)
                     .build();
 
     @Test
@@ -113,7 +50,7 @@ public class WindowMergerTest {
         assertEquals(toCreateOpt.get(), IntegerWindow.from(1).to(5));
 
         // This window that overlapped should be deleted, to be replaced by the new one
-        assertEquals(deletions, Collections.singleton(IntegerWindow.from(1).to(4)));
+        assertEquals(Collections.singleton(IntegerWindow.from(1).to(4)), deletions);
     }
 
     @Test
@@ -121,8 +58,7 @@ public class WindowMergerTest {
         final Optional<WindowMerger.OverlapStyle> overlapStyle =
                 dateTimeMerger.determineOverlap(
                         TrackerWindow.from(LocalDateTime.of(2017, 3, 20, 0, 0)).to(LocalDateTime.of(2017, 3, 29, 0, 0)),
-                        TrackerWindow.from(LocalDateTime.of(2017, 3, 15, 0, 0)).to(LocalDateTime.of(2017, 3, 25, 0, 0))
-                );
+                        TrackerWindow.from(LocalDateTime.of(2017, 3, 15, 0, 0)).to(LocalDateTime.of(2017, 3, 25, 0, 0)));
         assertTrue(overlapStyle.isPresent());
         assertEquals(WindowMerger.OverlapStyle.OVERLAP_START, overlapStyle.get());
     }
@@ -141,17 +77,15 @@ public class WindowMergerTest {
         assertTrue(toCreateOpt.isPresent());
 
         // Should detect overlap and move the end
-        assertEquals(toCreateOpt.get(),
-                TrackerWindow
+        assertEquals(TrackerWindow
                         .from(LocalDateTime.of(2017, 3, 15, 0, 0))
-                        .to(LocalDateTime.of(2017, 3, 29, 0, 0)));
+                        .to(LocalDateTime.of(2017, 3, 29, 0, 0)), toCreateOpt.get());
 
         // This window that overlapped should be deleted, to be replaced by the new one
-        assertEquals(deletions, Collections.singleton(TrackerWindow
+        assertEquals(Collections.singleton(TrackerWindow
                         .from(LocalDateTime.of(2017, 3, 15, 0, 0))
-                        .to(LocalDateTime.of(2017, 3, 25, 0, 0))
-                )
-        );
+                        .to(LocalDateTime.of(2017, 3, 25, 0, 0))),
+                deletions);
     }
 
     @Test
@@ -176,10 +110,10 @@ public class WindowMergerTest {
         assertTrue(toCreateOpt.isPresent());
 
         // Should detect overlap and move the start
-        assertEquals(toCreateOpt.get(), IntegerWindow.from(9).to(13));
+        assertEquals(IntegerWindow.from(9).to(13), toCreateOpt.get());
 
         // This window that overlapped should be deleted, to be replaced by the new one
-        assertEquals(deletions, Collections.singleton(IntegerWindow.from(10).to(13)));
+        assertEquals(Collections.singleton(IntegerWindow.from(10).to(13)), deletions);
     }
 
     @Test
@@ -187,8 +121,7 @@ public class WindowMergerTest {
         final Optional<WindowMerger.OverlapStyle> overlapStyle =
                 dateTimeMerger.determineOverlap(
                         TrackerWindow.from(LocalDateTime.of(2017, 3, 15, 0, 0)).to(LocalDateTime.of(2017, 3, 25, 0, 0)),
-                        TrackerWindow.from(LocalDateTime.of(2017, 3, 20, 0, 0)).to(LocalDateTime.of(2017, 3, 29, 0, 0))
-                );
+                        TrackerWindow.from(LocalDateTime.of(2017, 3, 20, 0, 0)).to(LocalDateTime.of(2017, 3, 29, 0, 0)));
         assertTrue(overlapStyle.isPresent());
         assertEquals(WindowMerger.OverlapStyle.OVERLAP_END, overlapStyle.get());
     }
@@ -207,19 +140,16 @@ public class WindowMergerTest {
         assertTrue(toCreateOpt.isPresent());
 
         // Should detect overlap and move the start
-        assertEquals(toCreateOpt.get(),
-                TrackerWindow
+        assertEquals(TrackerWindow
                         .from(LocalDateTime.of(2017, 3, 15, 0, 0))
-                        .to(LocalDateTime.of(2017, 3, 29, 0, 0))
-        );
+                        .to(LocalDateTime.of(2017, 3, 29, 0, 0)),
+                toCreateOpt.get());
 
         // This window that overlapped should be deleted, to be replaced by the new one
-        assertEquals(deletions, Collections.singleton(
-                TrackerWindow
+        assertEquals(Collections.singleton(TrackerWindow
                         .from(LocalDateTime.of(2017, 3, 20, 0, 0))
-                        .to(LocalDateTime.of(2017, 3, 29, 0, 0))
-                )
-        );
+                        .to(LocalDateTime.of(2017, 3, 29, 0, 0))),
+                deletions);
     }
 
     @Test
@@ -244,10 +174,10 @@ public class WindowMergerTest {
         assertTrue(toCreateOpt.isPresent());
 
         // Should detect overlap and move the start
-        assertEquals(toCreateOpt.get(), IntegerWindow.from(20).to(44));
+        assertEquals(IntegerWindow.from(20).to(44), toCreateOpt.get());
 
         // This window that overlapped should be deleted, to be replaced by the new one
-        assertEquals(deletions, Collections.singleton(IntegerWindow.from(24).to(30)));
+        assertEquals(Collections.singleton(IntegerWindow.from(24).to(30)), deletions);
     }
 
     @Test
@@ -275,18 +205,16 @@ public class WindowMergerTest {
         assertTrue(toCreateOpt.isPresent());
 
         // Should detect overlap and move the start
-        assertEquals(toCreateOpt.get(),
-                TrackerWindow
+        assertEquals(TrackerWindow
                         .from(LocalDateTime.of(2018, 10, 5, 0, 0))
-                        .to(LocalDateTime.of(2018, 12, 20, 0, 0)));
+                        .to(LocalDateTime.of(2018, 12, 20, 0, 0)),
+                toCreateOpt.get());
 
         // This window that overlapped should be deleted, to be replaced by the new one
-        assertEquals(deletions, Collections.singleton(
-                TrackerWindow
+        assertEquals(Collections.singleton(TrackerWindow
                         .from(LocalDateTime.of(2018, 11, 20, 0, 0))
-                        .to(LocalDateTime.of(2018, 12, 13, 0, 0))
-                )
-        );
+                        .to(LocalDateTime.of(2018, 12, 13, 0, 0))),
+                deletions);
     }
 
     @Test
@@ -317,8 +245,7 @@ public class WindowMergerTest {
         final Optional<WindowMerger.OverlapStyle> overlapStyle =
                 dateTimeMerger.determineOverlap(
                         TrackerWindow.from(LocalDateTime.of(2018, 11, 20, 0, 0)).to(LocalDateTime.of(2018, 12, 13, 0, 0)),
-                        TrackerWindow.from(LocalDateTime.of(2018, 10, 5, 0, 0)).to(LocalDateTime.of(2018, 12, 20, 0, 0))
-                );
+                        TrackerWindow.from(LocalDateTime.of(2018, 10, 5, 0, 0)).to(LocalDateTime.of(2018, 12, 20, 0, 0)));
         assertTrue(overlapStyle.isPresent());
         assertEquals(WindowMerger.OverlapStyle.NEW_SUBSUMED_BY_EXISTING, overlapStyle.get());
     }
@@ -360,7 +287,7 @@ public class WindowMergerTest {
         assertTrue(toCreateOpt.isPresent());
 
         // Should detect overlap and move the start
-        assertEquals(toCreateOpt.get(), IntegerWindow.from(24).to(30));
+        assertEquals(IntegerWindow.from(24).to(30), toCreateOpt.get());
 
         // This window that overlapped should be deleted, to be replaced by the new one
         assertEquals(0, deletions.size());
@@ -391,10 +318,10 @@ public class WindowMergerTest {
         assertTrue(toCreateOpt.isPresent());
 
         // Should detect overlap and move the start
-        assertEquals(toCreateOpt.get(),
-                TrackerWindow
+        assertEquals(TrackerWindow
                         .from(LocalDateTime.of(2018, 2, 20, 0, 0))
-                        .to(LocalDateTime.of(2018, 3, 20, 0, 0)));
+                        .to(LocalDateTime.of(2018, 3, 20, 0, 0)),
+                toCreateOpt.get());
 
         // This window that overlapped should be deleted, to be replaced by the new one
         assertEquals(0, deletions.size());
@@ -422,7 +349,7 @@ public class WindowMergerTest {
         assertTrue(toCreateOpt.isPresent());
 
         // Should detect overlap and move the start
-        assertEquals(toCreateOpt.get(), IntegerWindow.from(10).to(13));
+        assertEquals(IntegerWindow.from(10).to(13), toCreateOpt.get());
 
         // This window that overlapped should be deleted, to be replaced by the new one
         assertEquals(0, deletions.size());
@@ -433,8 +360,7 @@ public class WindowMergerTest {
         final Optional<WindowMerger.OverlapStyle> overlapStyle =
                 dateTimeMerger.determineOverlap(
                         TrackerWindow.from(LocalDateTime.of(2016, 3, 1, 0, 0)).to(LocalDateTime.of(2017, 3, 1, 0, 0)),
-                        TrackerWindow.from(LocalDateTime.of(2017, 3, 2, 0, 0)).to(LocalDateTime.of(2018, 3, 1, 0, 0))
-                );
+                        TrackerWindow.from(LocalDateTime.of(2017, 3, 2, 0, 0)).to(LocalDateTime.of(2018, 3, 1, 0, 0)));
         assertTrue(overlapStyle.isPresent());
         assertEquals(WindowMerger.OverlapStyle.NO_OVERLAP, overlapStyle.get());
     }
@@ -453,11 +379,10 @@ public class WindowMergerTest {
         assertTrue(toCreateOpt.isPresent());
 
         // Should detect overlap and move the start
-        assertEquals(toCreateOpt.get(),
-                TrackerWindow
+        assertEquals(TrackerWindow
                         .from(LocalDateTime.of(2016, 3, 1, 0, 0))
-                        .to(LocalDateTime.of(2017, 3, 1, 0, 0))
-        );
+                        .to(LocalDateTime.of(2017, 3, 1, 0, 0)),
+                toCreateOpt.get());
 
         // This window that overlapped should be deleted, to be replaced by the new one
         assertEquals(0, deletions.size());
@@ -477,17 +402,15 @@ public class WindowMergerTest {
                 .execute();
 
         assertTrue(toCreateOpt.isPresent());
-        assertEquals(toCreateOpt.get(),
-                TrackerWindow
+        assertEquals(TrackerWindow
                         .from(LocalDateTime.of(2018, 2, 1, 0, 0))
-                        .to(LocalDateTime.of(2018, 4, 1, 0, 0))
-        );
+                        .to(LocalDateTime.of(2018, 4, 1, 0, 0)),
+                toCreateOpt.get());
 
-        assertEquals(deletions, Collections.singleton(
-                TrackerWindow
+        assertEquals(Collections.singleton(TrackerWindow
                         .from(LocalDateTime.of(2018, 2, 1, 0, 0))
-                        .to(LocalDateTime.of(2018, 3, 1, 0, 0))
-        ));
+                        .to(LocalDateTime.of(2018, 3, 1, 0, 0))),
+                deletions);
     }
 
     @Test
@@ -503,17 +426,15 @@ public class WindowMergerTest {
                 .execute();
 
         assertTrue(toCreateOpt.isPresent());
-        assertEquals(toCreateOpt.get(),
-                TrackerWindow
+        assertEquals(TrackerWindow
                         .from(LocalDateTime.of(2017, 1, 1, 0, 0))
-                        .to(LocalDateTime.of(2017, 2, 28, 0, 0))
-        );
+                        .to(LocalDateTime.of(2017, 2, 28, 0, 0)),
+                toCreateOpt.get());
 
-        assertEquals(deletions, Collections.singleton(
-                TrackerWindow
+        assertEquals(Collections.singleton(TrackerWindow
                         .from(LocalDateTime.of(2017, 2, 1, 0, 0))
-                        .to(LocalDateTime.of(2017, 2, 28, 0, 0))
-        ));
+                        .to(LocalDateTime.of(2017, 2, 28, 0, 0))),
+                deletions);
     }
 
     @Test
@@ -530,15 +451,16 @@ public class WindowMergerTest {
                 .execute();
 
         assertTrue(toCreateOpt.isPresent());
-        assertEquals(toCreateOpt.get(),
-                TrackerWindow
+        assertEquals(TrackerWindow
                         .from(LocalDateTime.of(2017, 1, 1, 0, 0))
-                        .to(LocalDateTime.of(2017, 4, 1, 0, 0))
-        );
+                        .to(LocalDateTime.of(2017, 4, 1, 0, 0)),
+                toCreateOpt.get());
 
-        assertEquals(deletions, Stream.of(
-                TrackerWindow.from(LocalDateTime.of(2017, 1, 1, 0, 0)).to(LocalDateTime.of(2017, 2, 1, 0, 0)),
-                TrackerWindow.from(LocalDateTime.of(2017, 3, 1, 0, 0)).to(LocalDateTime.of(2017, 4, 1, 0, 0))
-        ).collect(Collectors.toSet()));
+        assertEquals(
+                Stream.of(
+                    TrackerWindow.from(LocalDateTime.of(2017, 1, 1, 0, 0)).to(LocalDateTime.of(2017, 2, 1, 0, 0)),
+                    TrackerWindow.from(LocalDateTime.of(2017, 3, 1, 0, 0)).to(LocalDateTime.of(2017, 4, 1, 0, 0))
+                ).collect(Collectors.toSet()),
+            deletions);
     }
 }

@@ -1,10 +1,16 @@
 package stroom.autoindex;
 
 import org.jooq.Field;
+import org.jooq.types.ULong;
 import stroom.query.api.v2.DocRef;
 import stroom.query.audit.model.DocRefEntity;
 import stroom.query.jooq.DocRefJooqEntity;
 import stroom.query.jooq.JooqEntity;
+
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAmount;
+import java.util.Objects;
 
 import static org.jooq.impl.DSL.field;
 
@@ -25,6 +31,10 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
     private static final String RAW_PREFIX = "raw_";
     private static final String INDEX_PREFIX = "index_";
 
+    private static final String TIME_FIELD_NAME = "timeField";
+    private static final String INDEXING_WINDOW_AMOUNT = "indexWindowAmount";
+    private static final String INDEXING_WINDOW_UNIT = "indexWindowUnit";
+
     public static final Field<String> RAW_DOC_REF_TYPE = field(RAW_PREFIX + DOC_REF_TYPE, String.class);
     public static final Field<String> RAW_DOC_REF_UUID = field(RAW_PREFIX + DocRefEntity.UUID, String.class);
     public static final Field<String> RAW_DOC_REF_NAME = field(RAW_PREFIX + DocRefEntity.NAME, String.class);
@@ -32,6 +42,10 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
     public static final Field<String> INDEX_DOC_REF_TYPE = field(INDEX_PREFIX + DOC_REF_TYPE, String.class);
     public static final Field<String> INDEX_DOC_REF_UUID = field(INDEX_PREFIX + DocRefEntity.UUID, String.class);
     public static final Field<String> INDEX_DOC_REF_NAME = field(INDEX_PREFIX + DocRefEntity.NAME, String.class);
+
+    public static final Field<String> TIME_FIELD_NAME_FIELD = field(TIME_FIELD_NAME, String.class);
+    public static final Field<ULong> INDEXING_WINDOW_AMOUNT_FIELD = field(INDEXING_WINDOW_AMOUNT, ULong.class);
+    public static final Field<String> INDEXING_WINDOW_UNIT_FIELD = field(INDEXING_WINDOW_UNIT, String.class);
 
     /**
      * This is the Doc Ref of the slow data source
@@ -43,12 +57,74 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
      */
     private DocRef indexDocRef;
 
+    /**
+     * This is the name of the field in the data source that is used to bound the time
+     */
+    private String timeFieldName;
+
+    /**
+     * This is the amount of time to index at a time, it will govern the size/increments of the time windows.
+     * Default is one day
+     */
+    private long indexWindowAmount = 1;
+
+    /**
+     * This is the units of the amount of time to index.
+     */
+    private ChronoUnit indexWindowUnit = ChronoUnit.DAYS;
+
     public DocRef getRawDocRef() {
         return rawDocRef;
     }
 
     public DocRef getIndexDocRef() {
         return indexDocRef;
+    }
+
+    public String getTimeFieldName() {
+        return timeFieldName;
+    }
+
+    public long getIndexWindowAmount() {
+        return indexWindowAmount;
+    }
+
+    public ChronoUnit getIndexWindowUnit() {
+        return indexWindowUnit;
+    }
+
+    public TemporalAmount indexingWindow() {
+        return Duration.of(this.indexWindowAmount, this.indexWindowUnit);
+    }
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("AutoIndexDocRefEntity{");
+        sb.append("rawDocRef=").append(rawDocRef);
+        sb.append(", indexDocRef=").append(indexDocRef);
+        sb.append(", timeFieldName='").append(timeFieldName).append('\'');
+        sb.append(", indexWindowAmount=").append(indexWindowAmount);
+        sb.append(", indexWindowUnit=").append(indexWindowUnit);
+        sb.append('}');
+        return sb.toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+        AutoIndexDocRefEntity that = (AutoIndexDocRefEntity) o;
+        return indexWindowAmount == that.indexWindowAmount &&
+                Objects.equals(rawDocRef, that.rawDocRef) &&
+                Objects.equals(indexDocRef, that.indexDocRef) &&
+                Objects.equals(timeFieldName, that.timeFieldName) &&
+                indexWindowUnit == that.indexWindowUnit;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), rawDocRef, indexDocRef, timeFieldName, indexWindowAmount, indexWindowUnit);
     }
 
     public static final class Builder extends BaseBuilder<AutoIndexDocRefEntity, Builder> {
@@ -69,6 +145,21 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
         public Builder indexDocRef(final DocRef docRef) {
             this.instance.indexDocRef = docRef;
             return self();
+        }
+
+        public Builder timeFieldName(final String value) {
+            this.instance.timeFieldName = value;
+            return this;
+        }
+
+        public Builder indexWindowAmount(final long value) {
+            this.instance.indexWindowAmount = value;
+            return this;
+        }
+
+        public Builder indexWindowUnits(final ChronoUnit value) {
+            this.instance.indexWindowUnit = value;
+            return this;
         }
 
         public Builder self() {
