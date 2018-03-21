@@ -1,5 +1,6 @@
 package stroom.autoindex.tracker;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -13,13 +14,15 @@ import java.util.function.Function;
  * @param <CONTAINER> The class that contains the comparables.
  * @param <COMPARABLE> The type of the property that defines the window
  */
-public class WindowMerger<CONTAINER, COMPARABLE extends Comparable<COMPARABLE>> {
+public class WindowMerger<CONTAINER, COMPARABLE> {
 
+    private final Comparator<COMPARABLE> comparator;
     private final Function<CONTAINER, COMPARABLE> fromSupplier;
     private final Function<CONTAINER, COMPARABLE> toSupplier;
     private final BiFunction<COMPARABLE, COMPARABLE, CONTAINER> newValueGenerator;
 
     private WindowMerger(final Builder<CONTAINER, COMPARABLE> builder) {
+        this.comparator = builder.comparator;
         this.newValueGenerator = builder.newValueGenerator;
         this.fromSupplier = builder.fromSupplier;
         this.toSupplier = builder.toSupplier;
@@ -76,20 +79,20 @@ public class WindowMerger<CONTAINER, COMPARABLE extends Comparable<COMPARABLE>> 
 
     Optional<OverlapStyle> determineOverlap(final CONTAINER newWindow,
                                          final CONTAINER existingWindow) {
-        if (toSupplier.apply(existingWindow).compareTo(fromSupplier.apply(newWindow)) < 0) {
+        if (comparator.compare(toSupplier.apply(existingWindow), fromSupplier.apply(newWindow)) < 0) {
             return OverlapStyle.NO_OVERLAP.opt();
-        } else if (fromSupplier.apply(existingWindow).compareTo(toSupplier.apply(newWindow)) > 0) {
+        } else if (comparator.compare(fromSupplier.apply(existingWindow), toSupplier.apply(newWindow)) > 0) {
             return OverlapStyle.NO_OVERLAP.opt();
-        } else if (fromSupplier.apply(existingWindow).compareTo(fromSupplier.apply(newWindow)) > 0) {
-            if (toSupplier.apply(existingWindow).compareTo(toSupplier.apply(newWindow)) < 0) {
+        } else if (comparator.compare(fromSupplier.apply(existingWindow), fromSupplier.apply(newWindow)) > 0) {
+            if (comparator.compare(toSupplier.apply(existingWindow), toSupplier.apply(newWindow)) < 0) {
                 return OverlapStyle.EXISTING_SUBSUMED_BY_NEW.opt();
-            } else if (toSupplier.apply(existingWindow).compareTo(toSupplier.apply(newWindow)) > 0) {
+            } else if (comparator.compare(toSupplier.apply(existingWindow), toSupplier.apply(newWindow)) > 0) {
                 return OverlapStyle.OVERLAP_END.opt();
             }
-        } else if (fromSupplier.apply(existingWindow).compareTo(fromSupplier.apply(newWindow)) < 0) {
-            if (toSupplier.apply(existingWindow).compareTo(toSupplier.apply(newWindow)) < 0) {
+        } else if (comparator.compare(fromSupplier.apply(existingWindow), fromSupplier.apply(newWindow)) < 0) {
+            if (comparator.compare(toSupplier.apply(existingWindow), toSupplier.apply(newWindow)) < 0) {
                 return OverlapStyle.OVERLAP_START.opt();
-            } else if (toSupplier.apply(existingWindow).compareTo(toSupplier.apply(newWindow)) > 0) {
+            } else if (comparator.compare(toSupplier.apply(existingWindow), toSupplier.apply(newWindow)) > 0) {
                 return OverlapStyle.NEW_SUBSUMED_BY_EXISTING.opt();
             }
         }
@@ -110,32 +113,39 @@ public class WindowMerger<CONTAINER, COMPARABLE extends Comparable<COMPARABLE>> 
         }
     }
 
-    public static <O, C extends Comparable<C>> Builder<O, C>
-    withValueGenerator(final BiFunction<C, C, O> newValueGenerator) {
+    public static <C, T> Builder<C, T>
+    withValueGenerator(final BiFunction<T, T, C> newValueGenerator) {
         return new Builder<>(newValueGenerator);
     }
 
-    public static class Builder<CONTAINER, COMPARABLE extends Comparable<COMPARABLE>> {
-        private final BiFunction<COMPARABLE, COMPARABLE, CONTAINER> newValueGenerator;
-        private Function<CONTAINER, COMPARABLE> fromSupplier;
-        private Function<CONTAINER, COMPARABLE> toSupplier;
+    public static class Builder<C, T> {
+        private final BiFunction<T, T, C> newValueGenerator;
+        private Comparator<T> comparator;
+        private Function<C, T> fromSupplier;
+        private Function<C, T> toSupplier;
 
-        private Builder(final BiFunction<COMPARABLE, COMPARABLE, CONTAINER> newValueGenerator) {
+        private Builder(final BiFunction<T, T, C> newValueGenerator) {
             this.newValueGenerator = newValueGenerator;
         }
 
-        public Builder<CONTAINER, COMPARABLE> from(final Function<CONTAINER, COMPARABLE> value) {
+        public Builder<C, T> comparator(final Comparator<T> value) {
+            this.comparator = value;
+            return this;
+        }
+
+        public Builder<C, T> from(final Function<C, T> value) {
             this.fromSupplier = value;
             return this;
         }
 
-        public Builder<CONTAINER, COMPARABLE> to(final Function<CONTAINER, COMPARABLE> value) {
+        public Builder<C, T> to(final Function<C, T> value) {
             this.toSupplier = value;
             return this;
         }
 
-        public WindowMerger<CONTAINER, COMPARABLE> build() {
+        public WindowMerger<C, T> build() {
             Objects.requireNonNull(this.newValueGenerator);
+            Objects.requireNonNull(this.comparator);
             Objects.requireNonNull(this.fromSupplier);
             Objects.requireNonNull(this.toSupplier);
 
