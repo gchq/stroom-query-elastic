@@ -1,12 +1,10 @@
 package stroom.autoindex.tracker;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 /**
  * A class that can be used to determine overlaps between windows of any type and merge them down
@@ -28,6 +26,44 @@ public class WindowMerger<CONTAINER, COMPARABLE> {
         this.toSupplier = builder.toSupplier;
     }
 
+
+    public class MergeProcessBuilder {
+        private final CONTAINER windowToAdd;
+        private final List<CONTAINER> existingWindows = new ArrayList<>();
+        private Consumer<CONTAINER> deletionHandler;
+
+        public MergeProcessBuilder(final CONTAINER windowToAdd) {
+            this.windowToAdd = windowToAdd;
+        }
+
+        public MergeProcessBuilder with(final List<CONTAINER> existingWindows) {
+            this.existingWindows.addAll(existingWindows);
+            return this;
+        }
+
+        public MergeProcessBuilder with(final CONTAINER ... existingWindows) {
+            this.existingWindows.addAll(Arrays.asList(existingWindows));
+            return this;
+        }
+
+
+        public MergeProcessBuilder deleteWith(final Consumer<CONTAINER> deletionHandler) {
+            this.deletionHandler = deletionHandler;
+            return this;
+        }
+
+        public Optional<CONTAINER> execute() {
+            Objects.requireNonNull(this.windowToAdd, "Must specific window to merge");
+            Objects.requireNonNull(this.deletionHandler, "Must specific a deletion handler");
+
+            return WindowMerger.this.mergeWindows(this.windowToAdd, this.existingWindows, this.deletionHandler);
+        }
+    }
+
+    public MergeProcessBuilder merge(final CONTAINER windowToAdd) {
+        return new MergeProcessBuilder(windowToAdd);
+    }
+
     /**
      * Calculates which window needs to be added (if any) and which existing ones should be deleted when a new
      * window is being added.
@@ -40,9 +76,9 @@ public class WindowMerger<CONTAINER, COMPARABLE> {
      * @return The time window that should be added, it is optional because a new time window may already
      * be completely subsumed by an existing one.
      */
-    public Optional<CONTAINER> mergeWindows(final CONTAINER windowToAdd,
-                                               final List<CONTAINER> existingWindows,
-                                               final Consumer<CONTAINER> deletionHandler) {
+    private Optional<CONTAINER> mergeWindows(final CONTAINER windowToAdd,
+                                            final List<CONTAINER> existingWindows,
+                                            final Consumer<CONTAINER> deletionHandler) {
         CONTAINER windowToReturn = windowToAdd;
 
         for (final CONTAINER existingWindow : existingWindows) {

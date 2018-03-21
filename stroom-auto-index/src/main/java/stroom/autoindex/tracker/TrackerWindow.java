@@ -43,6 +43,9 @@ public class TrackerWindow {
         }
 
         public TrackerWindow to(final LocalDateTime to) {
+            if (to.isBefore(this.from)) {
+                throw new IllegalArgumentException("The FROM date must be before the TO");
+            }
             return new TrackerWindow(this.from, to);
         }
     }

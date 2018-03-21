@@ -1,6 +1,5 @@
 package stroom.autoindex.tracker;
 
-import io.dropwizard.db.DataSourceFactory;
 import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.jooq.types.ULong;
@@ -26,6 +25,13 @@ public class AutoIndexTrackerDaoImpl implements AutoIndexTrackerDao {
     private static final Field<ULong> FIELD_FROM = DSL.field(FROM, ULong.class);
     private static final Field<ULong> FIELD_TO = DSL.field(TO, ULong.class);
 
+    private static final WindowMerger<TrackerWindow, LocalDateTime> dateTimeMerger =
+            WindowMerger.<TrackerWindow, LocalDateTime>withValueGenerator((from, to) -> TrackerWindow.from(from).to(to))
+                    .comparator(LocalDateTime::compareTo)
+                    .from(TrackerWindow::getFrom)
+                    .to(TrackerWindow::getTo)
+                    .build();
+
     private AutoIndexTrackerDaoImpl(final DSLContext database) {
         this.database = database;
     }
@@ -46,11 +52,23 @@ public class AutoIndexTrackerDaoImpl implements AutoIndexTrackerDao {
         return database.transactionResult(c -> {
             final AutoIndexTracker current = getInTransaction(c, docRefUuid);
 
-
-            DSL.using(c).insertInto(WINDOW_TABLE)
-                    .columns(FIELD_DOC_REF_UUID, FIELD_FROM, FIELD_TO)
-                    .values(docRefUuid, getEpochMillis(window.getFrom()), getEpochMillis(window.getTo()))
+            // Attempt to merge this new window with any existing ones that can be replaced
+            final Optional<TrackerWindow> windowToAdd = dateTimeMerger.merge(window)
+                    .with(current.getWindows())
+                    .deleteWith(tw -> DSL.using(c)
+                            .deleteFrom(WINDOW_TABLE)
+                            .where(FIELD_DOC_REF_UUID.equal(docRefUuid)
+                                    .and(FIELD_FROM.equal(getEpochMillis(tw.getFrom()))))
+                            .execute())
                     .execute();
+
+            // If there is still a window to add, add it to the database
+            windowToAdd.ifPresent(tw ->
+                    DSL.using(c).insertInto(WINDOW_TABLE)
+                            .columns(FIELD_DOC_REF_UUID, FIELD_FROM, FIELD_TO)
+                            .values(docRefUuid, getEpochMillis(tw.getFrom()), getEpochMillis(tw.getTo()))
+                            .execute()
+            );
 
             return getInTransaction(c, docRefUuid);
         });

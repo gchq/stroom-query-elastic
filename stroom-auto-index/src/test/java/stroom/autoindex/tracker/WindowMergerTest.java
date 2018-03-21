@@ -4,6 +4,8 @@ import org.junit.Test;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -98,13 +100,12 @@ public class WindowMergerTest {
     public void testMergeOverlapStartInteger() {
         final Set<IntegerWindow> deletions = new HashSet<>();
 
-        final Optional<IntegerWindow> toCreateOpt = integerMerger.mergeWindows(
-                IntegerWindow.from(2).to(5),
-                Arrays.asList(
-                        IntegerWindow.from(1).to(4),
-                        IntegerWindow.from(9).to(12)
-                ),
-                deletions::add);
+        final Optional<IntegerWindow> toCreateOpt = integerMerger
+                .merge(IntegerWindow.from(2).to(5))
+                .with(IntegerWindow.from(1).to(4),
+                        IntegerWindow.from(9).to(12))
+                .deleteWith(deletions::add)
+                .execute();
 
         assertTrue(toCreateOpt.isPresent());
 
@@ -112,8 +113,7 @@ public class WindowMergerTest {
         assertEquals(toCreateOpt.get(), IntegerWindow.from(1).to(5));
 
         // This window that overlapped should be deleted, to be replaced by the new one
-        assertEquals(1, deletions.size());
-        assertTrue(deletions.contains(IntegerWindow.from(1).to(4)));
+        assertEquals(deletions, Collections.singleton(IntegerWindow.from(1).to(4)));
     }
 
     @Test
@@ -131,13 +131,12 @@ public class WindowMergerTest {
     public void testMergeOverlapStartDateTime() {
         final Set<TrackerWindow> deletions = new HashSet<>();
 
-        final Optional<TrackerWindow> toCreateOpt = dateTimeMerger.mergeWindows(
-                TrackerWindow.from(LocalDateTime.of(2017, 3, 20, 0, 0)).to(LocalDateTime.of(2017, 3, 29, 0, 0)),
-                Arrays.asList(
-                        TrackerWindow.from(LocalDateTime.of(2016, 3, 15, 0, 0)).to(LocalDateTime.of(2016, 3, 25, 0, 0)),
-                        TrackerWindow.from(LocalDateTime.of(2017, 3, 15, 0, 0)).to(LocalDateTime.of(2017, 3, 25, 0, 0))
-                ),
-                deletions::add);
+        final Optional<TrackerWindow> toCreateOpt = dateTimeMerger
+                .merge(TrackerWindow.from(LocalDateTime.of(2017, 3, 20, 0, 0)).to(LocalDateTime.of(2017, 3, 29, 0, 0)))
+                .with(TrackerWindow.from(LocalDateTime.of(2016, 3, 15, 0, 0)).to(LocalDateTime.of(2016, 3, 25, 0, 0)),
+                        TrackerWindow.from(LocalDateTime.of(2017, 3, 15, 0, 0)).to(LocalDateTime.of(2017, 3, 25, 0, 0)))
+                .deleteWith(deletions::add)
+                .execute();
 
         assertTrue(toCreateOpt.isPresent());
 
@@ -148,9 +147,7 @@ public class WindowMergerTest {
                         .to(LocalDateTime.of(2017, 3, 29, 0, 0)));
 
         // This window that overlapped should be deleted, to be replaced by the new one
-        assertEquals(1, deletions.size());
-        assertTrue(deletions.contains(
-                TrackerWindow
+        assertEquals(deletions, Collections.singleton(TrackerWindow
                         .from(LocalDateTime.of(2017, 3, 15, 0, 0))
                         .to(LocalDateTime.of(2017, 3, 25, 0, 0))
                 )
@@ -169,13 +166,12 @@ public class WindowMergerTest {
     public void testMergeOverlapEndInteger() {
         final Set<IntegerWindow> deletions = new HashSet<>();
 
-        final Optional<IntegerWindow> toCreateOpt = integerMerger.mergeWindows(
-                IntegerWindow.from(9).to(12),
-                Arrays.asList(
-                        IntegerWindow.from(2).to(5),
-                        IntegerWindow.from(10).to(13)
-                ),
-                deletions::add);
+        final Optional<IntegerWindow> toCreateOpt = integerMerger
+                .merge(IntegerWindow.from(9).to(12))
+                .with(IntegerWindow.from(2).to(5),
+                        IntegerWindow.from(10).to(13))
+                .deleteWith(deletions::add)
+                .execute();
 
         assertTrue(toCreateOpt.isPresent());
 
@@ -183,8 +179,7 @@ public class WindowMergerTest {
         assertEquals(toCreateOpt.get(), IntegerWindow.from(9).to(13));
 
         // This window that overlapped should be deleted, to be replaced by the new one
-        assertEquals(1, deletions.size());
-        assertTrue(deletions.contains(IntegerWindow.from(10).to(13)));
+        assertEquals(deletions, Collections.singleton(IntegerWindow.from(10).to(13)));
     }
 
     @Test
@@ -202,13 +197,12 @@ public class WindowMergerTest {
     public void testMergeOverlapEndDateTime() {
         final Set<TrackerWindow> deletions = new HashSet<>();
 
-        final Optional<TrackerWindow> toCreateOpt = dateTimeMerger.mergeWindows(
-                TrackerWindow.from(LocalDateTime.of(2017, 3, 15, 0, 0)).to(LocalDateTime.of(2017, 3, 25, 0, 0)),
-                Arrays.asList(
-                        TrackerWindow.from(LocalDateTime.of(2016, 3, 20, 0, 0)).to(LocalDateTime.of(2016, 3, 29, 0, 0)),
-                        TrackerWindow.from(LocalDateTime.of(2017, 3, 20, 0, 0)).to(LocalDateTime.of(2017, 3, 29, 0, 0))
-                ),
-                deletions::add);
+        final Optional<TrackerWindow> toCreateOpt = dateTimeMerger
+                .merge(TrackerWindow.from(LocalDateTime.of(2017, 3, 15, 0, 0)).to(LocalDateTime.of(2017, 3, 25, 0, 0)))
+                .with(TrackerWindow.from(LocalDateTime.of(2016, 3, 20, 0, 0)).to(LocalDateTime.of(2016, 3, 29, 0, 0)),
+                        TrackerWindow.from(LocalDateTime.of(2017, 3, 20, 0, 0)).to(LocalDateTime.of(2017, 3, 29, 0, 0)))
+                .deleteWith(deletions::add)
+                .execute();
 
         assertTrue(toCreateOpt.isPresent());
 
@@ -220,8 +214,7 @@ public class WindowMergerTest {
         );
 
         // This window that overlapped should be deleted, to be replaced by the new one
-        assertEquals(1, deletions.size());
-        assertTrue(deletions.contains(
+        assertEquals(deletions, Collections.singleton(
                 TrackerWindow
                         .from(LocalDateTime.of(2017, 3, 20, 0, 0))
                         .to(LocalDateTime.of(2017, 3, 29, 0, 0))
@@ -241,13 +234,12 @@ public class WindowMergerTest {
     public void testMergeExistingSubsumedByNewInteger() {
         final Set<IntegerWindow> deletions = new HashSet<>();
 
-        final Optional<IntegerWindow> toCreateOpt = integerMerger.mergeWindows(
-                IntegerWindow.from(20).to(44),
-                Arrays.asList(
-                        IntegerWindow.from(2).to(5),
-                        IntegerWindow.from(24).to(30)
-                ),
-                deletions::add);
+        final Optional<IntegerWindow> toCreateOpt = integerMerger
+                .merge(IntegerWindow.from(20).to(44))
+                .with(IntegerWindow.from(2).to(5),
+                        IntegerWindow.from(24).to(30))
+                .deleteWith(deletions::add)
+                .execute();
 
         assertTrue(toCreateOpt.isPresent());
 
@@ -255,8 +247,7 @@ public class WindowMergerTest {
         assertEquals(toCreateOpt.get(), IntegerWindow.from(20).to(44));
 
         // This window that overlapped should be deleted, to be replaced by the new one
-        assertEquals(1, deletions.size());
-        assertTrue(deletions.contains(IntegerWindow.from(24).to(30)));
+        assertEquals(deletions, Collections.singleton(IntegerWindow.from(24).to(30)));
     }
 
     @Test
@@ -274,13 +265,12 @@ public class WindowMergerTest {
     public void testMergeExistingSubsumedByNewDateTime() {
         final Set<TrackerWindow> deletions = new HashSet<>();
 
-        final Optional<TrackerWindow> toCreateOpt = dateTimeMerger.mergeWindows(
-                TrackerWindow.from(LocalDateTime.of(2018, 10, 5, 0, 0)).to(LocalDateTime.of(2018, 12, 20, 0, 0)),
-                Arrays.asList(
-                        TrackerWindow.from(LocalDateTime.of(2017, 11, 20, 0, 0)).to(LocalDateTime.of(2017, 12, 13, 0, 0)),
-                        TrackerWindow.from(LocalDateTime.of(2018, 11, 20, 0, 0)).to(LocalDateTime.of(2018, 12, 13, 0, 0))
-                ),
-                deletions::add);
+        final Optional<TrackerWindow> toCreateOpt = dateTimeMerger
+                .merge(TrackerWindow.from(LocalDateTime.of(2018, 10, 5, 0, 0)).to(LocalDateTime.of(2018, 12, 20, 0, 0)))
+                .with(TrackerWindow.from(LocalDateTime.of(2017, 11, 20, 0, 0)).to(LocalDateTime.of(2017, 12, 13, 0, 0)),
+                        TrackerWindow.from(LocalDateTime.of(2018, 11, 20, 0, 0)).to(LocalDateTime.of(2018, 12, 13, 0, 0)))
+                .deleteWith(deletions::add)
+                .execute();
 
         assertTrue(toCreateOpt.isPresent());
 
@@ -291,8 +281,7 @@ public class WindowMergerTest {
                         .to(LocalDateTime.of(2018, 12, 20, 0, 0)));
 
         // This window that overlapped should be deleted, to be replaced by the new one
-        assertEquals(1, deletions.size());
-        assertTrue(deletions.contains(
+        assertEquals(deletions, Collections.singleton(
                 TrackerWindow
                         .from(LocalDateTime.of(2018, 11, 20, 0, 0))
                         .to(LocalDateTime.of(2018, 12, 13, 0, 0))
@@ -312,13 +301,12 @@ public class WindowMergerTest {
     public void testMergeNewSubsumedByExistingInteger() {
         final Set<IntegerWindow> deletions = new HashSet<>();
 
-        final Optional<IntegerWindow> toCreateOpt = integerMerger.mergeWindows(
-                IntegerWindow.from(24).to(30),
-                Arrays.asList(
-                        IntegerWindow.from(2).to(5),
-                        IntegerWindow.from(20).to(44)
-                ),
-                deletions::add);
+        final Optional<IntegerWindow> toCreateOpt = integerMerger
+                .merge(IntegerWindow.from(24).to(30))
+                .with(IntegerWindow.from(2).to(5),
+                        IntegerWindow.from(20).to(44))
+                .deleteWith(deletions::add)
+                .execute();
 
         assertFalse(toCreateOpt.isPresent());
         assertEquals(0, deletions.size());
@@ -339,13 +327,12 @@ public class WindowMergerTest {
     public void testMergeNewSubsumedByExistingDateTime() {
         final Set<TrackerWindow> deletions = new HashSet<>();
 
-        final Optional<TrackerWindow> toCreateOpt = dateTimeMerger.mergeWindows(
-                TrackerWindow.from(LocalDateTime.of(2018, 11, 20, 0, 0)).to(LocalDateTime.of(2018, 12, 13, 0, 0)),
-                Arrays.asList(
-                        TrackerWindow.from(LocalDateTime.of(2017, 10, 5, 0, 0)).to(LocalDateTime.of(2017, 12, 20, 0, 0)),
-                        TrackerWindow.from(LocalDateTime.of(2018, 10, 5, 0, 0)).to(LocalDateTime.of(2018, 12, 20, 0, 0))
-                ),
-                deletions::add);
+        final Optional<TrackerWindow> toCreateOpt = dateTimeMerger
+                .merge(TrackerWindow.from(LocalDateTime.of(2018, 11, 20, 0, 0)).to(LocalDateTime.of(2018, 12, 13, 0, 0)))
+                .with(TrackerWindow.from(LocalDateTime.of(2017, 10, 5, 0, 0)).to(LocalDateTime.of(2017, 12, 20, 0, 0)),
+                        TrackerWindow.from(LocalDateTime.of(2018, 10, 5, 0, 0)).to(LocalDateTime.of(2018, 12, 20, 0, 0)))
+                .deleteWith(deletions::add)
+                .execute();
 
         assertFalse(toCreateOpt.isPresent());
         assertEquals(0, deletions.size());
@@ -363,13 +350,12 @@ public class WindowMergerTest {
     public void testMergeNewIsNoOverlapAfterExistingInteger() {
         final Set<IntegerWindow> deletions = new HashSet<>();
 
-        final Optional<IntegerWindow> toCreateOpt = integerMerger.mergeWindows(
-                IntegerWindow.from(24).to(30),
-                Arrays.asList(
-                        IntegerWindow.from(2).to(5),
-                        IntegerWindow.from(10).to(23)
-                ),
-                deletions::add);
+        final Optional<IntegerWindow> toCreateOpt = integerMerger
+                .merge(IntegerWindow.from(24).to(30))
+                .with(IntegerWindow.from(2).to(5),
+                        IntegerWindow.from(10).to(23))
+                .deleteWith(deletions::add)
+                .execute();
 
         assertTrue(toCreateOpt.isPresent());
 
@@ -395,13 +381,12 @@ public class WindowMergerTest {
     public void testMergeNewIsNoOverlapAfterExistingDateTime() {
         final Set<TrackerWindow> deletions = new HashSet<>();
 
-        final Optional<TrackerWindow> toCreateOpt = dateTimeMerger.mergeWindows(
-                TrackerWindow.from(LocalDateTime.of(2018, 2, 20, 0, 0)).to(LocalDateTime.of(2018, 3, 20, 0, 0)),
-                Arrays.asList(
-                        TrackerWindow.from(LocalDateTime.of(2015, 1, 10, 0, 0)).to(LocalDateTime.of(2017, 2, 10, 0, 0)),
-                        TrackerWindow.from(LocalDateTime.of(2018, 1, 10, 0, 0)).to(LocalDateTime.of(2018, 2, 10, 0, 0))
-                ),
-                deletions::add);
+        final Optional<TrackerWindow> toCreateOpt = dateTimeMerger
+                .merge(TrackerWindow.from(LocalDateTime.of(2018, 2, 20, 0, 0)).to(LocalDateTime.of(2018, 3, 20, 0, 0)))
+                .with(TrackerWindow.from(LocalDateTime.of(2015, 1, 10, 0, 0)).to(LocalDateTime.of(2017, 2, 10, 0, 0)),
+                        TrackerWindow.from(LocalDateTime.of(2018, 1, 10, 0, 0)).to(LocalDateTime.of(2018, 2, 10, 0, 0)))
+                .deleteWith(deletions::add)
+                .execute();
 
         assertTrue(toCreateOpt.isPresent());
 
@@ -427,13 +412,12 @@ public class WindowMergerTest {
     public void testMergeNewIsNoOverlapBeforeExistingInteger() {
         final Set<IntegerWindow> deletions = new HashSet<>();
 
-        final Optional<IntegerWindow> toCreateOpt = integerMerger.mergeWindows(
-                IntegerWindow.from(10).to(13),
-                Arrays.asList(
-                        IntegerWindow.from(2).to(5),
-                        IntegerWindow.from(20).to(44)
-                ),
-                deletions::add);
+        final Optional<IntegerWindow> toCreateOpt = integerMerger
+                .merge(IntegerWindow.from(10).to(13))
+                .with(IntegerWindow.from(2).to(5),
+                        IntegerWindow.from(20).to(44))
+                .deleteWith(deletions::add)
+                .execute();
 
         assertTrue(toCreateOpt.isPresent());
 
@@ -459,13 +443,12 @@ public class WindowMergerTest {
     public void testMergeNewIsNoOverlapBeforeExistingDateTime() {
         final Set<TrackerWindow> deletions = new HashSet<>();
 
-        final Optional<TrackerWindow> toCreateOpt = dateTimeMerger.mergeWindows(
-                TrackerWindow.from(LocalDateTime.of(2016, 3, 1, 0, 0)).to(LocalDateTime.of(2017, 3, 1, 0, 0)),
-                Arrays.asList(
-                        TrackerWindow.from(LocalDateTime.of(2015, 3, 2, 0, 0)).to(LocalDateTime.of(2015, 3, 1, 0, 0)),
-                        TrackerWindow.from(LocalDateTime.of(2017, 3, 2, 0, 0)).to(LocalDateTime.of(2018, 3, 1, 0, 0))
-                ),
-                deletions::add);
+        final Optional<TrackerWindow> toCreateOpt = dateTimeMerger
+                .merge(TrackerWindow.from(LocalDateTime.of(2016, 3, 1, 0, 0)).to(LocalDateTime.of(2017, 3, 1, 0, 0)))
+                .with(TrackerWindow.from(LocalDateTime.of(2015, 3, 2, 0, 0)).to(LocalDateTime.of(2015, 4, 1, 0, 0)),
+                        TrackerWindow.from(LocalDateTime.of(2017, 3, 2, 0, 0)).to(LocalDateTime.of(2018, 4, 1, 0, 0)))
+                .deleteWith(deletions::add)
+                .execute();
 
         assertTrue(toCreateOpt.isPresent());
 
@@ -478,5 +461,84 @@ public class WindowMergerTest {
 
         // This window that overlapped should be deleted, to be replaced by the new one
         assertEquals(0, deletions.size());
+    }
+
+    /// Now some cases were windows should join up
+    @Test
+    public void testMergeNewDirectlyAfterExisting() {
+        final Set<TrackerWindow> deletions = new HashSet<>();
+
+        // New window is March 2018, existing windows are Jan and Feb
+        final Optional<TrackerWindow> toCreateOpt = dateTimeMerger
+                .merge(TrackerWindow.from(LocalDateTime.of(2018, 3, 1, 0, 0)).to(LocalDateTime.of(2018, 4, 1, 0, 0)))
+                .with(TrackerWindow.from(LocalDateTime.of(2018, 1, 1, 0, 0)).to(LocalDateTime.of(2018, 1, 31, 0, 0)),
+                        TrackerWindow.from(LocalDateTime.of(2018, 2, 1, 0, 0)).to(LocalDateTime.of(2018, 3, 1, 0, 0)))
+                .deleteWith(deletions::add)
+                .execute();
+
+        assertTrue(toCreateOpt.isPresent());
+        assertEquals(toCreateOpt.get(),
+                TrackerWindow
+                        .from(LocalDateTime.of(2018, 2, 1, 0, 0))
+                        .to(LocalDateTime.of(2018, 4, 1, 0, 0))
+        );
+
+        assertEquals(deletions, Collections.singleton(
+                TrackerWindow
+                        .from(LocalDateTime.of(2018, 2, 1, 0, 0))
+                        .to(LocalDateTime.of(2018, 3, 1, 0, 0))
+        ));
+    }
+
+    @Test
+    public void testMergeDirectlyBeforeExisting() {
+        final Set<TrackerWindow> deletions = new HashSet<>();
+
+        // New window is Jan 2017, existing windows are Feb and March
+        final Optional<TrackerWindow> toCreateOpt = dateTimeMerger
+                .merge(TrackerWindow.from(LocalDateTime.of(2017, 1, 1, 0, 0)).to(LocalDateTime.of(2017, 2, 1, 0, 0)))
+                .with(TrackerWindow.from(LocalDateTime.of(2017, 2, 1, 0, 0)).to(LocalDateTime.of(2017, 2, 28, 0, 0)),
+                        TrackerWindow.from(LocalDateTime.of(2017, 3, 1, 0, 0)).to(LocalDateTime.of(2017, 4, 1, 0, 0)))
+                .deleteWith(deletions::add)
+                .execute();
+
+        assertTrue(toCreateOpt.isPresent());
+        assertEquals(toCreateOpt.get(),
+                TrackerWindow
+                        .from(LocalDateTime.of(2017, 1, 1, 0, 0))
+                        .to(LocalDateTime.of(2017, 2, 28, 0, 0))
+        );
+
+        assertEquals(deletions, Collections.singleton(
+                TrackerWindow
+                        .from(LocalDateTime.of(2017, 2, 1, 0, 0))
+                        .to(LocalDateTime.of(2017, 2, 28, 0, 0))
+        ));
+    }
+
+    @Test
+    public void testMergeBetweenExisting() {
+        final Set<TrackerWindow> deletions = new HashSet<>();
+
+        // New window is Feb 2017, existing windows are Jan and March;
+
+        final Optional<TrackerWindow> toCreateOpt = dateTimeMerger
+                .merge(TrackerWindow.from(LocalDateTime.of(2017, 2, 1, 0, 0)).to(LocalDateTime.of(2017, 3, 1, 0, 0)))
+                .with(TrackerWindow.from(LocalDateTime.of(2017, 1, 1, 0, 0)).to(LocalDateTime.of(2017, 2, 1, 0, 0)),
+                        TrackerWindow.from(LocalDateTime.of(2017, 3, 1, 0, 0)).to(LocalDateTime.of(2017, 4, 1, 0, 0)))
+                .deleteWith(deletions::add)
+                .execute();
+
+        assertTrue(toCreateOpt.isPresent());
+        assertEquals(toCreateOpt.get(),
+                TrackerWindow
+                        .from(LocalDateTime.of(2017, 1, 1, 0, 0))
+                        .to(LocalDateTime.of(2017, 4, 1, 0, 0))
+        );
+
+        assertEquals(deletions, Stream.of(
+                TrackerWindow.from(LocalDateTime.of(2017, 1, 1, 0, 0)).to(LocalDateTime.of(2017, 2, 1, 0, 0)),
+                TrackerWindow.from(LocalDateTime.of(2017, 3, 1, 0, 0)).to(LocalDateTime.of(2017, 4, 1, 0, 0))
+        ).collect(Collectors.toSet()));
     }
 }

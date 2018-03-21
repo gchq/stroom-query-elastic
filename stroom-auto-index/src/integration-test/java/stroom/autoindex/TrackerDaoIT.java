@@ -11,7 +11,12 @@ import stroom.autoindex.tracker.TrackerWindow;
 import stroom.query.testing.DropwizardAppWithClientsRule;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
+import java.util.Collections;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
 import static org.junit.Assert.assertEquals;
@@ -63,7 +68,7 @@ public class TrackerDaoIT {
     public void testAddWindow() {
         // Given
         final String docRefUuid = UUID.randomUUID().toString();
-        final LocalDateTime now = LocalDateTime.now();
+        final LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         final LocalDateTime oneMonthAgo = now.minusMonths(1);
         final LocalDateTime twoMonthsAgo = oneMonthAgo.minusMonths(1);
         final LocalDateTime threeMonthsAgo = oneMonthAgo.minusMonths(1);
@@ -78,10 +83,35 @@ public class TrackerDaoIT {
         final AutoIndexTracker tracker3 = autoIndexTrackerDao.get(docRefUuid);
 
         // Then
-        assertEquals(1L, tracker1.getWindows().size());
-        assertEquals(2L, tracker2.getWindows().size());
+        assertEquals(tracker1.getWindows(), Collections.singletonList(oneMonthAgoToNow));
+        assertEquals(tracker2.getWindows(),
+                Stream.of(threeMonthsAgoToTwoMonthsAgo, oneMonthAgoToNow)
+                        .collect(Collectors.toList()));
 
         assertEquals(tracker2, tracker3);
+    }
+
+    @Test
+    public void testAddWindowsToMerge() {
+        // Given
+        final String docRefUuid = UUID.randomUUID().toString();
+        final LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        final LocalDateTime oneMonthAgo = now.minusMonths(1);
+        final LocalDateTime twoMonthsAgo = oneMonthAgo.minusMonths(1);
+
+        // Two windows that should join up
+        final TrackerWindow oneMonthAgoToNow = TrackerWindow.from(oneMonthAgo).to(now);
+        final TrackerWindow twoMonthsAgoToOneMonthAgo = TrackerWindow.from(twoMonthsAgo).to(oneMonthAgo);
+
+        // When
+        autoIndexTrackerDao.addWindow(docRefUuid, oneMonthAgoToNow);
+        autoIndexTrackerDao.addWindow(docRefUuid, twoMonthsAgoToOneMonthAgo);
+        final AutoIndexTracker tracker = autoIndexTrackerDao.get(docRefUuid);
+
+        // Then
+        // Should up with one big window that covers it all
+        assertEquals(tracker.getWindows(),
+                Collections.singletonList(TrackerWindow.from(twoMonthsAgo).to(now)));
     }
 
     @Test
