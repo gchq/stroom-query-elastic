@@ -31,7 +31,7 @@ else
     popd
     git clone https://github.com/gchq/stroom-test-data.git
     pushd stroom-test-data
-    ./gradlew clean build publishToMavenLocal -x integrationTest
+    ./gradlew clean build publishToMavenLocal
     popd
     popd
 

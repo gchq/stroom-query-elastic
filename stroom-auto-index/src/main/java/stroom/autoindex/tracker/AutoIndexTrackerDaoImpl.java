@@ -103,38 +103,10 @@ public class AutoIndexTrackerDaoImpl implements AutoIndexTrackerDao {
 
     /**
      * Allow building of instances of the services using raw database credentials.
-     * @param url The URL of the remote database
-     * @return A builder for constructing the instance.
+     * @param database The database to use
+     * @return An instance of the DAO Impl using the given database
      */
-    public static DbCredsBuilder withDatabase(final String url) {
-        return new DbCredsBuilder(url);
-    }
-
-    public static class DbCredsBuilder {
-        private final String url;
-        private String username;
-        private String password;
-
-        private DbCredsBuilder(final String url) {
-            this.url = url;
-        }
-
-        public DbCredsBuilder username(final String username) {
-            this.username = username;
-            return this;
-        }
-
-        public DbCredsBuilder password(final String password) {
-            this.password = password;
-            return this;
-        }
-
-        public AutoIndexTrackerDaoImpl build() {
-            if ((null != username) && (null != password)) {
-                return new AutoIndexTrackerDaoImpl(DSL.using(this.url, this.username, this.password));
-            } else {
-                return new AutoIndexTrackerDaoImpl(DSL.using(this.url));
-            }
-        }
+    public static AutoIndexTrackerDaoImpl withDatabase(final DSLContext database) {
+        return new AutoIndexTrackerDaoImpl(database);
     }
 }

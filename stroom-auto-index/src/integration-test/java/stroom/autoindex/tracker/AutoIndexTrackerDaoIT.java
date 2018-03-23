@@ -1,9 +1,15 @@
-package stroom.autoindex;
+package stroom.autoindex.tracker;
 
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
+import stroom.autoindex.App;
+import stroom.autoindex.AutoIndexDocRefEntity;
+import stroom.autoindex.Config;
+import stroom.autoindex.DSLContextBuilder;
+import stroom.autoindex.DeleteFromTableRule;
+import stroom.autoindex.TestConstants;
 import stroom.autoindex.tracker.AutoIndexTracker;
 import stroom.autoindex.tracker.AutoIndexTrackerDao;
 import stroom.autoindex.tracker.AutoIndexTrackerDaoImpl;
@@ -44,10 +50,10 @@ public class AutoIndexTrackerDaoIT {
 
     @BeforeClass
     public static void beforeClass() {
-        autoIndexTrackerDao = AutoIndexTrackerDaoImpl.withDatabase(appRule.getConfiguration().getDataSourceFactory().getUrl())
+        autoIndexTrackerDao = AutoIndexTrackerDaoImpl.withDatabase(DSLContextBuilder.withUrl(appRule.getConfiguration().getDataSourceFactory().getUrl())
                 .username(appRule.getConfiguration().getDataSourceFactory().getUser())
                 .password(appRule.getConfiguration().getDataSourceFactory().getPassword())
-                .build();
+                .build());
     }
 
     @Test

@@ -24,3 +24,11 @@ CREATE TABLE tracker_window (
     toTime          BIGINT UNSIGNED NOT NULL,
     PRIMARY KEY     (docRefUuid, fromTime)
 ) ENGINE=InnoDB DEFAULT CHARSET latin1;
+
+CREATE TABLE index_job (
+    docRefUuid      VARCHAR(255) NOT NULL,
+    fromTime        BIGINT UNSIGNED NOT NULL,
+    createTime      BIGINT UNSIGNED NOT NULL,
+    started         BOOL,
+    PRIMARY KEY     (docRefUuid, fromTime)
+) ENGINE=InnoDB DEFAULT CHARSET latin1;

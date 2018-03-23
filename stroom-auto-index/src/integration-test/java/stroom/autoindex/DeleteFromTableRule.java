@@ -48,12 +48,12 @@ public class DeleteFromTableRule<CONFIG extends Configuration & HasDataSourceFac
                         .forEach(t -> DSL.using(c).deleteFrom(t).execute()));
     }
 
-    static <C extends Configuration & HasDataSourceFactory>
+    public static <C extends Configuration & HasDataSourceFactory>
     Builder<C> withApp(final DropwizardAppRule<C> appRule) {
         return new Builder<>(appRule);
     }
 
-    static final class Builder<C extends Configuration & HasDataSourceFactory> {
+    public static final class Builder<C extends Configuration & HasDataSourceFactory> {
         private final DropwizardAppRule<C> appRule;
         private final List<String> tablesToClear;
 
