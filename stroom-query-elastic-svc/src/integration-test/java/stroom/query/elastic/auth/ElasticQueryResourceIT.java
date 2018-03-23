@@ -19,6 +19,7 @@ import stroom.query.api.v2.Field;
 import stroom.query.api.v2.FlatResult;
 import stroom.query.api.v2.OffsetRange;
 import stroom.query.api.v2.Query;
+import stroom.query.api.v2.QueryKey;
 import stroom.query.api.v2.ResultRequest;
 import stroom.query.api.v2.SearchRequest;
 import stroom.query.api.v2.SearchResponse;
@@ -264,6 +265,8 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
 
         assertEquals(1, lines.size());
         assertEquals("4178", lines.get(0).getLineId());
+
+        queryClient.destroy(authRule.adminUser(), searchRequest.getKey());
 
         // Create DocRef, Update Index, Get
 
