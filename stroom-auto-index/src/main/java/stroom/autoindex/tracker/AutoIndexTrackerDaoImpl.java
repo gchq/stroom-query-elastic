@@ -6,12 +6,10 @@ import org.jooq.types.ULong;
 
 import javax.inject.Inject;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
-import static stroom.autoindex.tracker.TimeUtils.dateTimeFromULong;
-import static stroom.autoindex.tracker.TimeUtils.getEpochSecondsULong;
+import static stroom.autoindex.TimeUtils.dateTimeFromULong;
+import static stroom.autoindex.TimeUtils.getEpochSecondsULong;
 
 public class AutoIndexTrackerDaoImpl implements AutoIndexTrackerDao {
     private final DSLContext database;
@@ -21,9 +19,9 @@ public class AutoIndexTrackerDaoImpl implements AutoIndexTrackerDao {
     private static final String TO = "toTime";
 
     private static final Table<Record> WINDOW_TABLE = DSL.table(AutoIndexTracker.TABLE_NAME);
-    private static final Field<String> FIELD_DOC_REF_UUID = DSL.field(DOC_REF_UUID, String.class);
-    private static final Field<ULong> FIELD_FROM = DSL.field(FROM, ULong.class);
-    private static final Field<ULong> FIELD_TO = DSL.field(TO, ULong.class);
+    public static final Field<String> FIELD_DOC_REF_UUID = DSL.field(DOC_REF_UUID, String.class);
+    public static final Field<ULong> FIELD_FROM = DSL.field(FROM, ULong.class);
+    public static final Field<ULong> FIELD_TO = DSL.field(TO, ULong.class);
 
     private static final WindowMerger<LocalDateTime, TrackerWindow> dateTimeMerger =
             WindowMerger.<LocalDateTime, TrackerWindow>withValueGenerator((from, to) -> TrackerWindow.from(from).to(to))
@@ -85,20 +83,27 @@ public class AutoIndexTrackerDaoImpl implements AutoIndexTrackerDao {
 
     private AutoIndexTracker getInTransaction(final Configuration c,
                                               final String docRefUuid) {
-        final Result<Record> results = DSL.using(c)
+        return DSL.using(c)
                 .select()
                 .from(WINDOW_TABLE)
                 .where(FIELD_DOC_REF_UUID.equal(docRefUuid))
                 .orderBy(FIELD_FROM)
-                .fetch();
-
-        final List<TrackerWindow> windows = results.stream()
-                .map(r -> TrackerWindow.from(dateTimeFromULong(r.get(FIELD_FROM))).to(dateTimeFromULong(r.get(FIELD_TO))))
+                .fetch(AutoIndexTrackerDaoImpl::fromRecord)
+                .stream()
                 .filter(TrackerWindow::isBound)
-                .collect(Collectors.toList());
+                .reduce(AutoIndexTracker.forDocRef(docRefUuid),
+                        AutoIndexTracker::withWindow,
+                        (a, b) -> a.withWindows(b.getWindows()));
+    }
 
-        return new AutoIndexTracker(docRefUuid)
-                .withWindows(windows);
+    /**
+     * JOOQ {@link RecordMapper} for {@link TrackerWindow}
+     * @param r The jOOQ Record to map
+     * @return The Tracker Window created from those details
+     */
+    public static TrackerWindow fromRecord(final Record r) {
+        return TrackerWindow.from(dateTimeFromULong(r.get(FIELD_FROM)))
+                .to(dateTimeFromULong(r.get(FIELD_TO)));
     }
 
     /**

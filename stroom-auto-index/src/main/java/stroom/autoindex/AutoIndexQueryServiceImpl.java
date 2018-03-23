@@ -22,7 +22,8 @@ public class AutoIndexQueryServiceImpl implements QueryService {
     private final Function<String, Optional<QueryResourceHttpClient>> queryClientCache;
 
     @Inject
-    public AutoIndexQueryServiceImpl(final DocRefService<AutoIndexDocRefEntity> docRefService,
+    @SuppressWarnings("unchecked")
+    public AutoIndexQueryServiceImpl(final DocRefService docRefService,
                                      @Named(QUERY_HTTP_CLIENT_CACHE)
                                      final Function<String, Optional<QueryResourceHttpClient>> queryClientCache) {
         this.docRefService = docRefService;

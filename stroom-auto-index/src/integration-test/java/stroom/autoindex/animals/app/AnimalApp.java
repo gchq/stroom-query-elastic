@@ -1,6 +1,8 @@
 package stroom.autoindex.animals.app;
 
 import com.codahale.metrics.health.HealthCheck;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import io.dropwizard.Application;
 import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.SubstitutingSourceProvider;
@@ -12,14 +14,12 @@ import stroom.query.audit.AuditedQueryBundle;
 import stroom.query.audit.service.DocRefService;
 
 public class AnimalApp extends Application<AnimalConfig> {
-    private final AuditedQueryBundle<AnimalConfig,
+    private Injector injector;
+
+    private AuditedQueryBundle<AnimalConfig,
             AnimalDocRefServiceImpl,
             AnimalDocRefEntity,
-            AnimalQueryServiceImpl> auditedQueryBundle =
-            new AuditedQueryBundle<>(
-                    AnimalDocRefServiceImpl.class,
-                    AnimalDocRefEntity.class,
-                    AnimalQueryServiceImpl.class);
+            AnimalQueryServiceImpl> auditedQueryBundle;
 
     @Override
     public void run(final AnimalConfig configuration,
@@ -31,19 +31,21 @@ public class AnimalApp extends Application<AnimalConfig> {
                 return Result.healthy("Keeps Dropwizard Happy");
             }
         });
-
-        // Why is this required???
-        environment.jersey().register(new AbstractBinder() {
-            @Override
-            protected void configure() {
-                bind(AnimalDocRefServiceImpl.class).to(new TypeLiteral<DocRefService<AnimalDocRefEntity>>(){});
-            }
-        });
     }
 
     @Override
     public void initialize(final Bootstrap<AnimalConfig> bootstrap) {
         super.initialize(bootstrap);
+
+        auditedQueryBundle =
+                new AuditedQueryBundle<>(
+                        (c) -> {
+                            this.injector = Guice.createInjector(auditedQueryBundle.getGuiceModule(c));
+                            return this.injector;
+                        },
+                        AnimalDocRefServiceImpl.class,
+                        AnimalDocRefEntity.class,
+                        AnimalQueryServiceImpl.class);
 
         // This allows us to use templating in the YAML configuration.
         bootstrap.setConfigurationSourceProvider(new SubstitutingSourceProvider(

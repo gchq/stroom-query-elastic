@@ -36,8 +36,9 @@ public class ElasticQueryServiceImpl implements QueryService {
     private final DocRefService<ElasticIndexDocRefEntity> service;
 
     @Inject
+    @SuppressWarnings("unchecked")
     public ElasticQueryServiceImpl(final TransportClient client,
-                                   final DocRefService<ElasticIndexDocRefEntity> service) {
+                                   final DocRefService service) {
         this.client = client;
         this.service = service;
     }

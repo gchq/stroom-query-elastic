@@ -7,6 +7,7 @@ import stroom.query.common.v2.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class ElasticStore implements Store {
     private CoprocessorSettingsMap coprocessorSettingsMap;
@@ -29,6 +30,16 @@ public class ElasticStore implements Store {
     @Override
     public boolean isComplete() {
         return true;
+    }
+
+    @Override
+    public void awaitCompletion() throws InterruptedException {
+
+    }
+
+    @Override
+    public boolean awaitCompletion(long timeout, TimeUnit unit) throws InterruptedException {
+        return false;
     }
 
     @Override
@@ -77,11 +88,6 @@ public class ElasticStore implements Store {
     @Override
     public StoreSize getStoreSize() {
         return storeSize;
-    }
-
-    @Override
-    public void registerCompletionListener(CompletionListener completionListener) {
-
     }
 
     public void process(CoprocessorSettingsMap coprocessorSettingsMap) {

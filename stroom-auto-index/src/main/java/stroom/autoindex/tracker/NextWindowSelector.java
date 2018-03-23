@@ -11,8 +11,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static stroom.autoindex.tracker.TimeUtils.dateTimeFromLong;
-import static stroom.autoindex.tracker.TimeUtils.getEpochSeconds;
+import static stroom.autoindex.TimeUtils.dateTimeFromLong;
+import static stroom.autoindex.TimeUtils.getEpochSeconds;
 
 /**
  * This class takes a list of time windows, and suggests the next one to fill in the timeline.
@@ -32,7 +32,7 @@ import static stroom.autoindex.tracker.TimeUtils.getEpochSeconds;
  * If there are awkward gaps in the windows, it will attempt to fill them in, it will suggest windows
  * that are neatly bound to the epoch of the window size. See the tests for examples.
  */
-class NextWindowSelector {
+public class NextWindowSelector {
     private static final Logger LOGGER = LoggerFactory.getLogger(NextWindowSelector.class);
 
     private final LocalDateTime now;
@@ -45,21 +45,21 @@ class NextWindowSelector {
         this.now = now;
     }
 
-    NextWindowSelector existingWindows(final List<TrackerWindow> values) {
+    public NextWindowSelector existingWindows(final List<TrackerWindow> values) {
         this.existingWindows.addAll(values);
         return this;
     }
 
-    NextWindowSelector existingWindows(final TrackerWindow...values) {
+    public NextWindowSelector existingWindows(final TrackerWindow...values) {
         return this.existingWindows(Arrays.asList(values));
     }
 
-    NextWindowSelector windowSize(final TemporalAmount windowSize) {
+    public NextWindowSelector windowSize(final TemporalAmount windowSize) {
         this.windowSize = windowSize;
         return this;
     }
 
-    TrackerWindow suggestNextWindow() {
+    public TrackerWindow suggestNextWindow() {
         Objects.requireNonNull(this.windowSize, "Must specify window size");
 
         final List<TrackerWindow> reversedWindows = Lists.reverse(
@@ -79,6 +79,15 @@ class NextWindowSelector {
         final TrackerWindow window = tryNextWindow(reversedWindows.iterator(), mostRecentEpoch);
         LOGGER.trace("Returning Window {}", window);
         return window;
+    }
+
+    public Stream<TrackerWindow> suggestNextWindows(final int count) {
+        return Stream.iterate(this.suggestNextWindow(),
+                tw -> this.existingWindows(tw).suggestNextWindow()).limit(count);
+    }
+
+    public static NextWindowSelector fromNow(final LocalDateTime now) {
+        return new NextWindowSelector(now);
     }
 
     /**
@@ -130,14 +139,5 @@ class NextWindowSelector {
             return TrackerWindow.from(currentTop.minus(this.windowSize)).to(currentTop);
         }
 
-    }
-
-    Stream<TrackerWindow> suggestNextWindows(final int count) {
-        return Stream.iterate(this.suggestNextWindow(),
-                tw -> this.existingWindows(tw).suggestNextWindow()).limit(count);
-    }
-
-    static NextWindowSelector fromNow(final LocalDateTime now) {
-        return new NextWindowSelector(now);
     }
 }

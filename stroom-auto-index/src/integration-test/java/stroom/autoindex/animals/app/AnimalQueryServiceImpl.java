@@ -30,8 +30,9 @@ public class AnimalQueryServiceImpl implements QueryService {
     private final DocRefService<AnimalDocRefEntity> docRefService;
 
     @Inject
-    public AnimalQueryServiceImpl(final DocRefService<AnimalDocRefEntity> docRefService) {
-        this.docRefService = docRefService;
+    @SuppressWarnings("unchecked")
+    public AnimalQueryServiceImpl(final DocRefService docRefService) {
+        this.docRefService = (DocRefService<AnimalDocRefEntity>) docRefService;
     }
 
     @Override
@@ -341,7 +342,6 @@ public class AnimalQueryServiceImpl implements QueryService {
         final List<Integer> storeSize = Collections.singletonList(results.size());
         CriteriaStore store = new CriteriaStore(storeSize, new StoreSize(storeSize),
                 coprocessorSettingsMap,
-                coprocessorMap,
                 payloadMap);
 
         // defaultMaxResultsSizes could be obtained from the StatisticsStore but at this point that object is ephemeral.

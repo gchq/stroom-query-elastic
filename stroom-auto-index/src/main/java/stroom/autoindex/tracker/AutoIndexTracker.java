@@ -1,7 +1,5 @@
 package stroom.autoindex.tracker;
 
-import stroom.query.api.v2.DocRef;
-
 import java.util.*;
 
 /**
@@ -17,16 +15,17 @@ public class AutoIndexTracker {
         return new AutoIndexTracker(docRefUuid);
     }
 
-    public static AutoIndexTracker forDocRef(final DocRef docRef) {
-        return forDocRef(docRef.getUuid());
-    }
-
     public AutoIndexTracker(final String docRefUuid) {
         this.docRefUuid = docRefUuid;
     }
 
     public AutoIndexTracker withWindows(final Collection<TrackerWindow> windows) {
         this.windows.addAll(windows);
+        return this;
+    }
+
+    public AutoIndexTracker withWindow(final TrackerWindow window) {
+        this.windows.add(window);
         return this;
     }
 

@@ -1,5 +1,10 @@
 package stroom.query.elastic;
 
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.util.Modules;
 import io.dropwizard.Application;
 import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.SubstitutingSourceProvider;
@@ -28,6 +33,8 @@ import java.util.stream.Collectors;
 
 public class App extends Application<Config> {
 
+    private Injector injector;
+
     public TransportClientBundle<Config> transportClientBundle = new TransportClientBundle<Config>() {
 
         @Override
@@ -45,14 +52,10 @@ public class App extends Application<Config> {
         }
     };
 
-    private final AuditedQueryBundle<Config,
+    private AuditedQueryBundle<Config,
             ElasticIndexDocRefServiceImpl,
             ElasticIndexDocRefEntity,
-            ElasticQueryServiceImpl> auditedQueryBundle =
-            new AuditedQueryBundle<>(
-                    ElasticIndexDocRefServiceImpl.class,
-                    ElasticIndexDocRefEntity.class,
-                    ElasticQueryServiceImpl.class);
+            ElasticQueryServiceImpl> auditedQueryBundle;
 
     public static void main(String[] args) throws Exception {
         new App().run(args);
@@ -64,12 +67,11 @@ public class App extends Application<Config> {
                 "Elastic",
                 new ElasticHealthCheck(transportClientBundle.getTransportClient())
         );
+
         environment.jersey().register(
                 new AbstractBinder() {
                     @Override
                     protected void configure() {
-                        bind(transportClientBundle.getTransportClient()).to(TransportClient.class);
-                        bind(ElasticIndexDocRefServiceImpl.class).to(new TypeLiteral<DocRefService<ElasticIndexDocRefEntity>>() {});
                     }
                 }
         );
@@ -77,10 +79,29 @@ public class App extends Application<Config> {
         configureCors(environment);
     }
 
+    private Module getGuiceModule(final Config config) {
+        return Modules.combine(new AbstractModule() {
+            @Override
+            protected void configure() {
+                bind(TransportClient.class).toInstance(transportClientBundle.getTransportClient());
+
+            }
+        }, auditedQueryBundle.getGuiceModule(config));
+    }
 
     @Override
     public void initialize(final Bootstrap<Config> bootstrap) {
         super.initialize(bootstrap);
+
+        auditedQueryBundle =
+                new AuditedQueryBundle<>(
+                        (c) -> {
+                            this.injector = Guice.createInjector(getGuiceModule(c));
+                            return injector;
+                        },
+                        ElasticIndexDocRefServiceImpl.class,
+                        ElasticIndexDocRefEntity.class,
+                        ElasticQueryServiceImpl.class);
 
         // This allows us to use templating in the YAML configuration.
         bootstrap.setConfigurationSourceProvider(new SubstitutingSourceProvider(
