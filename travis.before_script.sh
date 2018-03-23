@@ -27,11 +27,11 @@ else
     pushd ../git_work
     git clone https://github.com/gchq/stroom-query.git
     pushd stroom-query
-    ./gradlew clean build publishToMavenLocal
+    ./gradlew clean build publishToMavenLocal -x integrationTest
     popd
     git clone https://github.com/gchq/stroom-test-data.git
     pushd stroom-test-data
-    ./gradlew clean build publishToMavenLocal
+    ./gradlew clean build publishToMavenLocal -x integrationTest
     popd
     popd
 
