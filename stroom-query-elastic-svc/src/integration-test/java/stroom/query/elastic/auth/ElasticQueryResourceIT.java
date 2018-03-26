@@ -9,7 +9,17 @@ import org.slf4j.LoggerFactory;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.elastic.test.ElasticTestIndexRule;
-import stroom.query.api.v2.*;
+import stroom.query.api.v2.DocRef;
+import stroom.query.api.v2.ExpressionOperator;
+import stroom.query.api.v2.ExpressionTerm;
+import stroom.query.api.v2.Field;
+import stroom.query.api.v2.FlatResult;
+import stroom.query.api.v2.OffsetRange;
+import stroom.query.api.v2.Query;
+import stroom.query.api.v2.ResultRequest;
+import stroom.query.api.v2.SearchRequest;
+import stroom.query.api.v2.SearchResponse;
+import stroom.query.api.v2.TableSettings;
 import stroom.query.audit.authorisation.DocumentPermission;
 import stroom.query.audit.rest.AuditedDocRefResourceImpl;
 import stroom.query.audit.rest.AuditedQueryResourceImpl;
@@ -175,7 +185,7 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
     }
 
     @Test
-    public void testSearchValid() {
+    public void testSeawrchValid() {
         final DocRef docRef = createDocument();
 
         final String SPEAKER_TERM = "WARWICK";
@@ -209,10 +219,12 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
         assertEquals(1, lines.size());
         assertEquals("4178", lines.get(0).getLineId());
 
+        queryClient.destroy(authRule.adminUser(), searchRequest.getKey());
+
         // Create DocRef, Update Index, Get
 
         auditLogRule.check()
-                .thereAreAtLeast(3)
+                .thereAreAtLeast(4)
                 .containsOrdered(containsAllOf(AuditedDocRefResourceImpl.CREATE_DOC_REF, docRef.getUuid()))
                 .containsOrdered(containsAllOf(AuditedDocRefResourceImpl.UPDATE_DOC_REF, docRef.getUuid()))
                 .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_SEARCH,
@@ -220,7 +232,8 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
                         ShakespeareLine.SPEAKER,
                         SPEAKER_TERM,
                         ShakespeareLine.TEXT_ENTRY,
-                        TEXT_TERM));
+                        TEXT_TERM))
+                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_DESTROY, searchRequest.getKey().getUuid()));
     }
 
     /**
