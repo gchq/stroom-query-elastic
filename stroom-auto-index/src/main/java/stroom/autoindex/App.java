@@ -14,7 +14,6 @@ import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import stroom.query.audit.client.QueryResourceHttpClient;
-import stroom.query.audit.service.DocRefService;
 import stroom.query.jooq.AuditedJooqDocRefBundle;
 
 import java.util.Optional;

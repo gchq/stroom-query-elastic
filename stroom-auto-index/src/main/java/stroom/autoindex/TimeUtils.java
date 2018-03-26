@@ -2,10 +2,12 @@ package stroom.autoindex;
 
 import org.jooq.types.ULong;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 /**
@@ -15,7 +17,7 @@ public final class TimeUtils {
     public static LocalDateTime dateTimeFromULong(final ULong longValue) {
         return Optional.ofNullable(longValue)
                 .map(ULong::longValue)
-                .map(l ->  Instant.ofEpochSecond(l).atZone(ZoneId.systemDefault()).toLocalDateTime())
+                .map(l -> Instant.ofEpochSecond(l).atZone(ZoneId.of(ZoneOffset.UTC.getId())).toLocalDateTime())
                 .orElse(null);
     }
 
@@ -31,6 +33,10 @@ public final class TimeUtils {
 
     public static Long getEpochSeconds(final LocalDateTime dateTime) {
         return dateTime.atZone(ZoneOffset.UTC).toInstant().getEpochSecond();
+    }
+
+    public static LocalDateTime nowUtcSeconds() {
+        return LocalDateTime.now(Clock.systemUTC()).truncatedTo(ChronoUnit.SECONDS);
     }
 
     private TimeUtils() {

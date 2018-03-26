@@ -1,6 +1,10 @@
 package stroom.autoindex.tracker;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * Each instance shows which time windows have been indexed from the raw data source into the indexed data source.

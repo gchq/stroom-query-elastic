@@ -1,6 +1,11 @@
 package stroom.autoindex.tracker;
 
-import org.jooq.*;
+import org.jooq.Configuration;
+import org.jooq.DSLContext;
+import org.jooq.Field;
+import org.jooq.Record;
+import org.jooq.RecordMapper;
+import org.jooq.Table;
 import org.jooq.impl.DSL;
 import org.jooq.types.ULong;
 
@@ -28,13 +33,9 @@ public class AutoIndexTrackerDaoImpl implements AutoIndexTrackerDao {
                     .comparator(LocalDateTime::compareTo)
                     .build();
 
-    private AutoIndexTrackerDaoImpl(final DSLContext database) {
-        this.database = database;
-    }
-
     @Inject
-    public AutoIndexTrackerDaoImpl(final Configuration jooqConfig) {
-        database = DSL.using(jooqConfig);
+    public AutoIndexTrackerDaoImpl(final DSLContext database) {
+        this.database = database;
     }
 
     @Override
@@ -104,14 +105,5 @@ public class AutoIndexTrackerDaoImpl implements AutoIndexTrackerDao {
     public static TrackerWindow fromRecord(final Record r) {
         return TrackerWindow.from(dateTimeFromULong(r.get(FIELD_FROM)))
                 .to(dateTimeFromULong(r.get(FIELD_TO)));
-    }
-
-    /**
-     * Allow building of instances of the services using raw database credentials.
-     * @param database The database to use
-     * @return An instance of the DAO Impl using the given database
-     */
-    public static AutoIndexTrackerDaoImpl withDatabase(final DSLContext database) {
-        return new AutoIndexTrackerDaoImpl(database);
     }
 }

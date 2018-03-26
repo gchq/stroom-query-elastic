@@ -1,6 +1,6 @@
 package stroom.autoindex;
 
-import org.jooq.Configuration;
+import org.jooq.DSLContext;
 import org.jooq.types.ULong;
 import stroom.query.api.v2.DocRef;
 import stroom.query.jooq.DocRefServiceJooqImpl;
@@ -12,7 +12,7 @@ public class AutoIndexDocRefServiceImpl
         extends DocRefServiceJooqImpl<AutoIndexDocRefEntity> {
 
     @Inject
-    public AutoIndexDocRefServiceImpl(final Configuration jooqConfiguration) {
+    public AutoIndexDocRefServiceImpl(final DSLContext database) {
         super(AutoIndexDocRefEntity.TYPE,
                 dataMap -> new AutoIndexDocRefEntity.Builder()
                         .timeFieldName(dataMap.getValue(AutoIndexDocRefEntity.TIME_FIELD_NAME_FIELD).orElse(null))
@@ -47,6 +47,6 @@ public class AutoIndexDocRefServiceImpl
                     consumer.setValue(AutoIndexDocRefEntity.INDEX_DOC_REF_NAME, entity.getIndexDocRef().getName());
                 },
                 AutoIndexDocRefEntity.class,
-                jooqConfiguration);
+                database);
     }
 }

@@ -1,6 +1,11 @@
 package stroom.autoindex.tracker;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
@@ -16,8 +21,8 @@ class WindowMerger<COMPARABLE, HAS_BOUNDS extends HasBounds<COMPARABLE>> {
     private final BiFunction<COMPARABLE, COMPARABLE, HAS_BOUNDS> newValueGenerator;
 
     private WindowMerger(final Builder<COMPARABLE, HAS_BOUNDS> builder) {
-        this.comparator = builder.comparator;
-        this.newValueGenerator = builder.newValueGenerator;
+        this.comparator = Objects.requireNonNull(builder.comparator);
+        this.newValueGenerator = Objects.requireNonNull(builder.newValueGenerator);
     }
 
     public class MergeProcessBuilder {
@@ -161,9 +166,6 @@ class WindowMerger<COMPARABLE, HAS_BOUNDS extends HasBounds<COMPARABLE>> {
         }
 
         public WindowMerger<C, H> build() {
-            Objects.requireNonNull(this.newValueGenerator);
-            Objects.requireNonNull(this.comparator);
-
             return new WindowMerger<>(this);
         }
     }

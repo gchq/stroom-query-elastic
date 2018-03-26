@@ -1,5 +1,9 @@
 package stroom.autoindex.tracker;
 
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import org.jooq.DSLContext;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -10,14 +14,11 @@ import stroom.autoindex.Config;
 import stroom.autoindex.DSLContextBuilder;
 import stroom.autoindex.DeleteFromTableRule;
 import stroom.autoindex.TestConstants;
-import stroom.autoindex.tracker.AutoIndexTracker;
-import stroom.autoindex.tracker.AutoIndexTrackerDao;
-import stroom.autoindex.tracker.AutoIndexTrackerDaoImpl;
-import stroom.autoindex.tracker.TrackerWindow;
+import stroom.autoindex.TimeUtils;
+import stroom.autoindex.indexing.IndexJob;
 import stroom.query.testing.DropwizardAppWithClientsRule;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -41,6 +42,7 @@ public class AutoIndexTrackerDaoIT {
     public final DeleteFromTableRule<Config> clearDbRule = DeleteFromTableRule.withApp(appRule)
             .table(AutoIndexDocRefEntity.TABLE_NAME)
             .table(AutoIndexTracker.TABLE_NAME)
+            .table(IndexJob.TABLE_NAME)
             .build();
 
     /**
@@ -48,12 +50,24 @@ public class AutoIndexTrackerDaoIT {
      */
     private static AutoIndexTrackerDao autoIndexTrackerDao;
 
+    /**
+     * Injector for creating instances of the server outside of the running application.
+     */
+    private static Injector injector;
+
     @BeforeClass
     public static void beforeClass() {
-        autoIndexTrackerDao = AutoIndexTrackerDaoImpl.withDatabase(DSLContextBuilder.withUrl(appRule.getConfiguration().getDataSourceFactory().getUrl())
-                .username(appRule.getConfiguration().getDataSourceFactory().getUser())
-                .password(appRule.getConfiguration().getDataSourceFactory().getPassword())
-                .build());
+        injector = Guice.createInjector(new AbstractModule() {
+            @Override
+            protected void configure() {
+                bind(DSLContext.class).toInstance(DSLContextBuilder.withUrl(appRule.getConfiguration().getDataSourceFactory().getUrl())
+                        .username(appRule.getConfiguration().getDataSourceFactory().getUser())
+                        .password(appRule.getConfiguration().getDataSourceFactory().getPassword())
+                        .build());
+            }
+        });
+
+        autoIndexTrackerDao = injector.getInstance(AutoIndexTrackerDaoImpl.class);
     }
 
     @Test
@@ -73,7 +87,7 @@ public class AutoIndexTrackerDaoIT {
     public void testAddWindow() {
         // Given
         final String docRefUuid = UUID.randomUUID().toString();
-        final LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        final LocalDateTime now = TimeUtils.nowUtcSeconds();
         final LocalDateTime oneMonthAgo = now.minusMonths(1);
         final LocalDateTime twoMonthsAgo = oneMonthAgo.minusMonths(1);
         final LocalDateTime threeMonthsAgo = oneMonthAgo.minusMonths(1);
@@ -88,10 +102,11 @@ public class AutoIndexTrackerDaoIT {
         final AutoIndexTracker tracker3 = autoIndexTrackerDao.get(docRefUuid);
 
         // Then
-        assertEquals(tracker1.getWindows(), Collections.singletonList(oneMonthAgoToNow));
-        assertEquals(tracker2.getWindows(),
-                Stream.of(threeMonthsAgoToTwoMonthsAgo, oneMonthAgoToNow)
-                        .collect(Collectors.toList()));
+        assertEquals(Collections.singletonList(oneMonthAgoToNow),
+                tracker1.getWindows());
+        assertEquals(Stream.of(threeMonthsAgoToTwoMonthsAgo, oneMonthAgoToNow)
+                        .collect(Collectors.toList()),
+                tracker2.getWindows());
 
         assertEquals(tracker2, tracker3);
     }
@@ -100,7 +115,7 @@ public class AutoIndexTrackerDaoIT {
     public void testAddWindowsToMerge() {
         // Given
         final String docRefUuid = UUID.randomUUID().toString();
-        final LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        final LocalDateTime now = TimeUtils.nowUtcSeconds();
         final LocalDateTime oneMonthAgo = now.minusMonths(1);
         final LocalDateTime twoMonthsAgo = oneMonthAgo.minusMonths(1);
 
@@ -115,15 +130,15 @@ public class AutoIndexTrackerDaoIT {
 
         // Then
         // Should up with one big window that covers it all
-        assertEquals(tracker.getWindows(),
-                Collections.singletonList(TrackerWindow.from(twoMonthsAgo).to(now)));
+        assertEquals(Collections.singletonList(TrackerWindow.from(twoMonthsAgo).to(now)),
+                tracker.getWindows());
     }
 
     @Test
     public void testClearWindow() {
         // Given
         final String docRefUuid = UUID.randomUUID().toString();
-        final LocalDateTime now = LocalDateTime.now();
+        final LocalDateTime now = TimeUtils.nowUtcSeconds();
         final LocalDateTime oneMonthAgo = now.minusMonths(1);
         final LocalDateTime twoMonthsAgo = oneMonthAgo.minusMonths(1);
         final LocalDateTime threeMonthsAgo = oneMonthAgo.minusMonths(1);

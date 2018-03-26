@@ -8,10 +8,7 @@ import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
-import org.glassfish.hk2.api.TypeLiteral;
-import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import stroom.query.audit.AuditedQueryBundle;
-import stroom.query.audit.service.DocRefService;
 
 public class AnimalApp extends Application<AnimalConfig> {
     private Injector injector;

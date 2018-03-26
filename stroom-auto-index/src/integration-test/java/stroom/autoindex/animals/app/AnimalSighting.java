@@ -15,10 +15,11 @@ public class AnimalSighting {
     private final String observer;
 
     private AnimalSighting(final Builder builder) {
-        this.species = builder.species;
-        this.location = builder.location;
-        this.time = builder.time;
-        this.observer = builder.observer;
+        this.species = Objects.requireNonNull(builder.species);
+        this.location = Objects.requireNonNull(builder.location);
+        this.time = Objects.requireNonNull(builder.time);
+        this.observer = Objects.requireNonNull(builder.observer);
+
     }
 
     public String getSpecies() {
@@ -75,11 +76,6 @@ public class AnimalSighting {
         }
 
         public AnimalSighting build() {
-            Objects.requireNonNull(this.species);
-            Objects.requireNonNull(this.location);
-            Objects.requireNonNull(this.time);
-            Objects.requireNonNull(this.observer);
-
             return new AnimalSighting(this);
         }
     }

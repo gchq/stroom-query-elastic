@@ -2,7 +2,11 @@ package stroom.autoindex;
 
 import org.eclipse.jetty.http.HttpStatus;
 import stroom.datasource.api.v2.DataSource;
-import stroom.query.api.v2.*;
+import stroom.query.api.v2.DocRef;
+import stroom.query.api.v2.Query;
+import stroom.query.api.v2.QueryKey;
+import stroom.query.api.v2.SearchRequest;
+import stroom.query.api.v2.SearchResponse;
 import stroom.query.audit.client.QueryResourceHttpClient;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;

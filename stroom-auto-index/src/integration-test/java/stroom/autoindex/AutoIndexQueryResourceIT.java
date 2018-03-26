@@ -1,134 +1,43 @@
 package stroom.autoindex;
 
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import org.eclipse.jetty.http.HttpStatus;
-import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.animals.AnimalsQueryResourceIT;
-import stroom.autoindex.animals.app.AnimalApp;
-import stroom.autoindex.animals.app.AnimalConfig;
-import stroom.autoindex.animals.app.AnimalDocRefEntity;
 import stroom.autoindex.animals.app.AnimalSighting;
-import stroom.autoindex.tracker.AutoIndexTracker;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
-import stroom.elastic.test.ElasticTestIndexRule;
-import stroom.query.api.v2.*;
-import stroom.query.audit.authorisation.DocumentPermission;
-import stroom.query.audit.client.DocRefResourceHttpClient;
-import stroom.query.audit.client.QueryResourceHttpClient;
-import stroom.query.audit.model.DocRefEntity;
-import stroom.query.audit.rest.AuditedDocRefResourceImpl;
+import stroom.query.api.v2.ExpressionOperator;
+import stroom.query.api.v2.ExpressionTerm;
+import stroom.query.api.v2.FlatResult;
+import stroom.query.api.v2.OffsetRange;
+import stroom.query.api.v2.Result;
+import stroom.query.api.v2.SearchRequest;
+import stroom.query.api.v2.SearchResponse;
 import stroom.query.audit.rest.AuditedQueryResourceImpl;
-import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
-import stroom.query.elastic.service.ElasticIndexDocRefServiceImpl;
-import stroom.query.testing.DropwizardAppWithClientsRule;
-import stroom.query.testing.FifoLogbackRule;
-import stroom.query.testing.StroomAuthenticationRule;
-import stroom.testdata.FlatFileTestDataRule;
 
 import javax.ws.rs.core.Response;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static stroom.query.testing.FifoLogbackRule.containsAllOf;
 
-public class AutoIndexQueryResourceIT {
+public class AutoIndexQueryResourceIT extends AbstractAutoIndexIntegrationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(AutoIndexQueryResourceIT.class);
 
-    /**
-     * Same auth rule across all 3 applications
-     */
-    @ClassRule
-    public static final StroomAuthenticationRule authRule =
-            new StroomAuthenticationRule(WireMockConfiguration.options().port(TestConstants.TEST_AUTH_PORT));
 
-    /**
-     * The auto index application, it's client, and a rule to clear the doc ref database table
-     */
-    @ClassRule
-    public static final DropwizardAppWithClientsRule<Config> autoIndexAppRule =
-            new DropwizardAppWithClientsRule<>(App.class, resourceFilePath(TestConstants.AUTO_INDEX_APP_CONFIG));
-
-    private static DocRefResourceHttpClient<AutoIndexDocRefEntity> autoIndexDocRefClient =
-            new DocRefResourceHttpClient<>(TestConstants.AUTO_INDEX_APP_HOST);
-
-    private static QueryResourceHttpClient autoIndexQueryClient =
-            new QueryResourceHttpClient(TestConstants.AUTO_INDEX_APP_HOST);
-
-    @Rule
-    public final DeleteFromTableRule<Config> clearDbRule = DeleteFromTableRule.withApp(autoIndexAppRule)
-            .table(AutoIndexDocRefEntity.TABLE_NAME)
-            .table(AutoIndexTracker.TABLE_NAME)
-            .build();
-
-    /**
-     * The Elastic application, and it's client
-     */
-    @ClassRule
-    public static final DropwizardAppWithClientsRule<stroom.query.elastic.config.Config> elasticAppRule =
-            new DropwizardAppWithClientsRule<>(stroom.query.elastic.App.class, resourceFilePath(TestConstants.ELASTIC_APP_CONFIG));
-
-    private static DocRefResourceHttpClient<ElasticIndexDocRefEntity> elasticDocRefClient =
-            new DocRefResourceHttpClient<>(TestConstants.ELASTIC_APP_HOST);
-
-    /**
-     * The animals application, and it's client
-     */
-    @ClassRule
-    public static final DropwizardAppWithClientsRule<AnimalConfig> animalsAppRule =
-            new DropwizardAppWithClientsRule<>(AnimalApp.class, resourceFilePath(TestConstants.ANIMALS_APP_CONFIG));
-
-    private static DocRefResourceHttpClient<AnimalDocRefEntity> animalDocRefClient =
-            new DocRefResourceHttpClient<>(TestConstants.ANIMAL_APP_HOST);
-
-    /**
-     * Underlying test data for use by the animals application
-     */
-    @ClassRule
-    public static final FlatFileTestDataRule testDataRule = FlatFileTestDataRule.withTempDirectory()
-            .testDataGenerator(AnimalTestData.build())
-            .build();
-
-    /**
-     * This elastic index is used for the storage of Auto Index doc refs
-     */
-    @ClassRule
-    public static final ElasticTestIndexRule stroomIndexRule = ElasticTestIndexRule
-            .forIndex(AutoIndexQueryResourceIT.class, ElasticIndexDocRefServiceImpl.STROOM_INDEX_NAME)
-            .httpUrl(TestConstants.LOCAL_ELASTIC_HTTP_HOST)
-            .build();
-
-    @Rule
-    public FifoLogbackRule auditLogRule = new FifoLogbackRule();
-
-    private class EntityWithDocRef<DOC_REF_ENTITY extends DocRefEntity> {
-        private final DOC_REF_ENTITY entity;
-        private final DocRef docRef;
-
-        private EntityWithDocRef(final DOC_REF_ENTITY entity,
-                                 final DocRef docRef) {
-            this.entity = entity;
-            this.docRef = docRef;
-        }
-    }
 
     @Test
     public void testGetDataSource() {
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
 
-        final Response response = autoIndexQueryClient.getDataSource(authRule.adminUser(), autoIndex.docRef);
+        final Response response = autoIndexQueryClient.getDataSource(authRule.adminUser(), autoIndex.getDocRef());
         assertEquals(HttpStatus.OK_200, response.getStatus());
         final DataSource result = response.readEntity(DataSource.class);
 
@@ -144,8 +53,8 @@ public class AutoIndexQueryResourceIT {
         // Create the 3 doc refs, get data source, which will cause the raw data source to be queried
         auditLogRule.check()
                 .thereAreAtLeast(2)
-                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.GET_DATA_SOURCE, autoIndex.entity.getRawDocRef().getUuid()))
-                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.GET_DATA_SOURCE, autoIndex.docRef.getUuid()));
+                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.GET_DATA_SOURCE, autoIndex.getEntity().getRawDocRef().getUuid()))
+                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.GET_DATA_SOURCE, autoIndex.getDocRef().getUuid()));
     }
 
     @Test
@@ -167,7 +76,7 @@ public class AutoIndexQueryResourceIT {
                 .build();
 
         final SearchRequest searchRequest = AnimalsQueryResourceIT
-                .getTestSearchRequest(autoIndex.docRef, expressionOperator, offset);
+                .getTestSearchRequest(autoIndex.getDocRef(), expressionOperator, offset);
 
         final Response response = autoIndexQueryClient.search(authRule.adminUser(), searchRequest);
         assertEquals(HttpStatus.OK_200, response.getStatus());
@@ -205,115 +114,9 @@ public class AutoIndexQueryResourceIT {
         // Create the 3 doc refs, search, which will cause the raw data source to be queried
         auditLogRule.check()
                 .thereAreAtLeast(2)
-                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_SEARCH, autoIndex.entity.getRawDocRef().getUuid()))
-                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_SEARCH, autoIndex.docRef.getUuid()));
+                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_SEARCH, autoIndex.getEntity().getRawDocRef().getUuid()))
+                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_SEARCH, autoIndex.getDocRef().getUuid()));
     }
 
-    /**
-     * Creates the various doc refs required to support a single Auto Index.
-     * It gives the admin user full access to all doc refs.
-     * @return The AutoIndexDocRefEntity created, tied to the raw and indexed doc refs below it.
-     */
-    private EntityWithDocRef<AutoIndexDocRefEntity> createAutoIndex() {
-        final DocRef animalDocRef = createDocument(new AnimalDocRefEntity.Builder()
-                        .uuid(UUID.randomUUID().toString())
-                        .name(UUID.randomUUID().toString())
-                        .dataDirectory(testDataRule.getFolder().getAbsolutePath())
-                        .build());
 
-        final DocRef elasticDocRef = createDocument(new ElasticIndexDocRefEntity.Builder()
-                        .uuid(UUID.randomUUID().toString())
-                        .name(UUID.randomUUID().toString())
-                        .indexedType(UUID.randomUUID().toString())
-                        .indexName(UUID.randomUUID().toString())
-                        .build());
-
-        final AutoIndexDocRefEntity autoIndexDocRefEntity = new AutoIndexDocRefEntity.Builder()
-                .uuid(UUID.randomUUID().toString())
-                .name(UUID.randomUUID().toString())
-                .rawDocRef(animalDocRef)
-                .indexDocRef(elasticDocRef)
-                .build();
-
-        final DocRef autoIndexDocRef = createDocument(autoIndexDocRefEntity);
-
-        return new EntityWithDocRef<>(autoIndexDocRefEntity, autoIndexDocRef);
-    }
-
-    /**
-     * Creates a single document in one of the doc ref applications under test.
-     * The arguments passed in determine which is being used.
-     * @param docRefEntity The entity to create
-     * @param <DOC_REF_ENTITY> The class of the doc ref entity, it will be use to determine which TYPE and CLIENT to use.
-     * @return The Doc Ref of the document created
-     */
-    private <DOC_REF_ENTITY extends DocRefEntity>
-    DocRef createDocument(final DOC_REF_ENTITY docRefEntity) {
-        final String docRefType;
-        final DocRefResourceHttpClient<DOC_REF_ENTITY> docRefClient;
-
-        if (docRefEntity instanceof AutoIndexDocRefEntity) {
-            docRefType = AutoIndexDocRefEntity.TYPE;
-            @SuppressWarnings("unchecked")
-            DocRefResourceHttpClient<DOC_REF_ENTITY> c = (DocRefResourceHttpClient<DOC_REF_ENTITY>) autoIndexDocRefClient;
-            docRefClient = c;
-        } else if (docRefEntity instanceof AnimalDocRefEntity) {
-            docRefType = AnimalDocRefEntity.TYPE;
-            @SuppressWarnings("unchecked")
-            DocRefResourceHttpClient<DOC_REF_ENTITY> c = (DocRefResourceHttpClient<DOC_REF_ENTITY>) animalDocRefClient;
-            docRefClient = c;
-        } else if (docRefEntity instanceof ElasticIndexDocRefEntity) {
-            docRefType = ElasticIndexDocRefEntity.TYPE;
-            @SuppressWarnings("unchecked")
-            DocRefResourceHttpClient<DOC_REF_ENTITY> c = (DocRefResourceHttpClient<DOC_REF_ENTITY>) elasticDocRefClient;
-            docRefClient = c;
-        } else {
-            final String msg = String.format("Cannot create documents for this class %s", docRefEntity.getClass());
-            throw new IllegalArgumentException(msg);
-        }
-
-        // Generate UUID's for the doc ref and it's parent folder
-        final String parentFolderUuid = UUID.randomUUID().toString();
-        final DocRef docRef = new DocRef.Builder()
-                .uuid(docRefEntity.getUuid())
-                .type(docRefType)
-                .name(docRefEntity.getName())
-                .build();
-
-        // Ensure admin user can create the document in the folder
-        authRule.permitAdminUser()
-                .createInFolder(parentFolderUuid)
-                .docRefType(docRefType)
-                .done();
-
-        // Create a doc ref to hang the search from
-        final Response createResponse = docRefClient.createDocument(
-                authRule.adminUser(),
-                docRef.getUuid(),
-                docRef.getName(),
-                parentFolderUuid);
-        assertEquals(HttpStatus.OK_200, createResponse.getStatus());
-        createResponse.close();
-
-        // Give admin all the roles required to manipulate the document and it's underlying data
-        authRule.permitAdminUser()
-                .docRef(docRef)
-                .permission(DocumentPermission.READ)
-                .permission(DocumentPermission.UPDATE)
-                .done();
-
-        final Response updateIndexResponse =
-                docRefClient.update(authRule.adminUser(),
-                        docRef.getUuid(),
-                        docRefEntity);
-        assertEquals(HttpStatus.OK_200, updateIndexResponse.getStatus());
-        updateIndexResponse.close();
-
-        auditLogRule.check()
-                .thereAreAtLeast(2)
-                .containsOrdered(containsAllOf(AuditedDocRefResourceImpl.CREATE_DOC_REF, docRef.getUuid()))
-                .containsOrdered(containsAllOf(AuditedDocRefResourceImpl.UPDATE_DOC_REF, docRef.getUuid()));
-
-        return docRef;
-    }
 }
