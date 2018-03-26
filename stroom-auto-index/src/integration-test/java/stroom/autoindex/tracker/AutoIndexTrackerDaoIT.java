@@ -5,18 +5,9 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.jooq.DSLContext;
 import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
-import stroom.autoindex.App;
-import stroom.autoindex.AutoIndexDocRefEntity;
-import stroom.autoindex.Config;
-import stroom.autoindex.DSLContextBuilder;
-import stroom.autoindex.DeleteFromTableRule;
-import stroom.autoindex.TestConstants;
+import stroom.autoindex.AbstractAutoIndexIntegrationTest;
 import stroom.autoindex.TimeUtils;
-import stroom.autoindex.indexing.IndexJob;
-import stroom.query.testing.DropwizardAppWithClientsRule;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -24,46 +15,22 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-public class AutoIndexTrackerDaoIT {
-
-    /**
-     * Having the app rule will ensure the database gets migrated, it also gives us access to the configuration
-     */
-    @ClassRule
-    public static final DropwizardAppWithClientsRule<Config> appRule =
-            new DropwizardAppWithClientsRule<>(App.class, resourceFilePath(TestConstants.AUTO_INDEX_APP_CONFIG));
-
-
-    @Rule
-    public final DeleteFromTableRule<Config> clearDbRule = DeleteFromTableRule.withApp(appRule)
-            .table(AutoIndexDocRefEntity.TABLE_NAME)
-            .table(AutoIndexTracker.TABLE_NAME)
-            .table(IndexJob.TABLE_NAME)
-            .build();
+public class AutoIndexTrackerDaoIT extends AbstractAutoIndexIntegrationTest {
 
     /**
      * Create our own Index Tracker DAO for direct testing
      */
     private static AutoIndexTrackerDao autoIndexTrackerDao;
 
-    /**
-     * Injector for creating instances of the server outside of the running application.
-     */
-    private static Injector injector;
-
     @BeforeClass
     public static void beforeClass() {
-        injector = Guice.createInjector(new AbstractModule() {
+        final Injector injector = Guice.createInjector(new AbstractModule() {
             @Override
             protected void configure() {
-                bind(DSLContext.class).toInstance(DSLContextBuilder.withUrl(appRule.getConfiguration().getDataSourceFactory().getUrl())
-                        .username(appRule.getConfiguration().getDataSourceFactory().getUser())
-                        .password(appRule.getConfiguration().getDataSourceFactory().getPassword())
-                        .build());
+                bind(DSLContext.class).toInstance(initialiseJooqDbRule.withDatabase());
             }
         });
 

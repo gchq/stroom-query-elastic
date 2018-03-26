@@ -48,6 +48,10 @@ public class Config
     private AuthorisationServiceConfig authorisationServiceConfig;
 
     @NotNull
+    @JsonProperty("indexing")
+    private IndexingConfig indexingConfig;
+
+    @NotNull
     @JsonProperty("queryResourceUrlsByType")
     private Map<String, String> queryResourceUrlsByType;
 
@@ -65,6 +69,10 @@ public class Config
 
     public final JooqFactory getJooqFactory() {
         return jooqFactory;
+    }
+
+    public IndexingConfig getIndexingConfig() {
+        return indexingConfig;
     }
 
     @Override

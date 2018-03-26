@@ -2,6 +2,8 @@ package stroom.autoindex;
 
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import org.eclipse.jetty.http.HttpStatus;
+import org.jooq.DSLContext;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import stroom.autoindex.animals.AnimalTestData;
@@ -38,6 +40,7 @@ import static stroom.query.testing.FifoLogbackRule.containsAllOf;
  * to the REST API's, and the auth/audit log rules.
  */
 public abstract class AbstractAutoIndexIntegrationTest {
+
     /**
      * Same auth rule across all 3 applications
      */
@@ -50,20 +53,24 @@ public abstract class AbstractAutoIndexIntegrationTest {
      */
     @ClassRule
     public static final DropwizardAppWithClientsRule<Config> autoIndexAppRule =
-            new DropwizardAppWithClientsRule<>(App.class, resourceFilePath(TestConstants.AUTO_INDEX_APP_CONFIG));
+            new DropwizardAppWithClientsRule<>(App.class, resourceFilePath(TestConstants.AUTO_INDEX_APP_CONFIG_NO_INDEXING));
 
-    private static DocRefResourceHttpClient<AutoIndexDocRefEntity> autoIndexDocRefClient =
-            new DocRefResourceHttpClient<>(TestConstants.AUTO_INDEX_APP_HOST);
+    private static final DocRefResourceHttpClient<AutoIndexDocRefEntity> autoIndexDocRefClient =
+            new DocRefResourceHttpClient<>(TestConstants.AUTO_INDEX_APP_HOST_NO_INDEXING);
 
     protected static QueryResourceHttpClient autoIndexQueryClient =
-            new QueryResourceHttpClient(TestConstants.AUTO_INDEX_APP_HOST);
+            new QueryResourceHttpClient(TestConstants.AUTO_INDEX_APP_HOST_NO_INDEXING);
+
+    public static final InitialiseJooqDbRule initialiseJooqDbRule = InitialiseJooqDbRule
+            .withDataSourceFactory(() -> autoIndexAppRule.getConfiguration().getDataSourceFactory())
+            .tableToClear(AutoIndexDocRefEntity.TABLE_NAME)
+            .tableToClear(AutoIndexTracker.TABLE_NAME)
+            .tableToClear(IndexJob.TABLE_NAME)
+            .build();
+
 
     @Rule
-    public final DeleteFromTableRule<Config> clearDbRule = DeleteFromTableRule.withApp(autoIndexAppRule)
-            .table(AutoIndexDocRefEntity.TABLE_NAME)
-            .table(AutoIndexTracker.TABLE_NAME)
-            .table(IndexJob.TABLE_NAME)
-            .build();
+    public final InitialiseJooqDbRule initialiseJooqDbRulePerTest = initialiseJooqDbRule;
 
     /**
      * The Elastic application, and it's client

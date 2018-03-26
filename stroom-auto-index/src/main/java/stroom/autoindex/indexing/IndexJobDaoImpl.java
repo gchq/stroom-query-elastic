@@ -27,13 +27,13 @@ import static stroom.autoindex.tracker.AutoIndexTrackerDaoImpl.FIELD_TO;
 public class IndexJobDaoImpl implements IndexJobDao {
 
     private static final String JOB_ID = "jobId";
-    private static final String STARTED = "started";
+    private static final String STARTED_TIME = "startedTime";
     private static final String CREATE_TIME = "createTime";
 
-    private static final Table<Record> JOB_TABLE = DSL.table(IndexJob.TABLE_NAME);
-    private static final Field<String> FIELD_JOB_ID = DSL.field(JOB_ID, String.class);
-    private static final Field<Boolean> FIELD_STARTED = DSL.field(STARTED, Boolean.class);
-    private static final Field<ULong> FIELD_CREATE_TIME = DSL.field(CREATE_TIME, ULong.class);
+    public static final Table<Record> JOB_TABLE = DSL.table(IndexJob.TABLE_NAME);
+    public static final Field<String> FIELD_JOB_ID = DSL.field(JOB_ID, String.class);
+    public static final Field<ULong> FIELD_STARTED_TIME = DSL.field(STARTED_TIME, ULong.class);
+    public static final Field<ULong> FIELD_CREATE_TIME = DSL.field(CREATE_TIME, ULong.class);
 
     private final DSLContext database;
     private final AutoIndexTrackerDao autoIndexTrackerDao;
@@ -76,7 +76,7 @@ public class IndexJobDaoImpl implements IndexJobDao {
                     final IndexJob indexJob = IndexJob.forAutoIndex(autoIndex)
                             .jobId(UUID.randomUUID().toString())
                             .trackerWindow(nextWindow)
-                            .started(false)
+                            .startedTimeMillis(0L)
                             .createdTimeMillis(System.currentTimeMillis())
                             .build();
 
@@ -84,13 +84,13 @@ public class IndexJobDaoImpl implements IndexJobDao {
                     DSL.using(c).insertInto(JOB_TABLE)
                             .columns(FIELD_JOB_ID,
                                     FIELD_DOC_REF_UUID,
-                                    FIELD_STARTED,
+                                    FIELD_STARTED_TIME,
                                     FIELD_CREATE_TIME,
                                     FIELD_FROM,
                                     FIELD_TO)
                             .values(indexJob.getJobId(),
                                     docRefUuid,
-                                    indexJob.isStarted(),
+                                    ULong.valueOf(indexJob.getStartedTimeMillis()),
                                     ULong.valueOf(indexJob.getCreatedTimeMillis()),
                                     TimeUtils.getEpochSecondsULong(indexJob.getTrackerWindow().getFrom()),
                                     TimeUtils.getEpochSecondsULong(indexJob.getTrackerWindow().getTo()))
@@ -126,7 +126,7 @@ public class IndexJobDaoImpl implements IndexJobDao {
         return IndexJob.forAutoIndex(autoIndex)
                 .jobId(record.get(FIELD_JOB_ID))
                 .createdTimeMillis(record.get(FIELD_CREATE_TIME).longValue())
-                .started(record.get(FIELD_STARTED))
+                .startedTimeMillis(record.get(FIELD_STARTED_TIME).longValue())
                 .trackerWindow(AutoIndexTrackerDaoImpl.fromRecord(record))
                 .build();
     }
@@ -150,7 +150,7 @@ public class IndexJobDaoImpl implements IndexJobDao {
         return IndexJob.forAutoIndex(autoIndex)
                 .jobId(record.get(FIELD_JOB_ID))
                 .createdTimeMillis(record.get(FIELD_CREATE_TIME).longValue())
-                .started(record.get(FIELD_STARTED))
+                .startedTimeMillis(record.get(FIELD_STARTED_TIME).longValue())
                 .trackerWindow(AutoIndexTrackerDaoImpl.fromRecord(record))
                 .build();
     }

@@ -63,6 +63,9 @@ jooq:
   attachRecords: yes
   updatablePrimaryKeys: no
 
+indexing:
+  enabled: true
+
 queryResourceUrlsByType:
   ElasticIndex: http://localhost:18299
   AnimalHuntingGroup: http://localhost:8899

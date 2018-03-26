@@ -31,8 +31,6 @@ import static stroom.query.testing.FifoLogbackRule.containsAllOf;
 public class AutoIndexQueryResourceIT extends AbstractAutoIndexIntegrationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(AutoIndexQueryResourceIT.class);
 
-
-
     @Test
     public void testGetDataSource() {
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();

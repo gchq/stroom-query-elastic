@@ -26,7 +26,7 @@ public class AutoIndexDocRefResourceIT extends DocRefResourceIT<AutoIndexDocRefE
 
     @ClassRule
     public static final DropwizardAppWithClientsRule<Config> appRule =
-            new DropwizardAppWithClientsRule<>(App.class, resourceFilePath(TestConstants.AUTO_INDEX_APP_CONFIG));
+            new DropwizardAppWithClientsRule<>(App.class, resourceFilePath(TestConstants.AUTO_INDEX_APP_CONFIG_NO_INDEXING));
 
     @ClassRule
     public static final StroomAuthenticationRule authRule =
@@ -39,9 +39,10 @@ public class AutoIndexDocRefResourceIT extends DocRefResourceIT<AutoIndexDocRefE
             .build();
 
     @Rule
-    public final DeleteFromTableRule<Config> clearDbRule = DeleteFromTableRule.withApp(appRule)
-            .table(AutoIndexDocRefEntity.TABLE_NAME)
-            .table(AutoIndexTracker.TABLE_NAME)
+    public final InitialiseJooqDbRule clearDbRule = InitialiseJooqDbRule
+            .withDataSourceFactory(() -> appRule.getConfiguration().getDataSourceFactory())
+            .tableToClear(AutoIndexDocRefEntity.TABLE_NAME)
+            .tableToClear(AutoIndexTracker.TABLE_NAME)
             .build();
 
     @ClassRule

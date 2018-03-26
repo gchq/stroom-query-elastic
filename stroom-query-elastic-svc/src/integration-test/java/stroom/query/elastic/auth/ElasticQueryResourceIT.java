@@ -185,7 +185,7 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
     }
 
     @Test
-    public void testSeawrchValid() {
+    public void testSearchValid() {
         final DocRef docRef = createDocument();
 
         final String SPEAKER_TERM = "WARWICK";

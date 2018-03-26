@@ -16,14 +16,14 @@ public class IndexJob {
     private final AutoIndexDocRefEntity autoIndexDocRefEntity;
     private final TrackerWindow trackerWindow;
     private final long createdTimeMillis;
-    private final boolean started;
+    private final long startedTimeMillis;
 
     private IndexJob(final Builder builder) {
         this.jobId = Objects.requireNonNull(builder.jobId);
         this.autoIndexDocRefEntity = Objects.requireNonNull(builder.autoIndexDocRefEntity);
         this.trackerWindow = Objects.requireNonNull(builder.trackerWindow);
         this.createdTimeMillis = builder.createdTimeMillis;
-        this.started = builder.started;
+        this.startedTimeMillis = builder.startedTimeMillis;
     }
 
     public String getJobId() {
@@ -42,8 +42,8 @@ public class IndexJob {
         return createdTimeMillis;
     }
 
-    public boolean isStarted() {
-        return started;
+    public long getStartedTimeMillis() {
+        return startedTimeMillis;
     }
 
     public static Builder forAutoIndex(final AutoIndexDocRefEntity autoIndexDocRefEntity) {
@@ -55,7 +55,7 @@ public class IndexJob {
         private final AutoIndexDocRefEntity autoIndexDocRefEntity;
         private TrackerWindow trackerWindow;
         private long createdTimeMillis;
-        private boolean started;
+        private long startedTimeMillis;
 
         private Builder(final AutoIndexDocRefEntity autoIndexDocRefEntity) {
             this.autoIndexDocRefEntity = autoIndexDocRefEntity;
@@ -76,8 +76,8 @@ public class IndexJob {
             return this;
         }
 
-        public Builder started(final boolean value) {
-            this.started = value;
+        public Builder startedTimeMillis(final long value) {
+            this.startedTimeMillis = value;
             return this;
         }
 
