@@ -46,6 +46,19 @@ public class IndexJob {
         return startedTimeMillis;
     }
 
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("IndexJob{");
+        sb.append("jobId='").append(jobId).append('\'');
+        sb.append(", autoIndexDocRefEntity=").append(autoIndexDocRefEntity);
+        sb.append(", trackerWindow=").append(trackerWindow);
+        sb.append(", createdTimeMillis=").append(createdTimeMillis);
+        sb.append(", startedTimeMillis=").append(startedTimeMillis);
+        sb.append('}');
+        return sb.toString();
+    }
+
     public static Builder forAutoIndex(final AutoIndexDocRefEntity autoIndexDocRefEntity) {
         return new Builder(autoIndexDocRefEntity);
     }

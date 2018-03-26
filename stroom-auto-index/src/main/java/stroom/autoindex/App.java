@@ -13,11 +13,20 @@ import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import stroom.autoindex.indexing.IndexJob;
+import stroom.autoindex.indexing.IndexJobConsumer;
+import stroom.autoindex.indexing.IndexJobDao;
+import stroom.autoindex.indexing.IndexJobDaoImpl;
+import stroom.autoindex.indexing.IndexingTimerTask;
+import stroom.autoindex.tracker.AutoIndexTrackerDao;
+import stroom.autoindex.tracker.AutoIndexTrackerDaoImpl;
 import stroom.query.audit.client.QueryResourceHttpClient;
 import stroom.query.jooq.AuditedJooqDocRefBundle;
 
 import java.util.Optional;
+import java.util.Timer;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class App extends Application<Config> {
@@ -38,6 +47,13 @@ public class App extends Application<Config> {
                 return Result.healthy("Keeps Dropwizard Happy");
             }
         });
+
+        if (configuration.getIndexingConfig().getEnabled()) {
+            final Timer timer = new Timer();
+            final IndexingTimerTask indexingTimerTask = injector.getInstance(IndexingTimerTask.class);
+            timer.schedule(indexingTimerTask,
+                    configuration.getIndexingConfig().getSecondsBetweenChecks() * 1000);
+        }
     }
 
     private Module getGuiceModule(final Config configuration) {
@@ -54,6 +70,14 @@ public class App extends Application<Config> {
                 bind(new TypeLiteral<Function<String, Optional<QueryResourceHttpClient>>>() {})
                         .annotatedWith(Names.named(AutoIndexQueryServiceImpl.QUERY_HTTP_CLIENT_CACHE))
                         .toInstance(cacheNamed);
+
+                bind(AutoIndexTrackerDao.class).to(AutoIndexTrackerDaoImpl.class);
+                bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
+                bind(new TypeLiteral<Consumer<IndexJob>>(){})
+                        .annotatedWith(Names.named(IndexingTimerTask.TASK_HANDLER_NAME))
+                        .to(IndexJobConsumer.class)
+                        .asEagerSingleton(); // singleton so that the test receives same instance as the underlying timer task
+                bind(IndexingConfig.class).toInstance(configuration.getIndexingConfig());
             }
         }, auditedQueryBundle.getGuiceModule(configuration));
     }

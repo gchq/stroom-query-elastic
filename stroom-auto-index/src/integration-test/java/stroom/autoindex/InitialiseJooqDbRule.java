@@ -14,6 +14,7 @@ import java.util.function.Supplier;
 
 /**
  * A rule that can be applied to a test to clear database tables before test execution
+ * It also provides access to a DSLContext that can be used by tests to make assertions directly on the database.
  */
 public class InitialiseJooqDbRule implements MethodRule {
 

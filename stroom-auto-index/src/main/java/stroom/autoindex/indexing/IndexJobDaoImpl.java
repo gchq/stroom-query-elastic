@@ -39,7 +39,10 @@ public class IndexJobDaoImpl implements IndexJobDao {
     private final AutoIndexTrackerDao autoIndexTrackerDao;
     private final AutoIndexDocRefServiceImpl autoIndexDocRefService;
 
-    private static final ServiceUser INTERNAL = new ServiceUser("INTERNAL", "INVALID_JWT");
+    private static final ServiceUser INTERNAL = new ServiceUser.Builder()
+            .name(IndexJobDaoImpl.class.getName())
+            .jwt(UUID.randomUUID().toString())
+            .build();
 
     @Inject
     public IndexJobDaoImpl(final DSLContext database,
@@ -51,8 +54,9 @@ public class IndexJobDaoImpl implements IndexJobDao {
     }
 
     @Override
-    public IndexJob getOrCreate(final String docRefUuid) throws Exception {
+    public IndexJob getOrCreate(final AutoIndexDocRefEntity autoIndexDocRefEntity) {
 
+        final String docRefUuid = autoIndexDocRefEntity.getUuid();
 
         // Get or create
         return database.transactionResult(c -> Optional.ofNullable(
@@ -81,7 +85,8 @@ public class IndexJobDaoImpl implements IndexJobDao {
                             .build();
 
                     // Add to database
-                    DSL.using(c).insertInto(JOB_TABLE)
+                    DSL.using(c)
+                            .insertInto(JOB_TABLE)
                             .columns(FIELD_JOB_ID,
                                     FIELD_DOC_REF_UUID,
                                     FIELD_STARTED_TIME,
@@ -101,20 +106,46 @@ public class IndexJobDaoImpl implements IndexJobDao {
     }
 
     @Override
-    public void markAsStarted(final String jobId) throws Exception {
-        database.transaction(c -> {
-
-        });
+    public Optional<IndexJob> get(String jobId) {
+        return database.transactionResult(c ->  Optional.ofNullable(
+                DSL.using(c).select()
+                        .from(JOB_TABLE)
+                        .where(FIELD_JOB_ID.equal(jobId))
+                        .fetchOne(this::getFromRecord)));
     }
 
     @Override
-    public void markAsComplete(final String jobId) throws Exception {
-        database.transaction(c -> {
-            DSL.using(c).select()
-                    .from(JOB_TABLE)
-                    .where(FIELD_JOB_ID.equal(jobId))
-                    .fetchOne(this::getFromRecord);
-        });
+    public void markAsStarted(final String jobId) {
+        final int rowsAffected = database.transactionResult(c ->
+                DSL.using(c)
+                        .update(JOB_TABLE)
+                        .set(FIELD_STARTED_TIME, ULong.valueOf(System.currentTimeMillis()))
+                        .where(FIELD_JOB_ID.equal(jobId))
+                        .execute());
+
+        if (0 == rowsAffected) {
+            throw new RuntimeException(String.format("Could not mark Job %s as started, rows affected %d", jobId, rowsAffected));
+        }
+    }
+
+    @Override
+    public void markAsComplete(final String jobId) {
+        // Fetch the job
+        final IndexJob indexJob = get(jobId)
+                .orElseThrow(() -> new RuntimeException(String.format("Could not find Index Job for %s", jobId)));
+
+        // then add the window to the tracker
+        autoIndexTrackerDao.addWindow(indexJob.getAutoIndexDocRefEntity().getUuid(), indexJob.getTrackerWindow());
+
+        // Now delete the job
+        final int rowsAffected = database.transactionResult(c ->
+                DSL.using(c).deleteFrom(JOB_TABLE)
+                        .where(FIELD_JOB_ID.equal(jobId))
+                        .execute());
+
+        if (0 == rowsAffected) {
+            throw new RuntimeException(String.format("Could not mark Job %s as complete, rows affected %d", jobId, rowsAffected));
+        }
     }
 
     private IndexJob getFromRecord(final Record record) {
@@ -143,15 +174,5 @@ public class IndexJobDaoImpl implements IndexJobDao {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private IndexJob getFromRecord(final AutoIndexDocRefEntity autoIndex,
-                                   final Record record) {
-        return IndexJob.forAutoIndex(autoIndex)
-                .jobId(record.get(FIELD_JOB_ID))
-                .createdTimeMillis(record.get(FIELD_CREATE_TIME).longValue())
-                .startedTimeMillis(record.get(FIELD_STARTED_TIME).longValue())
-                .trackerWindow(AutoIndexTrackerDaoImpl.fromRecord(record))
-                .build();
     }
 }
