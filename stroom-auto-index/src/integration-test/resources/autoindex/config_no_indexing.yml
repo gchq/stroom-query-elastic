@@ -65,6 +65,10 @@ jooq:
 indexing:
   enabled: false
 
+serviceUser:
+  name: stroomServiceUser
+  jwt: 232344
+
 queryResourceUrlsByType:
   ElasticIndex: http://localhost:18299
   AnimalHuntingGroup: http://localhost:8899

@@ -16,4 +16,9 @@ public interface TestConstants {
     String ELASTIC_APP_HOST = "http://localhost:18299";
 
     int TEST_AUTH_PORT = 10080;
+
+    String TEST_SERVICE_USER = "TestServiceUser";
+
+    String TEST_DATA_INDEX = "AnimalsElastic";
+    String TEST_INDEXED_TYPE = "sighting";
 }

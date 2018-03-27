@@ -1,4 +1,4 @@
-package stroom.autoindex;
+package stroom.autoindex.app;
 
 public class IndexingConfig {
 

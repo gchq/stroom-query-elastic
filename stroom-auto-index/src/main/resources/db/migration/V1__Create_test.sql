@@ -13,7 +13,7 @@ CREATE TABLE auto_index_doc_ref (
     index_uuid          VARCHAR(255),
     index_name          VARCHAR(255),
     timeField           VARCHAR(255),
-    indexWindowAmount   BIGINT UNSIGNED,
+    indexWindowAmount   INT,
     indexWindowUnit     VARCHAR(255),
     PRIMARY KEY         (uuid)
 ) ENGINE=InnoDB DEFAULT CHARSET latin1;

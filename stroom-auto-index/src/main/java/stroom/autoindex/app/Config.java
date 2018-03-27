@@ -1,4 +1,4 @@
-package stroom.autoindex;
+package stroom.autoindex.app;
 
 import com.bendb.dropwizard.jooq.JooqFactory;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -55,6 +55,10 @@ public class Config
     @JsonProperty("queryResourceUrlsByType")
     private Map<String, String> queryResourceUrlsByType;
 
+    @NotNull
+    @JsonProperty("serviceUser")
+    private ServiceUserConfig serviceUser;
+
     public Map<String, String> getQueryResourceUrlsByType() {
         return queryResourceUrlsByType;
     }
@@ -73,6 +77,10 @@ public class Config
 
     public IndexingConfig getIndexingConfig() {
         return indexingConfig;
+    }
+
+    public ServiceUserConfig getServiceUser() {
+        return serviceUser;
     }
 
     @Override

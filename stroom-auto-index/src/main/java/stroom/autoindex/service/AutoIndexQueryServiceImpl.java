@@ -1,35 +1,28 @@
-package stroom.autoindex;
+package stroom.autoindex.service;
 
 import org.eclipse.jetty.http.HttpStatus;
+import stroom.autoindex.QueryClientCache;
 import stroom.datasource.api.v2.DataSource;
-import stroom.query.api.v2.DocRef;
-import stroom.query.api.v2.Query;
-import stroom.query.api.v2.QueryKey;
-import stroom.query.api.v2.SearchRequest;
-import stroom.query.api.v2.SearchResponse;
+import stroom.query.api.v2.*;
 import stroom.query.audit.client.QueryResourceHttpClient;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.audit.service.QueryService;
 
 import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.Optional;
 import java.util.function.Function;
 
 public class AutoIndexQueryServiceImpl implements QueryService {
 
-    public static final String QUERY_HTTP_CLIENT_CACHE = "queryHttpClientCache";
-
     private final DocRefService<AutoIndexDocRefEntity> docRefService;
 
-    private final Function<String, Optional<QueryResourceHttpClient>> queryClientCache;
+    private final QueryClientCache<QueryResourceHttpClient> queryClientCache;
 
     @Inject
     @SuppressWarnings("unchecked")
     public AutoIndexQueryServiceImpl(final DocRefService docRefService,
-                                     @Named(QUERY_HTTP_CLIENT_CACHE)
-                                     final Function<String, Optional<QueryResourceHttpClient>> queryClientCache) {
+                                     final QueryClientCache<QueryResourceHttpClient> queryClientCache) {
         this.docRefService = docRefService;
         this.queryClientCache = queryClientCache;
     }

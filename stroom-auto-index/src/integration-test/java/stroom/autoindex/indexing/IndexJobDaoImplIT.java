@@ -3,27 +3,25 @@ package stroom.autoindex.indexing;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.name.Names;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import stroom.autoindex.AbstractAutoIndexIntegrationTest;
-import stroom.autoindex.AutoIndexDocRefEntity;
-import stroom.autoindex.AutoIndexDocRefServiceImpl;
-import stroom.autoindex.DSLContextBuilder;
+import stroom.autoindex.AutoIndexConstants;
+import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.tracker.AutoIndexTracker;
 import stroom.autoindex.tracker.AutoIndexTrackerDao;
 import stroom.autoindex.tracker.AutoIndexTrackerDaoImpl;
+import stroom.query.audit.security.ServiceUser;
 
-import javax.ws.rs.core.Response;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
+import static stroom.autoindex.TestConstants.TEST_SERVICE_USER;
 
 public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
 
@@ -42,6 +40,9 @@ public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
                 bind(DSLContext.class).toInstance(initialiseJooqDbRule.withDatabase());
                 bind(AutoIndexTrackerDao.class).to(AutoIndexTrackerDaoImpl.class);
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
+                bind(ServiceUser.class)
+                        .annotatedWith(Names.named(AutoIndexConstants.STROOM_SERVICE_USER))
+                        .toInstance(serviceUser);
             }
         });
 

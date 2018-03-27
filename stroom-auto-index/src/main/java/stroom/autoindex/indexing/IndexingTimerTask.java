@@ -2,10 +2,8 @@ package stroom.autoindex.indexing;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import stroom.autoindex.AutoIndexDocRefEntity;
-import stroom.autoindex.AutoIndexDocRefServiceImpl;
-import stroom.autoindex.IndexingConfig;
-import stroom.autoindex.tracker.AutoIndexTrackerDao;
+import stroom.autoindex.app.IndexingConfig;
+import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
 import stroom.query.audit.security.ServiceUser;
 
 import javax.inject.Inject;
@@ -26,7 +24,6 @@ public class IndexingTimerTask extends TimerTask {
 
     private final IndexingConfig config;
     private final IndexJobDao indexJobDao;
-    private final AutoIndexTrackerDao autoIndexTrackerDao;
     private final AutoIndexDocRefServiceImpl autoIndexDocRefService;
     private final Consumer<IndexJob> taskHandler;
 
@@ -38,13 +35,11 @@ public class IndexingTimerTask extends TimerTask {
     @Inject
     public IndexingTimerTask(final IndexingConfig config,
                              final IndexJobDao indexJobDao,
-                             final AutoIndexTrackerDao autoIndexTrackerDao,
                              final AutoIndexDocRefServiceImpl autoIndexDocRefService,
                              @Named(TASK_HANDLER_NAME)
                              final Consumer<IndexJob> taskHandler) {
         this.config = config;
         this.indexJobDao = indexJobDao;
-        this.autoIndexTrackerDao = autoIndexTrackerDao;
         this.autoIndexDocRefService = autoIndexDocRefService;
         this.taskHandler = taskHandler;
     }

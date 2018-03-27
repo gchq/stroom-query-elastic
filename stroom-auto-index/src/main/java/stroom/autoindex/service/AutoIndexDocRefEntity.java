@@ -1,6 +1,7 @@
-package stroom.autoindex;
+package stroom.autoindex.service;
 
 import org.jooq.Field;
+import org.jooq.types.UInteger;
 import org.jooq.types.ULong;
 import stroom.query.api.v2.DocRef;
 import stroom.query.audit.model.DocRefEntity;
@@ -11,6 +12,9 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAmount;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.jooq.impl.DSL.field;
 
@@ -44,7 +48,7 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
     public static final Field<String> INDEX_DOC_REF_NAME = field(INDEX_PREFIX + DocRefEntity.NAME, String.class);
 
     public static final Field<String> TIME_FIELD_NAME_FIELD = field(TIME_FIELD_NAME, String.class);
-    public static final Field<ULong> INDEXING_WINDOW_AMOUNT_FIELD = field(INDEXING_WINDOW_AMOUNT, ULong.class);
+    public static final Field<Integer> INDEXING_WINDOW_AMOUNT_FIELD = field(INDEXING_WINDOW_AMOUNT, Integer.class);
     public static final Field<String> INDEXING_WINDOW_UNIT_FIELD = field(INDEXING_WINDOW_UNIT, String.class);
 
     /**
@@ -66,7 +70,7 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
      * This is the amount of time to index at a time, it will govern the size/increments of the time windows.
      * Default is one day
      */
-    private long indexWindowAmount = 1;
+    private int indexWindowAmount = 1;
 
     /**
      * This is the units of the amount of time to index.
@@ -85,16 +89,12 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
         return timeFieldName;
     }
 
-    public long getIndexWindowAmount() {
+    public int getIndexWindowAmount() {
         return indexWindowAmount;
     }
 
     public ChronoUnit getIndexWindowUnit() {
         return indexWindowUnit;
-    }
-
-    public TemporalAmount indexingWindow() {
-        return Duration.of(this.indexWindowAmount, this.indexWindowUnit);
     }
 
     @Override
@@ -152,12 +152,26 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
             return this;
         }
 
-        public Builder indexWindowAmount(final long value) {
+        public Builder indexWindowAmount(final int value) {
             this.instance.indexWindowAmount = value;
             return this;
         }
 
+        final static Set<ChronoUnit> allowedValues = Stream.of(
+                ChronoUnit.YEARS,
+                ChronoUnit.MONTHS,
+                ChronoUnit.DAYS,
+                ChronoUnit.HOURS,
+                ChronoUnit.MINUTES
+        ).collect(Collectors.toSet());
+
         public Builder indexWindowUnits(final ChronoUnit value) {
+            if (!allowedValues.contains(value)) {
+                throw new IllegalArgumentException(
+                        String.format("Index Window Unit of %s not allowed, must be one of %s",
+                                value, allowedValues));
+            }
+
             this.instance.indexWindowUnit = value;
             return this;
         }

@@ -6,23 +6,19 @@ import org.jooq.Record;
 import org.jooq.Table;
 import org.jooq.impl.DSL;
 import org.jooq.types.ULong;
-import stroom.autoindex.AutoIndexDocRefEntity;
-import stroom.autoindex.AutoIndexDocRefServiceImpl;
+import stroom.autoindex.AutoIndexConstants;
 import stroom.autoindex.TimeUtils;
-import stroom.autoindex.tracker.AutoIndexTracker;
-import stroom.autoindex.tracker.AutoIndexTrackerDao;
-import stroom.autoindex.tracker.AutoIndexTrackerDaoImpl;
-import stroom.autoindex.tracker.NextWindowSelector;
-import stroom.autoindex.tracker.TrackerWindow;
+import stroom.autoindex.service.AutoIndexDocRefEntity;
+import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
+import stroom.autoindex.tracker.*;
 import stroom.query.audit.security.ServiceUser;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 import java.util.Optional;
 import java.util.UUID;
 
-import static stroom.autoindex.tracker.AutoIndexTrackerDaoImpl.FIELD_DOC_REF_UUID;
-import static stroom.autoindex.tracker.AutoIndexTrackerDaoImpl.FIELD_FROM;
-import static stroom.autoindex.tracker.AutoIndexTrackerDaoImpl.FIELD_TO;
+import static stroom.autoindex.tracker.AutoIndexTrackerDaoImpl.*;
 
 public class IndexJobDaoImpl implements IndexJobDao {
 
@@ -38,19 +34,18 @@ public class IndexJobDaoImpl implements IndexJobDao {
     private final DSLContext database;
     private final AutoIndexTrackerDao autoIndexTrackerDao;
     private final AutoIndexDocRefServiceImpl autoIndexDocRefService;
-
-    private static final ServiceUser INTERNAL = new ServiceUser.Builder()
-            .name(IndexJobDaoImpl.class.getName())
-            .jwt(UUID.randomUUID().toString())
-            .build();
+    private final ServiceUser serviceUser;
 
     @Inject
     public IndexJobDaoImpl(final DSLContext database,
                            final AutoIndexTrackerDao autoIndexTrackerDao,
-                           final AutoIndexDocRefServiceImpl autoIndexDocRefService) {
+                           final AutoIndexDocRefServiceImpl autoIndexDocRefService,
+                           @Named(AutoIndexConstants.STROOM_SERVICE_USER)
+                               final ServiceUser serviceUser) {
         this.database = database;
         this.autoIndexTrackerDao = autoIndexTrackerDao;
         this.autoIndexDocRefService = autoIndexDocRefService;
+        this.serviceUser = serviceUser;
     }
 
     @Override
@@ -72,7 +67,8 @@ public class IndexJobDaoImpl implements IndexJobDao {
                     // Calculate the next window to try
                     final TrackerWindow nextWindow = NextWindowSelector
                             .fromNow(TimeUtils.nowUtcSeconds())
-                            .windowSize(autoIndex.indexingWindow())
+                            .windowSizeAmount(autoIndex.getIndexWindowAmount())
+                            .windowSizeUnit(autoIndex.getIndexWindowUnit())
                             .existingWindows(tracker.getWindows())
                             .suggestNextWindow();
 
@@ -169,7 +165,7 @@ public class IndexJobDaoImpl implements IndexJobDao {
      */
     private AutoIndexDocRefEntity getAutoIndex(final String docRefUuid) {
         try {
-            return autoIndexDocRefService.get(INTERNAL, docRefUuid)
+            return autoIndexDocRefService.get(serviceUser, docRefUuid)
                     .orElseThrow(() -> new RuntimeException(String.format("Could not find Auto Index for UUID: %s", docRefUuid)));
         } catch (Exception e) {
             throw new RuntimeException(e);

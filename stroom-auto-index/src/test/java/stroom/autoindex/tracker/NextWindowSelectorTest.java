@@ -2,10 +2,8 @@ package stroom.autoindex.tracker;
 
 import org.junit.Test;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalAmount;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -18,11 +16,10 @@ public class NextWindowSelectorTest {
     public void testFromEmptyByHours() {
         // Given
         final LocalDateTime now = LocalDateTime.of(2017, 3, 28, 16, 12);
-        final TemporalAmount windowSize = Duration.of(1, ChronoUnit.HOURS);
 
         // When
         final TrackerWindow nextWindow = NextWindowSelector.fromNow(now)
-                .windowSize(windowSize)
+                .windowSizeUnit(ChronoUnit.HOURS)
                 .suggestNextWindow();
 
         // Then
@@ -35,14 +32,13 @@ public class NextWindowSelectorTest {
     public void testWithOneFilledInByDays() {
         // Given
         final LocalDateTime now = LocalDateTime.of(2017, 3, 28, 16, 12);
-        final TemporalAmount windowSize = Duration.of(1, ChronoUnit.DAYS);
         final TrackerWindow existingWindow = TrackerWindow
                 .from(LocalDateTime.of(2017, 3, 27, 0, 0))
                 .to(LocalDateTime.of(2017, 3, 28, 0, 0));
 
         // When
         final TrackerWindow nextWindow = NextWindowSelector.fromNow(now)
-                .windowSize(windowSize)
+                .windowSizeUnit(ChronoUnit.DAYS)
                 .existingWindows(existingWindow)
                 .suggestNextWindow();
 
@@ -53,10 +49,55 @@ public class NextWindowSelectorTest {
     }
 
     @Test
+    public void testMonthLongWindow() {
+        // Given
+        final LocalDateTime now = LocalDateTime.of(2015, 10, 28, 16, 12);
+
+        final TrackerWindow existingWindow = TrackerWindow
+                .from(LocalDateTime.of(2015, 1, 1, 0, 0))
+                .to(LocalDateTime.of(2015, 5, 1, 0, 0));
+
+        // When
+        final TrackerWindow nextWindow = NextWindowSelector.fromNow(now)
+                .windowSizeUnit(ChronoUnit.MONTHS)
+                .windowSizeAmount(3)
+                .existingWindows(existingWindow)
+                .suggestNextWindow();
+
+        // Then
+        assertEquals(TrackerWindow
+                .from(LocalDateTime.of(2015, 7, 1, 0, 0))
+                .to(LocalDateTime.of(2015, 10, 1, 0, 0)), nextWindow);
+
+    }
+
+    @Test
+    public void testYearLongWindow() {
+        // Given
+        final LocalDateTime now = LocalDateTime.of(2015, 10, 28, 16, 12);
+
+        final TrackerWindow existingWindow = TrackerWindow
+                .from(LocalDateTime.of(2008, 1, 1, 0, 0))
+                .to(LocalDateTime.of(2011, 1, 1, 0, 0));
+
+        // When
+        final TrackerWindow nextWindow = NextWindowSelector.fromNow(now)
+                .windowSizeUnit(ChronoUnit.YEARS)
+                .windowSizeAmount(2)
+                .existingWindows(existingWindow)
+                .suggestNextWindow();
+
+        // Then
+        assertEquals(TrackerWindow
+                .from(LocalDateTime.of(2012, 1, 1, 0, 0))
+                .to(LocalDateTime.of(2014, 1, 1, 0, 0)), nextWindow);
+
+    }
+
+    @Test
     public void testWithAnAwkwardGapIn30Minutes() {
         // Given
         final LocalDateTime now = LocalDateTime.of(2015, 11, 5, 16, 23);
-        final TemporalAmount windowSize = Duration.of(30, ChronoUnit.MINUTES);
         final List<TrackerWindow> existingWindows = Arrays.asList(
                 TrackerWindow.from(LocalDateTime.of(2015, 11, 5, 15, 30))
                         .to(LocalDateTime.of(2015, 11, 5, 16, 0)),
@@ -68,7 +109,8 @@ public class NextWindowSelectorTest {
 
         // When
         final List<TrackerWindow> windows = NextWindowSelector.fromNow(now)
-                .windowSize(windowSize)
+                .windowSizeAmount(30)
+                .windowSizeUnit(ChronoUnit.MINUTES)
                 .existingWindows(existingWindows)
                 .suggestNextWindows(5)
                 .collect(Collectors.toList());
@@ -98,7 +140,6 @@ public class NextWindowSelectorTest {
     public void testWithOneLargeGapByFourHours() {
         // Given
         final LocalDateTime now = LocalDateTime.of(2018, 8, 17, 14, 0);
-        final TemporalAmount windowSize = Duration.of(4, ChronoUnit.HOURS);
         final List<TrackerWindow> existingWindows = Arrays.asList(
                 TrackerWindow.from(LocalDateTime.of(2018, 8, 16, 4, 0))
                         .to(LocalDateTime.of(2018, 8, 16, 12, 0)),
@@ -108,7 +149,8 @@ public class NextWindowSelectorTest {
 
         // When
         final List<TrackerWindow> windows = NextWindowSelector.fromNow(now)
-                .windowSize(windowSize)
+                .windowSizeAmount(4)
+                .windowSizeUnit(ChronoUnit.HOURS)
                 .existingWindows(existingWindows)
                 .suggestNextWindows(5)
                 .collect(Collectors.toList());

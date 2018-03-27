@@ -2,7 +2,6 @@ package stroom.autoindex;
 
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import org.eclipse.jetty.http.HttpStatus;
-import org.jooq.DSLContext;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -10,7 +9,11 @@ import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.animals.app.AnimalApp;
 import stroom.autoindex.animals.app.AnimalConfig;
 import stroom.autoindex.animals.app.AnimalDocRefEntity;
+import stroom.autoindex.animals.app.AnimalSighting;
+import stroom.autoindex.app.App;
+import stroom.autoindex.app.Config;
 import stroom.autoindex.indexing.IndexJob;
+import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.tracker.AutoIndexTracker;
 import stroom.elastic.test.ElasticTestIndexRule;
 import stroom.query.api.v2.DocRef;
@@ -19,6 +22,7 @@ import stroom.query.audit.client.DocRefResourceHttpClient;
 import stroom.query.audit.client.QueryResourceHttpClient;
 import stroom.query.audit.model.DocRefEntity;
 import stroom.query.audit.rest.AuditedDocRefResourceImpl;
+import stroom.query.audit.security.ServiceUser;
 import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
 import stroom.query.elastic.service.ElasticIndexDocRefServiceImpl;
 import stroom.query.testing.DropwizardAppWithClientsRule;
@@ -27,10 +31,12 @@ import stroom.query.testing.StroomAuthenticationRule;
 import stroom.testdata.FlatFileTestDataRule;
 
 import javax.ws.rs.core.Response;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
 import static org.junit.Assert.assertEquals;
+import static stroom.autoindex.TestConstants.TEST_SERVICE_USER;
 import static stroom.query.testing.FifoLogbackRule.containsAllOf;
 
 /**
@@ -47,6 +53,8 @@ public abstract class AbstractAutoIndexIntegrationTest {
     @ClassRule
     public static final StroomAuthenticationRule authRule =
             new StroomAuthenticationRule(WireMockConfiguration.options().port(TestConstants.TEST_AUTH_PORT));
+
+    protected static ServiceUser serviceUser;
 
     /**
      * The auto index application, it's client, and a rule to clear the doc ref database table
@@ -98,19 +106,34 @@ public abstract class AbstractAutoIndexIntegrationTest {
     @ClassRule
     public static final FlatFileTestDataRule testDataRule = FlatFileTestDataRule.withTempDirectory()
             .testDataGenerator(AnimalTestData.build())
+            .numberOfFiles(10)
             .build();
 
     /**
-     * This elastic index is used for the storage of Auto Index doc refs
+     * This elastic index is used for the storage of Elastic Index doc refs
      */
     @ClassRule
-    public static final ElasticTestIndexRule stroomIndexRule = ElasticTestIndexRule
+    public static final ElasticTestIndexRule docRefElasticIndexRule = ElasticTestIndexRule
             .forIndex(AutoIndexQueryResourceIT.class, ElasticIndexDocRefServiceImpl.STROOM_INDEX_NAME)
+            .httpUrl(TestConstants.LOCAL_ELASTIC_HTTP_HOST)
+            .build();
+
+    /**
+     * This elastic index is used for the storage of Elastic Index doc refs
+     */
+    @ClassRule
+    public static final ElasticTestIndexRule dataElasticIndexRule = ElasticTestIndexRule
+            .forIndex(AutoIndexQueryResourceIT.class, TestConstants.TEST_DATA_INDEX)
             .httpUrl(TestConstants.LOCAL_ELASTIC_HTTP_HOST)
             .build();
 
     @Rule
     public FifoLogbackRule auditLogRule = new FifoLogbackRule();
+
+    @BeforeClass
+    public static void beforeAbstractClass() {
+        serviceUser = authRule.authenticatedUser(TEST_SERVICE_USER);
+    }
 
     protected class EntityWithDocRef<DOC_REF_ENTITY extends DocRefEntity> {
         private final DOC_REF_ENTITY entity;
@@ -146,8 +169,8 @@ public abstract class AbstractAutoIndexIntegrationTest {
         final DocRef elasticDocRef = createDocument(new ElasticIndexDocRefEntity.Builder()
                 .uuid(UUID.randomUUID().toString())
                 .name(UUID.randomUUID().toString())
-                .indexedType(UUID.randomUUID().toString())
-                .indexName(UUID.randomUUID().toString())
+                .indexedType(TestConstants.TEST_INDEXED_TYPE)
+                .indexName(TestConstants.TEST_DATA_INDEX)
                 .build());
 
         final AutoIndexDocRefEntity autoIndexDocRefEntity = new AutoIndexDocRefEntity.Builder()
@@ -155,6 +178,9 @@ public abstract class AbstractAutoIndexIntegrationTest {
                 .name(UUID.randomUUID().toString())
                 .rawDocRef(animalDocRef)
                 .indexDocRef(elasticDocRef)
+                .timeFieldName(AnimalSighting.TIME)
+                .indexWindowAmount(AnimalTestData.WINDOW_AMOUNT)
+                .indexWindowUnits(AnimalTestData.WINDOW_UNITS)
                 .build();
 
         final DocRef autoIndexDocRef = createDocument(autoIndexDocRefEntity);

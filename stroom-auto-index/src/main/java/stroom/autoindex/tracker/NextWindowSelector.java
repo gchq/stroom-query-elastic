@@ -4,15 +4,11 @@ import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAmount;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -42,7 +38,9 @@ public class NextWindowSelector {
 
     private final LocalDateTime now;
 
-    private TemporalAmount windowSize;
+    private int windowSizeAmount = 1;
+
+    private ChronoUnit windowSizeUnit;
 
     private final List<TrackerWindow> existingWindows = new ArrayList<>();
 
@@ -59,13 +57,18 @@ public class NextWindowSelector {
         return this.existingWindows(Arrays.asList(values));
     }
 
-    public NextWindowSelector windowSize(final TemporalAmount windowSize) {
-        this.windowSize = windowSize;
+    public NextWindowSelector windowSizeAmount(final int value) {
+        this.windowSizeAmount = value;
+        return this;
+    }
+
+    public NextWindowSelector windowSizeUnit(final ChronoUnit value) {
+        this.windowSizeUnit = value;
         return this;
     }
 
     public TrackerWindow suggestNextWindow() {
-        Objects.requireNonNull(this.windowSize, "Must specify window size");
+        Objects.requireNonNull(this.windowSizeUnit, "Must specify window size");
 
         final List<TrackerWindow> reversedWindows = Lists.reverse(
                 this.existingWindows.stream()
@@ -75,9 +78,10 @@ public class NextWindowSelector {
         // Start iterating through the list backwards, cut to the last epoch
         final LocalDateTime mostRecentEpoch = findRecentEpoch(this.now);
 
-        LOGGER.trace("Suggest Next Window - Existing: {}, Size: {}, Now: {}, mostRecentEpoch: {}",
+        LOGGER.trace("Suggest Next Window - Existing: {}, Size: {} {}, Now: {}, mostRecentEpoch: {}",
                 this.existingWindows.size(),
-                this.windowSize,
+                this.windowSizeAmount,
+                this.windowSizeUnit,
                 this.now,
                 mostRecentEpoch);
 
@@ -101,9 +105,28 @@ public class NextWindowSelector {
      * @return The rounded date time.
      */
     private LocalDateTime findRecentEpoch(final LocalDateTime value) {
-        final Long valueSeconds = getEpochSeconds(value);
-        final Long windowSizeSeconds = windowSize.get(ChronoUnit.SECONDS);
-        return dateTimeFromLong(valueSeconds - (valueSeconds % windowSizeSeconds));
+        switch(this.windowSizeUnit) {
+            case YEARS: {
+                int year = value.getYear();
+                year = year - (year % this.windowSizeAmount);
+                return LocalDateTime.of(year, 1, 1, 0, 0);
+            }
+            case MONTHS: {
+                int month = value.getMonthValue() - 1;
+                month = month - (month % this.windowSizeAmount);
+                return LocalDateTime.of(value.getYear(), month + 1, 1, 0, 0);
+            }
+            case DAYS:
+            case HOURS:
+            case MINUTES:{
+                final Long valueSeconds = getEpochSeconds(value);
+                final TemporalAmount duration = Duration.of(this.windowSizeAmount, this.windowSizeUnit);
+                final Long windowSizeSeconds = duration.get(ChronoUnit.SECONDS);
+                return dateTimeFromLong(valueSeconds - (valueSeconds % windowSizeSeconds));
+            }
+        }
+
+        throw new IllegalArgumentException("Cannot support window size unit " + this.windowSizeUnit);
     }
 
     /**
@@ -122,7 +145,7 @@ public class NextWindowSelector {
             if (!tw.getTo().isBefore(currentTop)) {
                 return tryNextWindow(iter, tw.getFrom());
             } else {
-                LocalDateTime potentialFrom = currentTop.minus(this.windowSize);
+                LocalDateTime potentialFrom = currentTop.minus(this.windowSizeAmount, this.windowSizeUnit);
 
                 // Go back to most recent epoch from our current top
                 final LocalDateTime epochBackFromTop = findRecentEpoch(currentTop);
@@ -141,7 +164,9 @@ public class NextWindowSelector {
         } else {
             // We have run out of windows, going backwards, so just create one that is the window size
             // ending at the current top seconds
-            return TrackerWindow.from(currentTop.minus(this.windowSize)).to(currentTop);
+            return TrackerWindow
+                    .from(currentTop.minus(this.windowSizeAmount, this.windowSizeUnit))
+                    .to(currentTop);
         }
 
     }

@@ -6,15 +6,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.autoindex.animals.AnimalsQueryResourceIT;
 import stroom.autoindex.animals.app.AnimalSighting;
+import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
-import stroom.query.api.v2.ExpressionOperator;
-import stroom.query.api.v2.ExpressionTerm;
-import stroom.query.api.v2.FlatResult;
-import stroom.query.api.v2.OffsetRange;
-import stroom.query.api.v2.Result;
-import stroom.query.api.v2.SearchRequest;
-import stroom.query.api.v2.SearchResponse;
+import stroom.query.api.v2.*;
 import stroom.query.audit.rest.AuditedQueryResourceImpl;
 
 import javax.ws.rs.core.Response;

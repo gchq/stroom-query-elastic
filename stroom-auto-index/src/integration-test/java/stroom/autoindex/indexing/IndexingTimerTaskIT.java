@@ -1,10 +1,6 @@
 package stroom.autoindex.indexing;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.TypeLiteral;
+import com.google.inject.*;
 import com.google.inject.name.Names;
 import org.jooq.DSLContext;
 import org.junit.Before;
@@ -13,17 +9,18 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.autoindex.AbstractAutoIndexIntegrationTest;
-import stroom.autoindex.AutoIndexDocRefEntity;
-import stroom.autoindex.IndexingConfig;
+import stroom.autoindex.AutoIndexConstants;
+import stroom.autoindex.app.IndexingConfig;
+import stroom.autoindex.service.AutoIndexDocRefEntity;
+import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
+import stroom.autoindex.tracker.AutoIndexTracker;
 import stroom.autoindex.tracker.AutoIndexTrackerDao;
 import stroom.autoindex.tracker.AutoIndexTrackerDaoImpl;
+import stroom.autoindex.tracker.TrackerWindow;
+import stroom.query.audit.security.ServiceUser;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -35,7 +32,7 @@ import static org.junit.Assert.assertTrue;
 
 /**
  * This suite of tests exercises the {@link IndexingTimerTask} and it's integration with
- * the doc ref service {@link stroom.autoindex.AutoIndexDocRefServiceImpl} and
+ * the doc ref service {@link AutoIndexDocRefServiceImpl} and
  * the job DAO service {@link IndexJobDaoImpl} which is in turn dependant on the real {@link AutoIndexTrackerDaoImpl}
  */
 public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
@@ -43,6 +40,8 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(IndexingTimerTaskIT.class);
 
     private static IndexingTimerTask indexingTimerTask;
+
+    private static AutoIndexTrackerDao autoIndexTrackerDao;
 
     private static IndexingConfig indexingConfig = IndexingConfig
             .asEnabled()
@@ -67,6 +66,9 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
                         .to(TestIndexJobConsumer.class)
                         .asEagerSingleton(); // singleton so that the test receives same instance as the underlying timer task
                 bind(IndexingConfig.class).toInstance(indexingConfig);
+                bind(ServiceUser.class)
+                        .annotatedWith(Names.named(AutoIndexConstants.STROOM_SERVICE_USER))
+                        .toInstance(serviceUser);
             }
         });
 
@@ -75,6 +77,7 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
         assertTrue(testIndexJobConsumerObj instanceof TestIndexJobConsumer);
         testIndexJobConsumer = (TestIndexJobConsumer) testIndexJobConsumerObj;
         indexingTimerTask = testInjector.getInstance(IndexingTimerTask.class);
+        autoIndexTrackerDao = testInjector.getInstance(AutoIndexTrackerDao.class);
     }
 
     @Before
@@ -97,7 +100,7 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
     }
 
     @Test
-    public void testRunsLimitedNumberOfJobs() {
+    public void testRunsMultipleIterations() {
         final int numberCyclesToGetThroughAllIndexesOnce = 5;
         final int numberOfOuterCycles = 3;
 
@@ -152,6 +155,15 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
                 lastFromDateOpt = Optional.of(job.getTrackerWindow().getFrom());
                 jobsCounted.incrementAndGet();
             }
+
+            // Check the tracker information matches what we expect
+            final LocalDateTime from = jobs.get(jobs.size() - 1).getTrackerWindow().getFrom();
+            final LocalDateTime to = jobs.get(0).getTrackerWindow().getTo();
+
+            final AutoIndexTracker tracker = autoIndexTrackerDao.get(uuid);
+            assertEquals(
+                    Collections.singletonList(TrackerWindow.from(from).to(to)),
+                    tracker.getWindows());
         });
 
         // Double check that the comparisons happened in the volumes expected

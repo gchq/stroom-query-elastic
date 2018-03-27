@@ -1,6 +1,6 @@
 package stroom.autoindex.indexing;
 
-import stroom.autoindex.AutoIndexDocRefEntity;
+import stroom.autoindex.service.AutoIndexDocRefEntity;
 
 import java.util.Optional;
 

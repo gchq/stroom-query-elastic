@@ -1,10 +1,9 @@
 package stroom.autoindex.indexing;
 
-import stroom.autoindex.AutoIndexDocRefEntity;
+import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.tracker.TrackerWindow;
 
 import java.util.Objects;
-import java.util.UUID;
 
 /**
  * Encapsulates a single indexing job, operates on a specific auto index for a specific window of time.
