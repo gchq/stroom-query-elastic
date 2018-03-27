@@ -9,6 +9,8 @@ import stroom.query.audit.authorisation.AuthorisationServiceConfig;
 import stroom.query.audit.authorisation.HasAuthorisationConfig;
 import stroom.query.audit.security.HasTokenConfig;
 import stroom.query.audit.security.TokenConfig;
+import stroom.query.elastic.config.ElasticConfig;
+import stroom.query.elastic.config.HasElasticConfig;
 import stroom.query.jooq.HasDataSourceFactory;
 import stroom.query.jooq.HasFlywayFactory;
 import stroom.query.jooq.HasJooqFactory;
@@ -23,7 +25,8 @@ public class Config
                     HasTokenConfig,
                     HasDataSourceFactory,
                     HasFlywayFactory,
-                    HasJooqFactory {
+                    HasJooqFactory,
+                    HasElasticConfig {
     @Valid
     @NotNull
     @JsonProperty("database")
@@ -58,6 +61,15 @@ public class Config
     @NotNull
     @JsonProperty("serviceUser")
     private ServiceUserConfig serviceUser;
+
+    @Valid
+    @NotNull
+    @JsonProperty("elastic")
+    private ElasticConfig elasticConfig;
+
+    public ElasticConfig getElasticConfig() {
+        return elasticConfig;
+    }
 
     public Map<String, String> getQueryResourceUrlsByType() {
         return queryResourceUrlsByType;

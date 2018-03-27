@@ -12,45 +12,24 @@ import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.common.collect.Tuple;
-import org.glassfish.hk2.api.TypeLiteral;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import stroom.query.audit.AuditedQueryBundle;
-import stroom.query.audit.service.DocRefService;
 import stroom.query.elastic.config.Config;
 import stroom.query.elastic.health.ElasticHealthCheck;
-import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
+import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.service.ElasticIndexDocRefServiceImpl;
 import stroom.query.elastic.service.ElasticQueryServiceImpl;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.FilterRegistration;
-import java.util.Arrays;
 import java.util.EnumSet;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 public class App extends Application<Config> {
 
     private Injector injector;
 
-    public TransportClientBundle<Config> transportClientBundle = new TransportClientBundle<Config>() {
-
-        @Override
-        protected Map<String, Integer> getHosts(final Config config) {
-            return Arrays.stream(config.getElasticConfig().getTransportHosts().split(ElasticConfig.ENTRY_DELIMITER))
-                .map(h -> h.split(ElasticConfig.HOST_PORT_DELIMITER))
-                .filter(h -> (h.length == 2))
-                .map(h -> new Tuple<>(h[0], Integer.parseInt(h[1])))
-                .collect(Collectors.toMap(Tuple::v1, Tuple::v2));
-        }
-
-        @Override
-        protected String getClusterName(final Config config) {
-            return config.getElasticConfig().getClusterName();
-        }
-    };
+    private TransportClientBundle<Config> transportClientBundle = new TransportClientBundle<>();
 
     private AuditedQueryBundle<Config,
             ElasticIndexDocRefServiceImpl,

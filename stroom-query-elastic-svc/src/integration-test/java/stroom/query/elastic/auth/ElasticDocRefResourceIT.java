@@ -5,7 +5,7 @@ import org.junit.ClassRule;
 import stroom.elastic.test.ElasticTestIndexRule;
 import stroom.query.elastic.App;
 import stroom.query.elastic.config.Config;
-import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
+import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.service.ElasticIndexDocRefServiceImpl;
 import stroom.query.testing.DocRefResourceIT;
 import stroom.query.testing.DropwizardAppWithClientsRule;

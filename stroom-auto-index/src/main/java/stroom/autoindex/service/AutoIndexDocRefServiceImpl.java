@@ -1,8 +1,6 @@
 package stroom.autoindex.service;
 
 import org.jooq.DSLContext;
-import org.jooq.types.UInteger;
-import org.jooq.types.ULong;
 import stroom.query.api.v2.DocRef;
 import stroom.query.jooq.DocRefServiceJooqImpl;
 

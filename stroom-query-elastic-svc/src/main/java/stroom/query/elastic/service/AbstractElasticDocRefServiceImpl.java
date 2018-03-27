@@ -12,7 +12,7 @@ import stroom.query.audit.ExportDTO;
 import stroom.query.audit.model.DocRefEntity;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
-import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
+import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 
 import java.io.IOException;
 import java.util.List;

@@ -1,16 +1,12 @@
 package stroom.autoindex.service;
 
 import org.jooq.Field;
-import org.jooq.types.UInteger;
-import org.jooq.types.ULong;
 import stroom.query.api.v2.DocRef;
 import stroom.query.audit.model.DocRefEntity;
 import stroom.query.jooq.DocRefJooqEntity;
 import stroom.query.jooq.JooqEntity;
 
-import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalAmount;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;

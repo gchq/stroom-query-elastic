@@ -70,6 +70,11 @@ serviceUser:
   name: stroomServiceUser
   jwt: 232344
 
+elastic:
+  clusterName: docker-cluster
+  transportHosts: localhost:19300
+  httpHost: localhost:19200
+
 queryResourceUrlsByType:
   ElasticIndex: http://localhost:18299
   AnimalHuntingGroup: http://localhost:8899

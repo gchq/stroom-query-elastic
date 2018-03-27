@@ -9,6 +9,7 @@ import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import org.elasticsearch.client.transport.TransportClient;
 import stroom.autoindex.AutoIndexConstants;
 import stroom.autoindex.QueryClientCache;
 import stroom.autoindex.indexing.*;
@@ -20,6 +21,7 @@ import stroom.autoindex.tracker.AutoIndexTrackerDaoImpl;
 import stroom.query.audit.client.DocRefResourceHttpClient;
 import stroom.query.audit.client.QueryResourceHttpClient;
 import stroom.query.audit.security.ServiceUser;
+import stroom.query.elastic.transportClient.TransportClientBundle;
 import stroom.query.jooq.AuditedJooqDocRefBundle;
 
 import java.util.Timer;
@@ -33,6 +35,8 @@ public class App extends Application<Config> {
             AutoIndexDocRefServiceImpl,
             AutoIndexDocRefEntity,
             AutoIndexQueryServiceImpl> auditedQueryBundle;
+
+    private TransportClientBundle<Config> transportClientBundle = new TransportClientBundle<>();
 
     @Override
     public void run(final Config configuration,
@@ -67,12 +71,14 @@ public class App extends Application<Config> {
                         .to(IndexJobConsumer.class)
                         .asEagerSingleton(); // singleton so that the test receives same instance as the underlying timer task
                 bind(IndexingConfig.class).toInstance(configuration.getIndexingConfig());
+                bind(IndexWriter.class).to(IndexWriterImpl.class);
                 bind(Config.class).toInstance(configuration);
                 bind(ServiceUser.class).annotatedWith(Names.named(AutoIndexConstants.STROOM_SERVICE_USER))
                         .toInstance(new ServiceUser.Builder()
                                 .name(configuration.getServiceUser().getName())
                                 .jwt(configuration.getServiceUser().getJwt())
                                 .build());
+                bind(TransportClient.class).toInstance(transportClientBundle.getTransportClient());
             }
         }, auditedQueryBundle.getGuiceModule(configuration));
     }
@@ -96,6 +102,7 @@ public class App extends Application<Config> {
                 bootstrap.getConfigurationSourceProvider(),
                 new EnvironmentVariableSubstitutor(false)));
 
+        bootstrap.addBundle(this.transportClientBundle);
         bootstrap.addBundle(this.auditedQueryBundle);
 
     }

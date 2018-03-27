@@ -20,7 +20,7 @@ import stroom.query.audit.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.audit.service.QueryService;
 import stroom.query.common.v2.*;
-import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
+import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.store.ElasticStore;
 import stroom.util.shared.HasTerminate;
 

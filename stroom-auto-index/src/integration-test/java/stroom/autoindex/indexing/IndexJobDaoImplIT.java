@@ -21,7 +21,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.Assert.*;
-import static stroom.autoindex.TestConstants.TEST_SERVICE_USER;
 
 public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
 

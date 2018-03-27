@@ -2,6 +2,7 @@ package stroom.autoindex.indexing;
 
 import com.google.inject.*;
 import com.google.inject.name.Names;
+import org.elasticsearch.client.transport.TransportClient;
 import org.jooq.DSLContext;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -21,14 +22,13 @@ import stroom.query.audit.authorisation.DocumentPermission;
 import stroom.query.audit.client.DocRefResourceHttpClient;
 import stroom.query.audit.client.QueryResourceHttpClient;
 import stroom.query.audit.security.ServiceUser;
+import stroom.query.elastic.transportClient.TransportClientBundle;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -69,6 +69,7 @@ public class IndexJobConsumerIT extends AbstractAutoIndexIntegrationTest {
                 bind(DSLContext.class).toInstance(initialiseJooqDbRule.withDatabase());
                 bind(AutoIndexTrackerDao.class).to(AutoIndexTrackerDaoImpl.class);
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
+                bind(IndexWriter.class).to(IndexWriterImpl.class);
                 bind(new TypeLiteral<Consumer<IndexJob>>(){})
                         .annotatedWith(Names.named(IndexingTimerTask.TASK_HANDLER_NAME))
                         .to(IndexJobConsumer.class)
@@ -78,6 +79,8 @@ public class IndexJobConsumerIT extends AbstractAutoIndexIntegrationTest {
                 bind(ServiceUser.class)
                         .annotatedWith(Names.named(AutoIndexConstants.STROOM_SERVICE_USER))
                         .toInstance(serviceUser);
+                bind(TransportClient.class)
+                        .toInstance(TransportClientBundle.createTransportClient(autoIndexAppRule.getConfiguration()));
                 bind(new TypeLiteral<QueryClientCache<QueryResourceHttpClient>>(){})
                         .toInstance(new QueryClientCache<>(autoIndexAppRule.getConfiguration(), QueryResourceHttpClient::new));
                 bind(new TypeLiteral<QueryClientCache<DocRefResourceHttpClient>>(){})

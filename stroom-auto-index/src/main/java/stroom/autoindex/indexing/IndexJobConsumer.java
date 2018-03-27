@@ -33,6 +33,8 @@ public class IndexJobConsumer implements Consumer<IndexJob> {
 
     private final ServiceUser serviceUser;
 
+    private final IndexWriter indexWriter;
+
     private final Function<DocRef, DataSource> fieldNamesCache = new Function<DocRef, DataSource>() {
         @Override
         public DataSource apply(final DocRef docRef) {
@@ -56,11 +58,13 @@ public class IndexJobConsumer implements Consumer<IndexJob> {
                             final IndexingConfig indexingConfig,
                             final QueryClientCache<QueryResourceHttpClient> queryClientCache,
                             @Named(AutoIndexConstants.STROOM_SERVICE_USER)
-                                final ServiceUser serviceUser) {
+                                final ServiceUser serviceUser,
+                            final IndexWriter indexWriter) {
         this.indexJobDao = indexJobDao;
         this.indexingConfig = indexingConfig;
         this.queryClientCache = queryClientCache;
         this.serviceUser = serviceUser;
+        this.indexWriter = indexWriter;
     }
 
     @Override
@@ -92,13 +96,7 @@ public class IndexJobConsumer implements Consumer<IndexJob> {
 
         final SearchResponse searchResponse = searchRawResponse.readEntity(SearchResponse.class);
 
-        searchResponse.getResults().stream()
-                .filter(r -> r instanceof TableResult)
-                .map(r -> (TableResult) r)
-                .flatMap(tr -> tr.getRows().stream())
-                .forEach(r -> {
-                    LOGGER.debug("Result Found " + r);
-                });
+        indexWriter.writeResults(autoIndex.getIndexDocRef(), dataSource, searchResponse);
 
         indexJobDao.markAsComplete(indexJob.getJobId());
     }

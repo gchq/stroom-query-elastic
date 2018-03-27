@@ -1,4 +1,4 @@
-package stroom.query.elastic;
+package stroom.query.elastic.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

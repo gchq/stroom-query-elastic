@@ -19,6 +19,6 @@ public interface TestConstants {
 
     String TEST_SERVICE_USER = "TestServiceUser";
 
-    String TEST_DATA_INDEX = "AnimalsElastic";
+    String TEST_DATA_INDEX = "animals";
     String TEST_INDEXED_TYPE = "sighting";
 }

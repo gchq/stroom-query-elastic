@@ -23,7 +23,7 @@ import stroom.query.audit.client.QueryResourceHttpClient;
 import stroom.query.audit.model.DocRefEntity;
 import stroom.query.audit.rest.AuditedDocRefResourceImpl;
 import stroom.query.audit.security.ServiceUser;
-import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
+import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.service.ElasticIndexDocRefServiceImpl;
 import stroom.query.testing.DropwizardAppWithClientsRule;
 import stroom.query.testing.FifoLogbackRule;
@@ -31,7 +31,6 @@ import stroom.query.testing.StroomAuthenticationRule;
 import stroom.testdata.FlatFileTestDataRule;
 
 import javax.ws.rs.core.Response;
-import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;

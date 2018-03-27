@@ -1,4 +1,4 @@
-package stroom.query.elastic.hibernate;
+package stroom.query.elastic.model;
 
 import stroom.query.audit.model.DocRefEntity;
 
@@ -40,8 +40,6 @@ public class ElasticIndexDocRefEntity extends DocRefEntity {
         return sb.toString();
     }
 
-
-
     public static abstract class BaseBuilder<T extends ElasticIndexDocRefEntity, CHILD_CLASS extends BaseBuilder<T, ?>>
             extends DocRefEntity.BaseBuilder<T, CHILD_CLASS> {
 
@@ -50,12 +48,12 @@ public class ElasticIndexDocRefEntity extends DocRefEntity {
         }
 
         public CHILD_CLASS indexName(final Object value) {
-            this.instance.setIndexName(Optional.ofNullable(value).map(Object::toString).orElse(null));
+            this.instance.setIndexName(Optional.ofNullable(value).map(Object::toString).map(String::toLowerCase).orElse(null));
             return self();
         }
 
         public CHILD_CLASS indexedType(final Object value) {
-            this.instance.setIndexedType(Optional.ofNullable(value).map(Object::toString).orElse(null));
+            this.instance.setIndexedType(Optional.ofNullable(value).map(Object::toString).map(String::toLowerCase).orElse(null));
             return self();
         }
     }

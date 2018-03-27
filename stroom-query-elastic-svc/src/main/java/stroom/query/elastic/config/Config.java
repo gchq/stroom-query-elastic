@@ -6,12 +6,14 @@ import stroom.query.audit.authorisation.AuthorisationServiceConfig;
 import stroom.query.audit.authorisation.HasAuthorisationConfig;
 import stroom.query.audit.security.HasTokenConfig;
 import stroom.query.audit.security.TokenConfig;
-import stroom.query.elastic.ElasticConfig;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
-public class Config extends Configuration implements HasAuthorisationConfig, HasTokenConfig {
+public class Config extends Configuration
+        implements  HasAuthorisationConfig,
+                    HasTokenConfig,
+                    HasElasticConfig {
 
     @Valid
     @NotNull

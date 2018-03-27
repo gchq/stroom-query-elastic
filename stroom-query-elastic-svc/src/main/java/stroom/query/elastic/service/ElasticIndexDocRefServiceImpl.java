@@ -1,7 +1,7 @@
 package stroom.query.elastic.service;
 
 import org.elasticsearch.client.transport.TransportClient;
-import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
+import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 
 import javax.inject.Inject;
 import java.util.function.BiConsumer;

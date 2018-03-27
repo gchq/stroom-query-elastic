@@ -15,7 +15,7 @@ import stroom.query.audit.security.NoAuthValueFactoryProvider;
 import stroom.query.elastic.App;
 import stroom.query.elastic.ShakespeareLine;
 import stroom.query.elastic.config.Config;
-import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
+import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.service.ElasticIndexDocRefServiceImpl;
 import stroom.query.testing.DropwizardAppWithClientsRule;
 import stroom.query.testing.QueryResourceNoAuthIT;
