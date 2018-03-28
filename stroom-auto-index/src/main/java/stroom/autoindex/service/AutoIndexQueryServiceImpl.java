@@ -2,6 +2,8 @@ package stroom.autoindex.service;
 
 import org.eclipse.jetty.http.HttpStatus;
 import stroom.autoindex.QueryClientCache;
+import stroom.autoindex.tracker.AutoIndexTracker;
+import stroom.autoindex.tracker.AutoIndexTrackerDao;
 import stroom.datasource.api.v2.DataSource;
 import stroom.query.api.v2.*;
 import stroom.query.audit.client.QueryResourceHttpClient;
@@ -10,8 +12,8 @@ import stroom.query.audit.service.DocRefService;
 import stroom.query.audit.service.QueryService;
 
 import javax.inject.Inject;
+import javax.ws.rs.core.Response;
 import java.util.Optional;
-import java.util.function.Function;
 
 public class AutoIndexQueryServiceImpl implements QueryService {
 
@@ -19,48 +21,87 @@ public class AutoIndexQueryServiceImpl implements QueryService {
 
     private final QueryClientCache<QueryResourceHttpClient> queryClientCache;
 
+    private final AutoIndexTrackerDao trackerDao;
+
     @Inject
     @SuppressWarnings("unchecked")
     public AutoIndexQueryServiceImpl(final DocRefService docRefService,
+                                     final AutoIndexTrackerDao trackerDao,
                                      final QueryClientCache<QueryResourceHttpClient> queryClientCache) {
         this.docRefService = docRefService;
         this.queryClientCache = queryClientCache;
+        this.trackerDao = trackerDao;
     }
 
     @Override
     public Optional<DataSource> getDataSource(final ServiceUser user,
                                               final DocRef docRef) throws Exception {
-        return getUnderlyingDocRef(user, docRef.getUuid(), AutoIndexDocRefEntity::getRawDocRef)
-                .map(d -> d.client.getDataSource(user, d.docRef))
-                .filter(r -> r.getStatus() == HttpStatus.OK_200)
-                .map(r -> r.readEntity(DataSource.class));
+        final Optional<AutoIndexDocRefEntity> docRefEntityOpt =
+                docRefService.get(user, docRef.getUuid());
+        if (!docRefEntityOpt.isPresent()) {
+            return Optional.empty();
+        }
+        final AutoIndexDocRefEntity docRefEntity = docRefEntityOpt.get();
+
+        final QueryResourceHttpClient rawClient = queryClientCache.apply(docRefEntity.getRawDocRef().getType())
+                .orElseThrow(() -> new RuntimeException("Could not get HTTP Client for Query Resource"));
+
+        final Response response = rawClient.getDataSource(user, docRefEntity.getRawDocRef());
+
+        if (response.getStatus() == HttpStatus.OK_200) {
+            return Optional.of(response.readEntity(DataSource.class));
+        } else {
+            response.close();
+            return Optional.empty();
+        }
     }
 
     @Override
     public Optional<SearchResponse> search(final ServiceUser user,
                                            final SearchRequest request) throws Exception {
-        return getUnderlyingDocRef(user, request.getQuery().getDataSource().getUuid(), AutoIndexDocRefEntity::getRawDocRef)
-                .map(d -> {
-                    // Translate the request to query the underlying document
-                    final Query oQuery = request.getQuery();
-                    final Query.Builder queryBuilder = new Query.Builder()
-                            .expression(oQuery.getExpression());
-                    oQuery.getParams().forEach(queryBuilder::addParams);
-                    queryBuilder.dataSource(d.docRef);
+        final String docRefUuid = request.getQuery().getDataSource().getUuid();
+        final Optional<AutoIndexDocRefEntity> docRefEntityOpt =
+                docRefService.get(user, docRefUuid);
+        if (!docRefEntityOpt.isPresent()) {
+            return Optional.empty();
+        }
+        final AutoIndexDocRefEntity docRefEntity = docRefEntityOpt.get();
 
-                    final SearchRequest.Builder xRequestBuilder = new SearchRequest.Builder()
-                            .dateTimeLocale(request.getDateTimeLocale())
-                            .incremental(request.incremental())
-                            .key(request.getKey())
-                            .timeout(request.getTimeout())
-                            .query(queryBuilder.build());
+        final QueryResourceHttpClient rawClient = queryClientCache.apply(docRefEntity.getRawDocRef().getType())
+                .orElseThrow(() -> new RuntimeException("Could not get HTTP Client for Query Resource"));
 
-                    request.getResultRequests().forEach(xRequestBuilder::addResultRequests);
+        final QueryResourceHttpClient indexClient = queryClientCache.apply(docRefEntity.getIndexDocRef().getType())
+                .orElseThrow(() -> new RuntimeException("Could not get HTTP Client for Query Resource"));
 
-                    return d.client.search(user, xRequestBuilder.build());
-                })
-                .filter(r -> r.getStatus() == HttpStatus.OK_200)
-                .map(r -> r.readEntity(SearchResponse.class));
+        final AutoIndexTracker tracker = trackerDao.get(docRefUuid);
+
+        // Get access to the input query
+        final Query inputQuery = request.getQuery();
+
+        // Create a query for the raw data source
+        final Query.Builder rawQueryBuilder = new Query.Builder()
+                .expression(inputQuery.getExpression());
+        inputQuery.getParams().forEach(rawQueryBuilder::addParams);
+        rawQueryBuilder.dataSource(docRefEntity.getRawDocRef());
+
+        final SearchRequest.Builder rawSearchRequestBuilder = new SearchRequest.Builder()
+                .dateTimeLocale(request.getDateTimeLocale())
+                .incremental(request.incremental())
+                .key(request.getKey())
+                .timeout(request.getTimeout())
+                .query(rawQueryBuilder.build());
+
+        request.getResultRequests().forEach(rawSearchRequestBuilder::addResultRequests);
+
+        final Response rawResponse = rawClient.search(user, rawSearchRequestBuilder.build());
+
+        if (rawResponse.getStatus() == HttpStatus.OK_200) {
+            final SearchResponse rawSearchResponse = rawResponse.readEntity(SearchResponse.class);
+            return Optional.of(rawSearchResponse);
+        } else {
+            rawResponse.close();
+            return Optional.empty();
+        }
     }
 
     @Override
@@ -73,47 +114,5 @@ public class AutoIndexQueryServiceImpl implements QueryService {
     public Optional<DocRef> getDocRefForQueryKey(final ServiceUser user,
                                                  final QueryKey queryKey) throws Exception {
         return Optional.empty();
-    }
-
-    /**
-     * Used to wrap an underlying doc ref up with a client that can be used to communicate with the
-     * underlying service that owns the doc ref.
-     */
-    private class UnderlyingDocRef {
-        private final DocRef docRef;
-        private final QueryResourceHttpClient client;
-
-        public UnderlyingDocRef(final DocRef docRef,
-                                final QueryResourceHttpClient client) {
-            this.docRef = docRef;
-            this.client = client;
-        }
-    }
-
-    /**
-     * Used to take the outer doc ref UUID and lookup the wrapped Doc Ref details.
-     * @param user The logged in user
-     * @param docRefExtractor Method on AutoIndexDocRefEntity for pulling out the doc ref
-     * @param outerDocRefUuid The UUID of the outer document
-     * @return Effectively a tuple that contains the wrapped Doc Ref and a HTTP client for querying the underlying datasource
-     * @throws Exception If something goes wrong
-     */
-    private Optional<UnderlyingDocRef> getUnderlyingDocRef(final ServiceUser user,
-                                                           final String outerDocRefUuid,
-                                                           final Function<AutoIndexDocRefEntity, DocRef> docRefExtractor) throws Exception {
-        final Optional<AutoIndexDocRefEntity> docRefEntity = docRefService.get(user, outerDocRefUuid);
-
-        if (!docRefEntity.isPresent()) {
-            return Optional.empty();
-        }
-
-        final DocRef rawDocRef = docRefEntity
-                .map(docRefExtractor)
-                .orElseThrow(() -> new RuntimeException("Underlying Doc ref not specified"));
-
-        final QueryResourceHttpClient client = queryClientCache.apply(rawDocRef.getType())
-                .orElseThrow(() -> new RuntimeException("Could not get HTTP Client for Query Resource"));
-
-        return Optional.of(new UnderlyingDocRef(rawDocRef, client));
     }
 }

@@ -76,6 +76,27 @@ public class AutoIndexQueryResourceIT extends AbstractAutoIndexIntegrationTest {
 
         final SearchResponse searchResponse = response.readEntity(SearchResponse.class);
 
+        final Set<AnimalSighting> resultsSet = getAnimalSightingsFromResponse(searchResponse);
+
+        // Check that the returned data matches the conditions
+        resultsSet.stream().map(AnimalSighting::getObserver)
+                .forEach(o -> assertEquals(testObserver, o));
+        resultsSet.stream().map(AnimalSighting::getTime)
+                .forEach(t -> assertTrue(testMaxDate.isAfter(t)));
+
+        LOGGER.info("Results from Search {}", resultsSet.size());
+        resultsSet.stream()
+                .map(Object::toString)
+                .forEach(LOGGER::info);
+
+        // Check that the auto index and the raw data source were queried
+        auditLogRule.check()
+                .thereAreAtLeast(2)
+                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_SEARCH, autoIndex.getEntity().getRawDocRef().getUuid()))
+                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_SEARCH, autoIndex.getDocRef().getUuid()));
+    }
+
+    public static Set<AnimalSighting> getAnimalSightingsFromResponse(final SearchResponse searchResponse) {
         final Set<AnimalSighting> resultsSet = new HashSet<>();
 
         assertTrue("No results seen", searchResponse.getResults().size() > 0);
@@ -93,23 +114,7 @@ public class AutoIndexQueryResourceIT extends AbstractAutoIndexIntegrationTest {
                     .forEach(resultsSet::add);
         }
 
-        // Check that the returned data matches the conditions
-        resultsSet.stream().map(AnimalSighting::getObserver)
-                .forEach(o -> assertEquals(testObserver, o));
-        resultsSet.stream().map(AnimalSighting::getTime)
-                .forEach(t -> assertTrue(testMaxDate.isAfter(t)));
-
-        LOGGER.info("Results from Search {}", resultsSet.size());
-        resultsSet.stream()
-                .map(Object::toString)
-                .forEach(LOGGER::info);
-
-        // Create the 3 doc refs, search, which will cause the raw data source to be queried
-        auditLogRule.check()
-                .thereAreAtLeast(2)
-                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_SEARCH, autoIndex.getEntity().getRawDocRef().getUuid()))
-                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_SEARCH, autoIndex.getDocRef().getUuid()));
+        return resultsSet;
     }
-
 
 }
