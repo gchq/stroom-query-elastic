@@ -31,8 +31,6 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
     private static final String TIME_FIELD_NAME = "timeField";
     private static final String INDEXING_WINDOW = "indexWindow";
 
-    private static final String TIMELINE_LATEST_VALUE = "timelineLatestValue";
-
     public static final Field<String> RAW_DOC_REF_TYPE = field(RAW_PREFIX + DOC_REF_TYPE, String.class);
     public static final Field<String> RAW_DOC_REF_UUID = field(RAW_PREFIX + DocRefEntity.UUID, String.class);
     public static final Field<String> RAW_DOC_REF_NAME = field(RAW_PREFIX + DocRefEntity.NAME, String.class);
@@ -43,8 +41,6 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
 
     public static final Field<String> TIME_FIELD_NAME_FIELD = field(TIME_FIELD_NAME, String.class);
     public static final Field<ULong> INDEXING_WINDOW_FIELD = field(INDEXING_WINDOW, ULong.class);
-
-    public static final Field<ULong> TIMELINE_LATEST_VALUE_FIELD = field(TIMELINE_LATEST_VALUE, ULong.class);
 
     /**
      * This is the Doc Ref of the slow data source
@@ -115,13 +111,12 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
         return indexWindow == that.indexWindow &&
                 Objects.equals(rawDocRef, that.rawDocRef) &&
                 Objects.equals(indexDocRef, that.indexDocRef) &&
-                Objects.equals(timeFieldName, that.timeFieldName) &&
-                Objects.equals(timelineLatestValue, that.timelineLatestValue);
+                Objects.equals(timeFieldName, that.timeFieldName);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), rawDocRef, indexDocRef, timeFieldName, indexWindow, timelineLatestValue);
+        return Objects.hash(super.hashCode(), rawDocRef, indexDocRef, timeFieldName, indexWindow);
     }
 
     public static final class Builder extends BaseBuilder<AutoIndexDocRefEntity, Builder> {
@@ -151,11 +146,6 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
 
         public Builder indexWindow(final Long value) {
             this.instance.indexWindow = value;
-            return this;
-        }
-
-        public Builder timelineLatestValue(final Long value) {
-            this.instance.timelineLatestValue = value;
             return this;
         }
 

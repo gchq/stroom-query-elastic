@@ -13,10 +13,10 @@ public class NextWindowSelectorTest {
     @Test
     public void testFromEmpty() {
         // Given
-        final Long now = 6089L;
+        final TrackerWindow bounds = TrackerWindow.from(0L).to(6089L);
 
         // When
-        final TrackerWindow nextWindow = NextWindowSelector.fromNow(now)
+        final TrackerWindow nextWindow = NextWindowSelector.withBounds(bounds)
                 .windowSize(30L)
                 .suggestNextWindow();
 
@@ -29,13 +29,13 @@ public class NextWindowSelectorTest {
     @Test
     public void testOneWithSingleExisting() {
         // Given
-        final Long now = 4056L;
+        final TrackerWindow bounds = TrackerWindow.from(0L).to(4056L);
         final TrackerWindow existingWindow = TrackerWindow
                 .from(4020L)
                 .to(4040L);
 
         // When
-        final TrackerWindow nextWindow = NextWindowSelector.fromNow(now)
+        final TrackerWindow nextWindow = NextWindowSelector.withBounds(bounds)
                 .windowSize(20)
                 .existingWindows(existingWindow)
                 .suggestNextWindow();
@@ -49,7 +49,7 @@ public class NextWindowSelectorTest {
     @Test
     public void testWithAnAwkwardGap() {
         // Given
-        final Long now = 23L;
+        final TrackerWindow bounds = TrackerWindow.from(0L).to(23L);
         final List<TrackerWindow> existingWindows = Arrays.asList(
                 TrackerWindow.from(17L).to(22L),
                 TrackerWindow.from(13L).to(15L),
@@ -57,7 +57,7 @@ public class NextWindowSelectorTest {
         );
 
         // When
-        final List<TrackerWindow> windows = NextWindowSelector.fromNow(now)
+        final List<TrackerWindow> windows = NextWindowSelector.withBounds(bounds)
                 .windowSize(4)
                 .existingWindows(existingWindows)
                 .suggestNextWindows(6)
@@ -90,14 +90,14 @@ public class NextWindowSelectorTest {
     @Test
     public void testWithOneLargeGap() {
         // Given
-        final Long now = 65L;
+        final TrackerWindow bounds = TrackerWindow.from(0L).to(65L);
         final List<TrackerWindow> existingWindows = Arrays.asList(
                 TrackerWindow.from(50L).to(60L),
                 TrackerWindow.from(0L).to(10L)
         );
 
         // When
-        final List<TrackerWindow> windows = NextWindowSelector.fromNow(now)
+        final List<TrackerWindow> windows = NextWindowSelector.withBounds(bounds)
                 .windowSize(10)
                 .existingWindows(existingWindows)
                 .suggestNextWindows(4)

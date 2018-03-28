@@ -15,6 +15,7 @@ import java.util.function.Consumer;
 
 public class AnimalTestData implements Consumer<Consumer<String>> {
 
+    public static final TrackerWindow TIMELINE_BOUNDS = TrackerWindow.from(1000L).to(4000L);
     public static final Long ROW_COUNT = 1000L;
     public static final LocalDateTime FROM_DATE = LocalDateTime.of(2016, 1, 1, 0, 0, 0);
     public static final LocalDateTime TO_DATE = FROM_DATE.plus(2, ChronoUnit.YEARS);
@@ -48,7 +49,7 @@ public class AnimalTestData implements Consumer<Consumer<String>> {
     @Override
     public void accept(final Consumer<String> writer) {
         DataGenerator.buildDefinition()
-                .addFieldDefinition(DataGenerator.sequentialNumberField(AnimalSighting.STREAM_ID, 0, ROW_COUNT))
+                .addFieldDefinition(DataGenerator.sequentialNumberField(AnimalSighting.STREAM_ID, TIMELINE_BOUNDS.getFrom(), TIMELINE_BOUNDS.getTo()))
                 .addFieldDefinition(DataGenerator.randomValueField(AnimalSighting.SPECIES,
                         Arrays.asList("spider", "whale", "dog", "tiger", "monkey", "lion", "woodlouse", "honey-badger")))
                 .addFieldDefinition(DataGenerator.randomValueField(AnimalSighting.LOCATION,

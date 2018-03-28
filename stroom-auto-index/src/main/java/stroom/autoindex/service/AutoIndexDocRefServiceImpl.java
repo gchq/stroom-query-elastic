@@ -14,8 +14,6 @@ public class AutoIndexDocRefServiceImpl
     public AutoIndexDocRefServiceImpl(final DSLContext database) {
         super(AutoIndexDocRefEntity.TYPE,
                 dataMap -> new AutoIndexDocRefEntity.Builder()
-                        .timelineLatestValue(dataMap.getValue(AutoIndexDocRefEntity.TIMELINE_LATEST_VALUE_FIELD)
-                                .orElse(ULong.valueOf(1L)).longValue())
                         .timeFieldName(dataMap.getValue(AutoIndexDocRefEntity.TIME_FIELD_NAME_FIELD).orElse(null))
                         .indexWindow(dataMap.getValue(AutoIndexDocRefEntity.INDEXING_WINDOW_FIELD)
                                 .orElse(ULong.valueOf(1L)).longValue())
@@ -32,7 +30,6 @@ public class AutoIndexDocRefServiceImpl
                 (entity, consumer) -> {
                     consumer.setValue(AutoIndexDocRefEntity.INDEXING_WINDOW_FIELD, ULong.valueOf(entity.getIndexWindow()));
                     consumer.setValue(AutoIndexDocRefEntity.TIME_FIELD_NAME_FIELD, entity.getTimeFieldName());
-                    consumer.setValue(AutoIndexDocRefEntity.TIMELINE_LATEST_VALUE_FIELD, ULong.valueOf(entity.getTimelineLatestValue()));
 
                     consumer.setValue(AutoIndexDocRefEntity.RAW_DOC_REF_TYPE, entity.getRawDocRef().getType());
                     consumer.setValue(AutoIndexDocRefEntity.RAW_DOC_REF_UUID, entity.getRawDocRef().getUuid());

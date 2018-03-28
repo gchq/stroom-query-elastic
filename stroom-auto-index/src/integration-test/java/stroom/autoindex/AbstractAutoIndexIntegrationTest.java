@@ -71,7 +71,8 @@ public abstract class AbstractAutoIndexIntegrationTest {
     public static final InitialiseJooqDbRule initialiseJooqDbRule = InitialiseJooqDbRule
             .withDataSourceFactory(() -> autoIndexAppRule.getConfiguration().getDataSourceFactory())
             .tableToClear(AutoIndexDocRefEntity.TABLE_NAME)
-            .tableToClear(AutoIndexTracker.TABLE_NAME)
+            .tableToClear(AutoIndexTracker.TRACKER_WINDOW_TABLE_NAME)
+            .tableToClear(AutoIndexTracker.TIMELINE_BOUNDS_TABLE_NAME)
             .tableToClear(IndexJob.TABLE_NAME)
             .build();
 
@@ -179,7 +180,6 @@ public abstract class AbstractAutoIndexIntegrationTest {
                 .indexDocRef(elasticDocRef)
                 .timeFieldName(AnimalSighting.STREAM_ID)
                 .indexWindow(AnimalTestData.WINDOW_AMOUNT)
-                .timelineLatestValue(AnimalTestData.ROW_COUNT)
                 .build();
 
         final DocRef autoIndexDocRef = createDocument(autoIndexDocRefEntity);

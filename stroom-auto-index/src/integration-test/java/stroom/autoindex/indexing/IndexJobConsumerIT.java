@@ -98,6 +98,8 @@ public class IndexJobConsumerIT extends AbstractAutoIndexIntegrationTest {
         // Create a valid auto index
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
 
+        trackerDao.setTimelineBounds(autoIndex.getDocRef().getUuid(), AnimalTestData.TIMELINE_BOUNDS);
+
         // Give our fixed test service user access to the doc refs
         // The wired Index Job DAO will use this user via Guice injection
         authRule.permitAuthenticatedUser(TEST_SERVICE_USER)
@@ -117,6 +119,8 @@ public class IndexJobConsumerIT extends AbstractAutoIndexIntegrationTest {
     public void testRunThroughAllValidTime() {
         // Create a valid auto index
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
+
+        trackerDao.setTimelineBounds(autoIndex.getDocRef().getUuid(), AnimalTestData.TIMELINE_BOUNDS);
 
         // Give our fixed test service user access to the doc refs
         // The wired Index Job DAO will use this user via Guice injection

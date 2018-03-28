@@ -29,14 +29,14 @@ import java.util.stream.Stream;
 public class NextWindowSelector {
     private static final Logger LOGGER = LoggerFactory.getLogger(NextWindowSelector.class);
 
-    private final Long now;
+    private TrackerWindow timelineBounds;
 
     private long windowSize = 1;
 
     private final List<TrackerWindow> existingWindows = new ArrayList<>();
 
-    private NextWindowSelector(final Long now) {
-        this.now = now;
+    private NextWindowSelector(final TrackerWindow timelineBounds) {
+        this.timelineBounds = timelineBounds;
     }
 
     public NextWindowSelector existingWindows(final List<TrackerWindow> values) {
@@ -60,12 +60,12 @@ public class NextWindowSelector {
                         .collect(Collectors.toList()));
 
         // Start iterating through the list backwards, cut to the last epoch
-        final Long mostRecentEpoch = this.now - (this.now % this.windowSize);
+        final Long mostRecentEpoch = this.timelineBounds.getTo() - (this.timelineBounds.getTo() % this.windowSize);
 
-        LOGGER.trace("Suggest Next Window - Existing: {}, Size: {}, Now: {}, mostRecentEpoch: {}",
+        LOGGER.trace("Suggest Next Window - Existing: {}, Size: {}, Now: {}, Timeline Bounds: {}",
                 this.existingWindows.size(),
                 this.windowSize,
-                this.now,
+                this.timelineBounds,
                 mostRecentEpoch);
 
         final TrackerWindow window = tryNextWindow(reversedWindows.iterator(), mostRecentEpoch);
@@ -78,8 +78,8 @@ public class NextWindowSelector {
                 tw -> this.existingWindows(tw).suggestNextWindow()).limit(count);
     }
 
-    public static NextWindowSelector fromNow(final Long now) {
-        return new NextWindowSelector(now);
+    public static NextWindowSelector withBounds(final TrackerWindow timelineBounds) {
+        return new NextWindowSelector(timelineBounds);
     }
 
     /**

@@ -8,6 +8,7 @@ import stroom.autoindex.animals.app.AnimalDocRefEntity;
 import stroom.autoindex.animals.app.AnimalSighting;
 import stroom.autoindex.app.App;
 import stroom.autoindex.app.Config;
+import stroom.autoindex.indexing.IndexJob;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.tracker.AutoIndexTracker;
 import stroom.elastic.test.ElasticTestIndexRule;
@@ -44,7 +45,9 @@ public class AutoIndexDocRefResourceIT extends DocRefResourceIT<AutoIndexDocRefE
     public final InitialiseJooqDbRule clearDbRule = InitialiseJooqDbRule
             .withDataSourceFactory(() -> appRule.getConfiguration().getDataSourceFactory())
             .tableToClear(AutoIndexDocRefEntity.TABLE_NAME)
-            .tableToClear(AutoIndexTracker.TABLE_NAME)
+            .tableToClear(AutoIndexTracker.TRACKER_WINDOW_TABLE_NAME)
+            .tableToClear(AutoIndexTracker.TIMELINE_BOUNDS_TABLE_NAME)
+            .tableToClear(IndexJob.TABLE_NAME)
             .build();
 
     @ClassRule
@@ -62,7 +65,6 @@ public class AutoIndexDocRefResourceIT extends DocRefResourceIT<AutoIndexDocRefE
         return new AutoIndexDocRefEntity.Builder()
                 .indexWindow(4L)
                 .timeFieldName(AnimalSighting.TIME)
-                .timelineLatestValue(1000L)
                 .rawDocRef(new DocRef.Builder()
                         .uuid(UUID.randomUUID().toString())
                         .type(AnimalDocRefEntity.TYPE)
@@ -79,8 +81,6 @@ public class AutoIndexDocRefResourceIT extends DocRefResourceIT<AutoIndexDocRefE
     @Override
     protected Map<String, String> exportValues(final AutoIndexDocRefEntity entity) {
         final Map<String, String> values = new HashMap<>();
-
-        values.put(AutoIndexDocRefEntity.TIMELINE_LATEST_VALUE_FIELD.getName(), Long.toString(entity.getTimelineLatestValue()));
 
         values.put(AutoIndexDocRefEntity.INDEXING_WINDOW_FIELD.getName(), Long.toString(entity.getIndexWindow()));
         values.put(AutoIndexDocRefEntity.TIME_FIELD_NAME_FIELD.getName(), entity.getTimeFieldName());

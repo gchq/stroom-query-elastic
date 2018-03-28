@@ -9,6 +9,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.animals.AnimalsQueryResourceIT;
 import stroom.autoindex.animals.app.AnimalSighting;
 import stroom.autoindex.app.Config;
@@ -99,6 +100,8 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
     public void testForkBasedOnSingleRun() {
         // Create a valid auto index
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
+
+        trackerDao.setTimelineBounds(autoIndex.getDocRef().getUuid(), AnimalTestData.TIMELINE_BOUNDS);
 
         // Give our fixed test service user access to the doc refs
         // The wired Index Job DAO will use this user via Guice injection

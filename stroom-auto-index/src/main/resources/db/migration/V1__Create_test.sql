@@ -14,8 +14,14 @@ CREATE TABLE auto_index_doc_ref (
     index_name          VARCHAR(255),
     timeField           VARCHAR(255),
     indexWindow         BIGINT UNSIGNED,
-    timelineLatestValue BIGINT UNSIGNED,
     PRIMARY KEY         (uuid)
+) ENGINE=InnoDB DEFAULT CHARSET latin1;
+
+CREATE TABLE timeline_bounds (
+    docRefUuid      VARCHAR(255) NOT NULL,
+    fromValue       BIGINT UNSIGNED NOT NULL,
+    toValue         BIGINT UNSIGNED NOT NULL,
+    PRIMARY KEY     (docRefUuid)
 ) ENGINE=InnoDB DEFAULT CHARSET latin1;
 
 CREATE TABLE tracker_window (

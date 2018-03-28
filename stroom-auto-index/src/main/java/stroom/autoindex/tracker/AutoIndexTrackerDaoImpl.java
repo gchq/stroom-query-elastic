@@ -14,7 +14,8 @@ public class AutoIndexTrackerDaoImpl implements AutoIndexTrackerDao {
     private static final String FROM = "fromValue";
     private static final String TO = "toValue";
 
-    private static final Table<Record> WINDOW_TABLE = DSL.table(AutoIndexTracker.TABLE_NAME);
+    private static final Table<Record> TRACKER_WINDOW_TABLE = DSL.table(AutoIndexTracker.TRACKER_WINDOW_TABLE_NAME);
+    private static final Table<Record> TIMELINE_BOUNDS_TABLE = DSL.table(AutoIndexTracker.TIMELINE_BOUNDS_TABLE_NAME);
     public static final Field<String> FIELD_DOC_REF_UUID = DSL.field(DOC_REF_UUID, String.class);
     public static final Field<ULong> FIELD_FROM = DSL.field(FROM, ULong.class);
     public static final Field<ULong> FIELD_TO = DSL.field(TO, ULong.class);
@@ -35,6 +36,27 @@ public class AutoIndexTrackerDaoImpl implements AutoIndexTrackerDao {
     }
 
     @Override
+    public AutoIndexTracker setTimelineBounds(final String docRefUuid,
+                                              final TrackerWindow timelineBounds) {
+        return database.transactionResult(c -> {
+             int existing = DSL.using(c).update(TIMELINE_BOUNDS_TABLE)
+                     .set(FIELD_FROM, ULong.valueOf(timelineBounds.getFrom()))
+                     .set(FIELD_TO, ULong.valueOf(timelineBounds.getTo()))
+                     .where(FIELD_DOC_REF_UUID.equal(docRefUuid))
+                     .execute();
+
+             if (0 == existing) {
+                 DSL.using(c).insertInto(TIMELINE_BOUNDS_TABLE)
+                         .columns(FIELD_DOC_REF_UUID, FIELD_FROM, FIELD_TO)
+                         .values(docRefUuid, ULong.valueOf(timelineBounds.getFrom()), ULong.valueOf(timelineBounds.getTo()))
+                         .execute();
+             }
+
+            return getInTransaction(c, docRefUuid);
+        });
+    }
+
+    @Override
     public AutoIndexTracker addWindow(final String docRefUuid,
                                       final TrackerWindow window) {
         return database.transactionResult(c -> {
@@ -44,7 +66,7 @@ public class AutoIndexTrackerDaoImpl implements AutoIndexTrackerDao {
             final Optional<TrackerWindow> windowToAdd = longTimeMerger.merge(window)
                     .with(current.getWindows())
                     .deleteWith(tw -> DSL.using(c)
-                            .deleteFrom(WINDOW_TABLE)
+                            .deleteFrom(TRACKER_WINDOW_TABLE)
                             .where(FIELD_DOC_REF_UUID.equal(docRefUuid)
                                     .and(FIELD_FROM.equal(ULong.valueOf(tw.getFrom()))))
                             .execute())
@@ -52,7 +74,7 @@ public class AutoIndexTrackerDaoImpl implements AutoIndexTrackerDao {
 
             // If there is still a window to add, add it to the database
             windowToAdd.ifPresent(tw ->
-                    DSL.using(c).insertInto(WINDOW_TABLE)
+                    DSL.using(c).insertInto(TRACKER_WINDOW_TABLE)
                             .columns(FIELD_DOC_REF_UUID, FIELD_FROM, FIELD_TO)
                             .values(docRefUuid, ULong.valueOf(tw.getFrom()), ULong.valueOf(tw.getTo()))
                             .execute()
@@ -65,7 +87,7 @@ public class AutoIndexTrackerDaoImpl implements AutoIndexTrackerDao {
     @Override
     public AutoIndexTracker clearWindows(final String docRefUuid) {
         return database.transactionResult(c -> {
-            DSL.using(c).deleteFrom(WINDOW_TABLE)
+            DSL.using(c).deleteFrom(TRACKER_WINDOW_TABLE)
                     .where(FIELD_DOC_REF_UUID.equal(docRefUuid))
                     .execute();
 
@@ -75,15 +97,21 @@ public class AutoIndexTrackerDaoImpl implements AutoIndexTrackerDao {
 
     private AutoIndexTracker getInTransaction(final Configuration c,
                                               final String docRefUuid) {
+        final TrackerWindow timelineBounds = DSL.using(c).select()
+                .from(TIMELINE_BOUNDS_TABLE)
+                .where(FIELD_DOC_REF_UUID.equal(docRefUuid))
+                .fetchOne(AutoIndexTrackerDaoImpl::fromRecord);
+
         return DSL.using(c)
                 .select()
-                .from(WINDOW_TABLE)
+                .from(TRACKER_WINDOW_TABLE)
                 .where(FIELD_DOC_REF_UUID.equal(docRefUuid))
                 .orderBy(FIELD_FROM)
                 .fetch(AutoIndexTrackerDaoImpl::fromRecord)
                 .stream()
                 .filter(TrackerWindow::isBound)
-                .reduce(AutoIndexTracker.forDocRef(docRefUuid),
+                .reduce(AutoIndexTracker.forDocRef(docRefUuid)
+                                .withBounds(timelineBounds),
                         AutoIndexTracker::withWindow,
                         (a, b) -> a.withWindows(b.getWindows()));
     }

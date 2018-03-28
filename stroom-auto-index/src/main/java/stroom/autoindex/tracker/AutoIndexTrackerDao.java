@@ -13,6 +13,14 @@ public interface AutoIndexTrackerDao {
     AutoIndexTracker get(final String docRefUuid);
 
     /**
+     * Sets the timeline bounds for a particular auto index doc ref.
+     * @param docRefUuid The UUID of the Auto Index Doc Ref
+     * @param timelineBounds The bounds to apply as the timeline of the underlying raw data source
+     * @return The updated Auto Index Tracker
+     */
+    AutoIndexTracker setTimelineBounds(final String docRefUuid, final TrackerWindow timelineBounds);
+
+    /**
      * Add a tracked window for a given Doc Ref UUID.
      *
      * @param docRefUuid The UUID of the Auto Index Doc Ref

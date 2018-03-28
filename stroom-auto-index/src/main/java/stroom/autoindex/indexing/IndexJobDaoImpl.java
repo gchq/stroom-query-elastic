@@ -65,7 +65,7 @@ public class IndexJobDaoImpl implements IndexJobDao {
 
                     // Calculate the next window to try
                     final TrackerWindow nextWindow = NextWindowSelector
-                            .fromNow(autoIndexDocRefEntity.getTimelineLatestValue())
+                            .withBounds(tracker.getTimelineBounds())
                             .windowSize(autoIndex.getIndexWindow())
                             .existingWindows(tracker.getWindows())
                             .suggestNextWindow();
