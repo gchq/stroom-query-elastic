@@ -7,7 +7,6 @@ import org.jooq.Table;
 import org.jooq.impl.DSL;
 import org.jooq.types.ULong;
 import stroom.autoindex.AutoIndexConstants;
-import stroom.autoindex.TimeUtils;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
 import stroom.autoindex.tracker.*;
@@ -66,9 +65,8 @@ public class IndexJobDaoImpl implements IndexJobDao {
 
                     // Calculate the next window to try
                     final TrackerWindow nextWindow = NextWindowSelector
-                            .fromNow(TimeUtils.nowUtcSeconds())
-                            .windowSizeAmount(autoIndex.getIndexWindowAmount())
-                            .windowSizeUnit(autoIndex.getIndexWindowUnit())
+                            .fromNow(autoIndexDocRefEntity.getTimelineLatestValue())
+                            .windowSize(autoIndex.getIndexWindow())
                             .existingWindows(tracker.getWindows())
                             .suggestNextWindow();
 
@@ -93,8 +91,8 @@ public class IndexJobDaoImpl implements IndexJobDao {
                                     docRefUuid,
                                     ULong.valueOf(indexJob.getStartedTimeMillis()),
                                     ULong.valueOf(indexJob.getCreatedTimeMillis()),
-                                    TimeUtils.getEpochSecondsULong(indexJob.getTrackerWindow().getFrom()),
-                                    TimeUtils.getEpochSecondsULong(indexJob.getTrackerWindow().getTo()))
+                                    ULong.valueOf(indexJob.getTrackerWindow().getFrom()),
+                                    ULong.valueOf(indexJob.getTrackerWindow().getTo()))
                             .execute();
 
                     return indexJob;

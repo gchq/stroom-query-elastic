@@ -11,14 +11,14 @@ public class HasBoundsTest {
     @Test
     public void testInteger() {
         // Given
-        final IntegerWindow window = IntegerWindow.from(5).to(8);
+        final TrackerWindow window = TrackerWindow.from(5L).to(8L);
 
         // When
-        final boolean lower = window.isInside(3, Integer::compare);
-        final boolean onBottomEdge = window.isInside(5, Integer::compare);
-        final boolean within = window.isInside(6, Integer::compare);
-        final boolean onTopEdge = window.isInside(8, Integer::compare);
-        final boolean higher = window.isInside(10, Integer::compare);
+        final boolean lower = window.isInside(3L, Long::compare);
+        final boolean onBottomEdge = window.isInside(5L, Long::compare);
+        final boolean within = window.isInside(6L, Long::compare);
+        final boolean onTopEdge = window.isInside(8L, Long::compare);
+        final boolean higher = window.isInside(10L, Long::compare);
 
         // Then
         assertFalse(lower);
@@ -31,14 +31,14 @@ public class HasBoundsTest {
     @Test
     public void testIntegerInsideState() {
         // Given
-        final IntegerWindow window = IntegerWindow.from(5).to(8);
+        final TrackerWindow window = TrackerWindow.from(5L).to(8L);
 
         // When
-        final HasBounds.Inside lower = window.checkInside(3, Integer::compare);
-        final HasBounds.Inside onBottomEdge = window.checkInside(5, Integer::compare);
-        final HasBounds.Inside within = window.checkInside(6, Integer::compare);
-        final HasBounds.Inside onTopEdge = window.checkInside(8, Integer::compare);
-        final HasBounds.Inside higher = window.checkInside(10, Integer::compare);
+        final HasBounds.Inside lower = window.checkInside(3L, Long::compare);
+        final HasBounds.Inside onBottomEdge = window.checkInside(5L, Long::compare);
+        final HasBounds.Inside within = window.checkInside(6L, Long::compare);
+        final HasBounds.Inside onTopEdge = window.checkInside(8L, Long::compare);
+        final HasBounds.Inside higher = window.checkInside(10L, Long::compare);
 
         // Then
         assertEquals(HasBounds.Inside.LOWER, lower);
@@ -51,7 +51,7 @@ public class HasBoundsTest {
     @Test
     public void testDateTime() {
         // Given
-        final TrackerWindow window = TrackerWindow
+        final LocalDateTimeWindow window = LocalDateTimeWindow
                 .from(LocalDateTime.of(2017, 3, 20, 16, 12))
                 .to(LocalDateTime.of(2017, 3, 24, 16, 12));
 
@@ -73,7 +73,7 @@ public class HasBoundsTest {
     @Test
     public void testDateTimeInsideState() {
         // Given
-        final TrackerWindow window = TrackerWindow
+        final LocalDateTimeWindow window = LocalDateTimeWindow
                 .from(LocalDateTime.of(2017, 3, 20, 16, 12))
                 .to(LocalDateTime.of(2017, 3, 24, 16, 12));
 

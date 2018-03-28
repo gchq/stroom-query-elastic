@@ -15,12 +15,12 @@ import stroom.query.audit.rest.AuditedQueryResourceImpl;
 import javax.ws.rs.core.Response;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static stroom.autoindex.animals.AnimalsQueryResourceIT.getAnimalSightingsFromResponse;
 import static stroom.query.testing.FifoLogbackRule.containsAllOf;
 
 public class AutoIndexQueryResourceIT extends AbstractAutoIndexIntegrationTest {
@@ -94,27 +94,6 @@ public class AutoIndexQueryResourceIT extends AbstractAutoIndexIntegrationTest {
                 .thereAreAtLeast(2)
                 .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_SEARCH, autoIndex.getEntity().getRawDocRef().getUuid()))
                 .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_SEARCH, autoIndex.getDocRef().getUuid()));
-    }
-
-    public static Set<AnimalSighting> getAnimalSightingsFromResponse(final SearchResponse searchResponse) {
-        final Set<AnimalSighting> resultsSet = new HashSet<>();
-
-        assertTrue("No results seen", searchResponse.getResults().size() > 0);
-        for (final Result result : searchResponse.getResults()) {
-            assertTrue(result instanceof FlatResult);
-
-            final FlatResult flatResult = (FlatResult) result;
-            flatResult.getValues().stream()
-                    .map(o -> new AnimalSighting.Builder()
-                            .species(o.get(3).toString())
-                            .location(o.get(4).toString())
-                            .observer(o.get(5).toString())
-                            .time(LocalDateTime.parse(o.get(6).toString(), DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                            .build())
-                    .forEach(resultsSet::add);
-        }
-
-        return resultsSet;
     }
 
 }

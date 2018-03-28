@@ -17,15 +17,12 @@ import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.tracker.AutoIndexTrackerDao;
 import stroom.autoindex.tracker.AutoIndexTrackerDaoImpl;
-import stroom.autoindex.tracker.TrackerWindow;
 import stroom.query.audit.authorisation.DocumentPermission;
 import stroom.query.audit.client.DocRefResourceHttpClient;
 import stroom.query.audit.client.QueryResourceHttpClient;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 
-import java.time.Clock;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -101,10 +98,6 @@ public class IndexJobConsumerIT extends AbstractAutoIndexIntegrationTest {
         // Create a valid auto index
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
 
-        // Just tell the window tracker that we already have data from 'now' back to test data end date
-        trackerDao.addWindow(autoIndex.getDocRef().getUuid(),
-                TrackerWindow.from(AnimalTestData.TO_DATE).to(LocalDateTime.now(Clock.systemUTC())));
-
         // Give our fixed test service user access to the doc refs
         // The wired Index Job DAO will use this user via Guice injection
         authRule.permitAuthenticatedUser(TEST_SERVICE_USER)
@@ -125,10 +118,6 @@ public class IndexJobConsumerIT extends AbstractAutoIndexIntegrationTest {
         // Create a valid auto index
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
 
-        // Just tell the window tracker that we already have data from 'now' back to test data end date
-        trackerDao.addWindow(autoIndex.getDocRef().getUuid(),
-                TrackerWindow.from(AnimalTestData.TO_DATE).to(LocalDateTime.now(Clock.systemUTC())));
-
         // Give our fixed test service user access to the doc refs
         // The wired Index Job DAO will use this user via Guice injection
         authRule.permitAuthenticatedUser(TEST_SERVICE_USER)
@@ -142,7 +131,6 @@ public class IndexJobConsumerIT extends AbstractAutoIndexIntegrationTest {
         // Attempt to run the number of jobs that would completely cover the time range
         final List<IndexJob> jobs = AnimalTestData.getExpectedTrackerWindows().stream()
                 .map(tw -> indexJobDao.getOrCreate(autoIndex.getEntity()))
-                .filter(job -> !job.getTrackerWindow().getFrom().isBefore(AnimalTestData.FROM_DATE))
                 .peek(indexJobConsumer)
                 .collect(Collectors.toList());
 

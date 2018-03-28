@@ -7,9 +7,7 @@ import org.jooq.DSLContext;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import stroom.autoindex.AbstractAutoIndexIntegrationTest;
-import stroom.autoindex.TimeUtils;
 
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -51,13 +49,13 @@ public class AutoIndexTrackerDaoIT extends AbstractAutoIndexIntegrationTest {
     }
 
     @Test
-    public void testAddWindow() {
+    public void testAddNonContiguousWindows() {
         // Given
         final String docRefUuid = UUID.randomUUID().toString();
-        final LocalDateTime now = TimeUtils.nowUtcSeconds();
-        final LocalDateTime oneMonthAgo = now.minusMonths(1);
-        final LocalDateTime twoMonthsAgo = oneMonthAgo.minusMonths(1);
-        final LocalDateTime threeMonthsAgo = oneMonthAgo.minusMonths(1);
+        final Long now = 20L;
+        final Long oneMonthAgo = now - 5;
+        final Long twoMonthsAgo = oneMonthAgo - 5;
+        final Long threeMonthsAgo = twoMonthsAgo - 5;
 
         // Two non-contiguous windows
         final TrackerWindow oneMonthAgoToNow = TrackerWindow.from(oneMonthAgo).to(now);
@@ -79,12 +77,12 @@ public class AutoIndexTrackerDaoIT extends AbstractAutoIndexIntegrationTest {
     }
 
     @Test
-    public void testAddWindowsToMerge() {
+    public void testAddContiguousWindows() {
         // Given
         final String docRefUuid = UUID.randomUUID().toString();
-        final LocalDateTime now = TimeUtils.nowUtcSeconds();
-        final LocalDateTime oneMonthAgo = now.minusMonths(1);
-        final LocalDateTime twoMonthsAgo = oneMonthAgo.minusMonths(1);
+        final Long now = 35L;
+        final Long oneMonthAgo = now - 10;
+        final Long twoMonthsAgo = oneMonthAgo - 10;
 
         // Two windows that should join up
         final TrackerWindow oneMonthAgoToNow = TrackerWindow.from(oneMonthAgo).to(now);
@@ -105,10 +103,10 @@ public class AutoIndexTrackerDaoIT extends AbstractAutoIndexIntegrationTest {
     public void testClearWindow() {
         // Given
         final String docRefUuid = UUID.randomUUID().toString();
-        final LocalDateTime now = TimeUtils.nowUtcSeconds();
-        final LocalDateTime oneMonthAgo = now.minusMonths(1);
-        final LocalDateTime twoMonthsAgo = oneMonthAgo.minusMonths(1);
-        final LocalDateTime threeMonthsAgo = oneMonthAgo.minusMonths(1);
+        final Long now = 45L;
+        final Long oneMonthAgo = now - 10;
+        final Long twoMonthsAgo = oneMonthAgo - 10;
+        final Long threeMonthsAgo = twoMonthsAgo - 10;
 
         // Two non-contiguous windows
         final TrackerWindow oneMonthAgoToNow = TrackerWindow.from(oneMonthAgo).to(now);

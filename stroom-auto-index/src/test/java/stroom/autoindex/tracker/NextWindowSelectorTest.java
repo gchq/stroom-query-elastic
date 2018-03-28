@@ -2,8 +2,6 @@ package stroom.autoindex.tracker;
 
 import org.junit.Test;
 
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -13,165 +11,104 @@ import static org.junit.Assert.assertEquals;
 public class NextWindowSelectorTest {
 
     @Test
-    public void testFromEmptyByHours() {
+    public void testFromEmpty() {
         // Given
-        final LocalDateTime now = LocalDateTime.of(2017, 3, 28, 16, 12);
+        final Long now = 6089L;
 
         // When
         final TrackerWindow nextWindow = NextWindowSelector.fromNow(now)
-                .windowSizeUnit(ChronoUnit.HOURS)
+                .windowSize(30L)
                 .suggestNextWindow();
 
         // Then
         assertEquals(TrackerWindow
-                .from(LocalDateTime.of(2017, 3, 28, 15, 0))
-                .to(LocalDateTime.of(2017, 3, 28, 16, 0)), nextWindow);
+                .from(6030L)
+                .to(6060L), nextWindow);
     }
 
     @Test
-    public void testWithOneFilledInByDays() {
+    public void testOneWithSingleExisting() {
         // Given
-        final LocalDateTime now = LocalDateTime.of(2017, 3, 28, 16, 12);
+        final Long now = 4056L;
         final TrackerWindow existingWindow = TrackerWindow
-                .from(LocalDateTime.of(2017, 3, 27, 0, 0))
-                .to(LocalDateTime.of(2017, 3, 28, 0, 0));
+                .from(4020L)
+                .to(4040L);
 
         // When
         final TrackerWindow nextWindow = NextWindowSelector.fromNow(now)
-                .windowSizeUnit(ChronoUnit.DAYS)
+                .windowSize(20)
                 .existingWindows(existingWindow)
                 .suggestNextWindow();
 
         // Then
         assertEquals(TrackerWindow
-                .from(LocalDateTime.of(2017, 3, 26, 0, 0))
-                .to(LocalDateTime.of(2017, 3, 27, 0, 0)), nextWindow);
+                .from(4000L)
+                .to(4020L), nextWindow);
     }
 
     @Test
-    public void testMonthLongWindow() {
+    public void testWithAnAwkwardGap() {
         // Given
-        final LocalDateTime now = LocalDateTime.of(2015, 10, 28, 16, 12);
-
-        final TrackerWindow existingWindow = TrackerWindow
-                .from(LocalDateTime.of(2015, 1, 1, 0, 0))
-                .to(LocalDateTime.of(2015, 5, 1, 0, 0));
-
-        // When
-        final TrackerWindow nextWindow = NextWindowSelector.fromNow(now)
-                .windowSizeUnit(ChronoUnit.MONTHS)
-                .windowSizeAmount(3)
-                .existingWindows(existingWindow)
-                .suggestNextWindow();
-
-        // Then
-        assertEquals(TrackerWindow
-                .from(LocalDateTime.of(2015, 7, 1, 0, 0))
-                .to(LocalDateTime.of(2015, 10, 1, 0, 0)), nextWindow);
-
-    }
-
-    @Test
-    public void testYearLongWindow() {
-        // Given
-        final LocalDateTime now = LocalDateTime.of(2015, 10, 28, 16, 12);
-
-        final TrackerWindow existingWindow = TrackerWindow
-                .from(LocalDateTime.of(2008, 1, 1, 0, 0))
-                .to(LocalDateTime.of(2011, 1, 1, 0, 0));
-
-        // When
-        final TrackerWindow nextWindow = NextWindowSelector.fromNow(now)
-                .windowSizeUnit(ChronoUnit.YEARS)
-                .windowSizeAmount(2)
-                .existingWindows(existingWindow)
-                .suggestNextWindow();
-
-        // Then
-        assertEquals(TrackerWindow
-                .from(LocalDateTime.of(2012, 1, 1, 0, 0))
-                .to(LocalDateTime.of(2014, 1, 1, 0, 0)), nextWindow);
-
-    }
-
-    @Test
-    public void testWithAnAwkwardGapIn30Minutes() {
-        // Given
-        final LocalDateTime now = LocalDateTime.of(2015, 11, 5, 16, 23);
+        final Long now = 23L;
         final List<TrackerWindow> existingWindows = Arrays.asList(
-                TrackerWindow.from(LocalDateTime.of(2015, 11, 5, 15, 30))
-                        .to(LocalDateTime.of(2015, 11, 5, 16, 0)),
-                TrackerWindow.from(LocalDateTime.of(2015, 11, 5, 14, 46))
-                        .to(LocalDateTime.of(2015, 11, 5, 15, 18)),
-                TrackerWindow.from(LocalDateTime.of(2015, 11, 5, 13, 0))
-                        .to(LocalDateTime.of(2015, 11, 5, 14, 0))
+                TrackerWindow.from(17L).to(22L),
+                TrackerWindow.from(13L).to(15L),
+                TrackerWindow.from(7L).to(11L)
         );
 
         // When
         final List<TrackerWindow> windows = NextWindowSelector.fromNow(now)
-                .windowSizeAmount(30)
-                .windowSizeUnit(ChronoUnit.MINUTES)
+                .windowSize(4)
                 .existingWindows(existingWindows)
-                .suggestNextWindows(5)
+                .suggestNextWindows(6)
                 .collect(Collectors.toList());
 
         // Then
         assertEquals(Arrays.asList(
                 TrackerWindow
-                        .from(LocalDateTime.of(2015, 11, 5, 15, 18))
-                        .to(LocalDateTime.of(2015, 11, 5, 15, 30)),
+                        .from(16L)
+                        .to(17L),
                 TrackerWindow
-                        .from(LocalDateTime.of(2015, 11, 5, 14, 30))
-                        .to(LocalDateTime.of(2015, 11, 5, 14, 46)),
+                        .from(15L)
+                        .to(16L),
                 TrackerWindow
-                        .from(LocalDateTime.of(2015, 11, 5, 14, 0))
-                        .to(LocalDateTime.of(2015, 11, 5, 14, 30)),
+                        .from(12L)
+                        .to(13L),
                 TrackerWindow
-                        .from(LocalDateTime.of(2015, 11, 5, 12, 30))
-                        .to(LocalDateTime.of(2015, 11, 5, 13, 0)),
+                        .from(11L)
+                        .to(12L),
                 TrackerWindow
-                        .from(LocalDateTime.of(2015, 11, 5, 12, 0))
-                        .to(LocalDateTime.of(2015, 11, 5, 12, 30))
+                        .from(4L)
+                        .to(7L),
+                TrackerWindow
+                        .from(0L)
+                        .to(4L)
                 ),
                 windows);
     }
 
     @Test
-    public void testWithOneLargeGapByFourHours() {
+    public void testWithOneLargeGap() {
         // Given
-        final LocalDateTime now = LocalDateTime.of(2018, 8, 17, 14, 0);
+        final Long now = 65L;
         final List<TrackerWindow> existingWindows = Arrays.asList(
-                TrackerWindow.from(LocalDateTime.of(2018, 8, 16, 4, 0))
-                        .to(LocalDateTime.of(2018, 8, 16, 12, 0)),
-                TrackerWindow.from(LocalDateTime.of(2018, 8, 17, 0, 0))
-                        .to(LocalDateTime.of(2018, 8, 17, 12, 0))
+                TrackerWindow.from(50L).to(60L),
+                TrackerWindow.from(0L).to(10L)
         );
 
         // When
         final List<TrackerWindow> windows = NextWindowSelector.fromNow(now)
-                .windowSizeAmount(4)
-                .windowSizeUnit(ChronoUnit.HOURS)
+                .windowSize(10)
                 .existingWindows(existingWindows)
-                .suggestNextWindows(5)
+                .suggestNextWindows(4)
                 .collect(Collectors.toList());
 
         // Then
         assertEquals(Arrays.asList(
-                TrackerWindow
-                        .from(LocalDateTime.of(2018, 8, 16, 20, 0))
-                        .to(LocalDateTime.of(2018, 8, 17, 0, 0)),
-                TrackerWindow
-                        .from(LocalDateTime.of(2018, 8, 16, 16, 0))
-                        .to(LocalDateTime.of(2018, 8, 16, 20, 0)),
-                TrackerWindow
-                        .from(LocalDateTime.of(2018, 8, 16, 12, 0))
-                        .to(LocalDateTime.of(2018, 8, 16, 16, 0)),
-                TrackerWindow
-                        .from(LocalDateTime.of(2018, 8, 16, 0, 0))
-                        .to(LocalDateTime.of(2018, 8, 16, 4, 0)),
-                TrackerWindow
-                        .from(LocalDateTime.of(2018, 8, 15, 20, 0))
-                        .to(LocalDateTime.of(2018, 8, 16, 0, 0))
+                TrackerWindow.from(40L).to(50L),
+                TrackerWindow.from(30L).to(40L),
+                TrackerWindow.from(20L).to(30L),
+                TrackerWindow.from(10L).to(20L)
                 ),
                 windows);
     }

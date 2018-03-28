@@ -19,7 +19,6 @@ import stroom.autoindex.tracker.AutoIndexTrackerDaoImpl;
 import stroom.autoindex.tracker.TrackerWindow;
 import stroom.query.audit.security.ServiceUser;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -140,25 +139,25 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
         final AtomicInteger jobsCounted = new AtomicInteger(0);
         final AtomicInteger jobsCompared = new AtomicInteger(0);
         lastIndexJobByDocRefUuid.forEach((uuid, jobs) -> {
-            Optional<LocalDateTime> lastFromDateOpt = Optional.empty();
+            Optional<Long> lastFromOpt = Optional.empty();
 
             LOGGER.debug("Job's for UUID {}", uuid);
 
             for (final IndexJob job : jobs) {
                 LOGGER.debug(job.toString());
 
-                lastFromDateOpt.ifPresent(lastFromDate -> {
+                lastFromOpt.ifPresent(lastFromDate -> {
                     assertEquals(lastFromDate, job.getTrackerWindow().getTo());
                     jobsCompared.incrementAndGet();
                 });
 
-                lastFromDateOpt = Optional.of(job.getTrackerWindow().getFrom());
+                lastFromOpt = Optional.of(job.getTrackerWindow().getFrom());
                 jobsCounted.incrementAndGet();
             }
 
             // Check the tracker information matches what we expect
-            final LocalDateTime from = jobs.get(jobs.size() - 1).getTrackerWindow().getFrom();
-            final LocalDateTime to = jobs.get(0).getTrackerWindow().getTo();
+            final Long from = jobs.get(jobs.size() - 1).getTrackerWindow().getFrom();
+            final Long to = jobs.get(0).getTrackerWindow().getTo();
 
             final AutoIndexTracker tracker = autoIndexTrackerDao.get(uuid);
             assertEquals(

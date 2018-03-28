@@ -58,6 +58,64 @@ public class AnimalsQueryResourceIT extends QueryResourceIT<AnimalDocRefEntity, 
     }
 
     @Test
+    public void testStreamIdSearch() {
+        final DocRef docRef = createDocument(new AnimalDocRefEntity.Builder()
+                .dataDirectory(testDataRule.getFolder().getAbsolutePath())
+                .build());
+
+        auditLogRule.check().thereAreAtLeast(2)
+                .containsOrdered(containsAllOf(AuditedDocRefResourceImpl.CREATE_DOC_REF, docRef.getUuid()))
+                .containsOrdered(containsAllOf(AuditedDocRefResourceImpl.UPDATE_DOC_REF, docRef.getUuid()));
+
+        final OffsetRange offset = new OffsetRange.Builder()
+                .length(100L)
+                .offset(0L)
+                .build();
+        final Long testMaxStreamId = 100L;
+        final ExpressionOperator expressionOperator = new ExpressionOperator.Builder(ExpressionOperator.Op.AND)
+                .addTerm(AnimalSighting.STREAM_ID, ExpressionTerm.Condition.LESS_THAN, Long.toString(testMaxStreamId))
+                .build();
+
+        final SearchRequest searchRequest = getValidSearchRequest(docRef, expressionOperator, offset);
+
+        final Response response = queryClient.search(authRule.adminUser(), searchRequest);
+        assertEquals(HttpStatus.OK_200, response.getStatus());
+
+        final SearchResponse searchResponse = response.readEntity(SearchResponse.class);
+
+        final Set<AnimalSighting> resultsSet = new HashSet<>();
+
+        assertTrue("No results seen", searchResponse.getResults().size() > 0);
+        for (final Result result : searchResponse.getResults()) {
+            assertTrue(result instanceof FlatResult);
+
+            final FlatResult flatResult = (FlatResult) result;
+            flatResult.getValues().stream()
+                    //.map(objects -> objects.get(1))
+                    .map(o -> new AnimalSighting.Builder()
+                            .streamId(Long.valueOf(o.get(3).toString()))
+                            .species(o.get(4).toString())
+                            .location(o.get(5).toString())
+                            .observer(o.get(6).toString())
+                            .time(LocalDateTime.parse(o.get(7).toString(), DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                            .build())
+                    .forEach(resultsSet::add);
+        }
+
+        // Check that the returned data matches the conditions
+        resultsSet.stream().map(AnimalSighting::getStreamId)
+                .forEach(t -> assertTrue(testMaxStreamId > t));
+
+        LOGGER.info("Results from Search {}", resultsSet.size());
+        resultsSet.stream()
+                .map(Object::toString)
+                .forEach(LOGGER::info);
+
+        auditLogRule.check().thereAreAtLeast(1)
+                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_SEARCH, docRef.getUuid()));
+    }
+
+    @Test
     public void testQuerySearch() {
         final DocRef docRef = createDocument(new AnimalDocRefEntity.Builder()
                 .dataDirectory(testDataRule.getFolder().getAbsolutePath())
@@ -88,23 +146,7 @@ public class AnimalsQueryResourceIT extends QueryResourceIT<AnimalDocRefEntity, 
 
         final SearchResponse searchResponse = response.readEntity(SearchResponse.class);
 
-        final Set<AnimalSighting> resultsSet = new HashSet<>();
-
-        assertTrue("No results seen", searchResponse.getResults().size() > 0);
-        for (final Result result : searchResponse.getResults()) {
-            assertTrue(result instanceof FlatResult);
-
-            final FlatResult flatResult = (FlatResult) result;
-            flatResult.getValues().stream()
-                    //.map(objects -> objects.get(1))
-                    .map(o -> new AnimalSighting.Builder()
-                            .species(o.get(3).toString())
-                            .location(o.get(4).toString())
-                            .observer(o.get(5).toString())
-                            .time(LocalDateTime.parse(o.get(6).toString(), DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                            .build())
-                    .forEach(resultsSet::add);
-        }
+        final Set<AnimalSighting> resultsSet = getAnimalSightingsFromResponse(searchResponse);
 
         // Check that the returned data matches the conditions
         resultsSet.stream().map(AnimalSighting::getObserver)
@@ -121,12 +163,35 @@ public class AnimalsQueryResourceIT extends QueryResourceIT<AnimalDocRefEntity, 
                 .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_SEARCH, docRef.getUuid()));
     }
 
+    public static Set<AnimalSighting> getAnimalSightingsFromResponse(final SearchResponse searchResponse) {
+        final Set<AnimalSighting> resultsSet = new HashSet<>();
+
+        assertTrue("No results seen", searchResponse.getResults().size() > 0);
+        for (final Result result : searchResponse.getResults()) {
+            assertTrue(result instanceof FlatResult);
+
+            final FlatResult flatResult = (FlatResult) result;
+            flatResult.getValues().stream()
+                    .map(o -> new AnimalSighting.Builder()
+                            .streamId(Long.valueOf(o.get(3).toString()))
+                            .species(o.get(4).toString())
+                            .location(o.get(5).toString())
+                            .observer(o.get(6).toString())
+                            .time(LocalDateTime.parse(o.get(7).toString(), DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                            .build())
+                    .forEach(resultsSet::add);
+        }
+
+        return resultsSet;
+    }
+
     @Override
     protected void assertValidDataSource(final DataSource dataSource) {
         final Set<String> resultFieldNames = dataSource.getFields().stream()
                 .map(DataSourceField::getName)
                 .collect(Collectors.toSet());
 
+        assertTrue(resultFieldNames.contains(AnimalSighting.STREAM_ID));
         assertTrue(resultFieldNames.contains(AnimalSighting.SPECIES));
         assertTrue(resultFieldNames.contains(AnimalSighting.LOCATION));
         assertTrue(resultFieldNames.contains(AnimalSighting.OBSERVER));
@@ -168,6 +233,10 @@ public class AnimalsQueryResourceIT extends QueryResourceIT<AnimalDocRefEntity, 
                                 .queryId(queryKey)
                                 .extractValues(false)
                                 .showDetail(false)
+                                .addFields(new Field.Builder()
+                                        .name(AnimalSighting.STREAM_ID)
+                                        .expression("${" + AnimalSighting.STREAM_ID + "}")
+                                        .build())
                                 .addFields(new Field.Builder()
                                         .name(AnimalSighting.SPECIES)
                                         .expression("${" + AnimalSighting.SPECIES + "}")

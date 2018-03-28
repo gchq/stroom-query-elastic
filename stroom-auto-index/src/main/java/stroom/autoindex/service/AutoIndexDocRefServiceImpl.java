@@ -1,11 +1,11 @@
 package stroom.autoindex.service;
 
 import org.jooq.DSLContext;
+import org.jooq.types.ULong;
 import stroom.query.api.v2.DocRef;
 import stroom.query.jooq.DocRefServiceJooqImpl;
 
 import javax.inject.Inject;
-import java.time.temporal.ChronoUnit;
 
 public class AutoIndexDocRefServiceImpl
         extends DocRefServiceJooqImpl<AutoIndexDocRefEntity> {
@@ -14,13 +14,11 @@ public class AutoIndexDocRefServiceImpl
     public AutoIndexDocRefServiceImpl(final DSLContext database) {
         super(AutoIndexDocRefEntity.TYPE,
                 dataMap -> new AutoIndexDocRefEntity.Builder()
+                        .timelineLatestValue(dataMap.getValue(AutoIndexDocRefEntity.TIMELINE_LATEST_VALUE_FIELD)
+                                .orElse(ULong.valueOf(1L)).longValue())
                         .timeFieldName(dataMap.getValue(AutoIndexDocRefEntity.TIME_FIELD_NAME_FIELD).orElse(null))
-                        .indexWindowAmount(dataMap.getValue(AutoIndexDocRefEntity.INDEXING_WINDOW_AMOUNT_FIELD)
-                                .orElse(1))
-                        .indexWindowUnits(dataMap.getValue(AutoIndexDocRefEntity.INDEXING_WINDOW_UNIT_FIELD)
-                                .map(ChronoUnit::valueOf)
-                                .orElse(ChronoUnit.DAYS
-                        ))
+                        .indexWindow(dataMap.getValue(AutoIndexDocRefEntity.INDEXING_WINDOW_FIELD)
+                                .orElse(ULong.valueOf(1L)).longValue())
                         .rawDocRef(new DocRef.Builder()
                                 .type(dataMap.getValue(AutoIndexDocRefEntity.RAW_DOC_REF_TYPE).orElse(null))
                                 .uuid(dataMap.getValue(AutoIndexDocRefEntity.RAW_DOC_REF_UUID).orElse(null))
@@ -32,9 +30,9 @@ public class AutoIndexDocRefServiceImpl
                                 .name(dataMap.getValue(AutoIndexDocRefEntity.INDEX_DOC_REF_NAME).orElse(null))
                                 .build()),
                 (entity, consumer) -> {
-                    consumer.setValue(AutoIndexDocRefEntity.INDEXING_WINDOW_AMOUNT_FIELD, entity.getIndexWindowAmount());
-                    consumer.setValue(AutoIndexDocRefEntity.INDEXING_WINDOW_UNIT_FIELD, entity.getIndexWindowUnit().name());
+                    consumer.setValue(AutoIndexDocRefEntity.INDEXING_WINDOW_FIELD, ULong.valueOf(entity.getIndexWindow()));
                     consumer.setValue(AutoIndexDocRefEntity.TIME_FIELD_NAME_FIELD, entity.getTimeFieldName());
+                    consumer.setValue(AutoIndexDocRefEntity.TIMELINE_LATEST_VALUE_FIELD, ULong.valueOf(entity.getTimelineLatestValue()));
 
                     consumer.setValue(AutoIndexDocRefEntity.RAW_DOC_REF_TYPE, entity.getRawDocRef().getType());
                     consumer.setValue(AutoIndexDocRefEntity.RAW_DOC_REF_UUID, entity.getRawDocRef().getUuid());

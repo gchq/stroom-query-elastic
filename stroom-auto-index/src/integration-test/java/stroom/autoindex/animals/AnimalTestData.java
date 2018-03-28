@@ -15,10 +15,10 @@ import java.util.function.Consumer;
 
 public class AnimalTestData implements Consumer<Consumer<String>> {
 
+    public static final Long ROW_COUNT = 1000L;
     public static final LocalDateTime FROM_DATE = LocalDateTime.of(2016, 1, 1, 0, 0, 0);
     public static final LocalDateTime TO_DATE = FROM_DATE.plus(2, ChronoUnit.YEARS);
-    public static final int WINDOW_AMOUNT = 1;
-    public static final ChronoUnit WINDOW_UNITS = ChronoUnit.MONTHS;
+    public static final Long WINDOW_AMOUNT = 100L;
 
     private AnimalTestData() {
 
@@ -33,10 +33,10 @@ public class AnimalTestData implements Consumer<Consumer<String>> {
         if (null == expectedTrackerWindows) {
             expectedTrackerWindows = new ArrayList<>();
 
-            LocalDateTime currentTo = TO_DATE;
+            Long currentTo = ROW_COUNT;
 
-            while (currentTo.isAfter(FROM_DATE)) {
-                LocalDateTime thisFrom = currentTo.minus(WINDOW_AMOUNT, WINDOW_UNITS);
+            while (currentTo > 0) {
+                Long thisFrom = currentTo - WINDOW_AMOUNT;
                 expectedTrackerWindows.add(TrackerWindow.from(thisFrom).to(currentTo));
                 currentTo = thisFrom;
             }
@@ -48,6 +48,7 @@ public class AnimalTestData implements Consumer<Consumer<String>> {
     @Override
     public void accept(final Consumer<String> writer) {
         DataGenerator.buildDefinition()
+                .addFieldDefinition(DataGenerator.sequentialNumberField(AnimalSighting.STREAM_ID, 0, ROW_COUNT))
                 .addFieldDefinition(DataGenerator.randomValueField(AnimalSighting.SPECIES,
                         Arrays.asList("spider", "whale", "dog", "tiger", "monkey", "lion", "woodlouse", "honey-badger")))
                 .addFieldDefinition(DataGenerator.randomValueField(AnimalSighting.LOCATION,
@@ -59,7 +60,7 @@ public class AnimalTestData implements Consumer<Consumer<String>> {
                         TO_DATE,
                         DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                 .setDataWriter(FlatDataWriterBuilder.defaultCsvFormat())
-                .rowCount(1000)
+                .rowCount(Math.toIntExact(ROW_COUNT))
                 .consumedBy(s -> s.forEach(writer))
                 .generate();
     }

@@ -18,7 +18,6 @@ import stroom.query.testing.DocRefResourceIT;
 import stroom.query.testing.DropwizardAppWithClientsRule;
 import stroom.query.testing.StroomAuthenticationRule;
 
-import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -61,9 +60,9 @@ public class AutoIndexDocRefResourceIT extends DocRefResourceIT<AutoIndexDocRefE
     @Override
     protected AutoIndexDocRefEntity createPopulatedEntity() {
         return new AutoIndexDocRefEntity.Builder()
-                .indexWindowAmount(4)
-                .indexWindowUnits(ChronoUnit.HOURS)
+                .indexWindow(4L)
                 .timeFieldName(AnimalSighting.TIME)
+                .timelineLatestValue(1000L)
                 .rawDocRef(new DocRef.Builder()
                         .uuid(UUID.randomUUID().toString())
                         .type(AnimalDocRefEntity.TYPE)
@@ -81,8 +80,9 @@ public class AutoIndexDocRefResourceIT extends DocRefResourceIT<AutoIndexDocRefE
     protected Map<String, String> exportValues(final AutoIndexDocRefEntity entity) {
         final Map<String, String> values = new HashMap<>();
 
-        values.put(AutoIndexDocRefEntity.INDEXING_WINDOW_AMOUNT_FIELD.getName(), Long.toString(entity.getIndexWindowAmount()));
-        values.put(AutoIndexDocRefEntity.INDEXING_WINDOW_UNIT_FIELD.getName(), entity.getIndexWindowUnit().name());
+        values.put(AutoIndexDocRefEntity.TIMELINE_LATEST_VALUE_FIELD.getName(), Long.toString(entity.getTimelineLatestValue()));
+
+        values.put(AutoIndexDocRefEntity.INDEXING_WINDOW_FIELD.getName(), Long.toString(entity.getIndexWindow()));
         values.put(AutoIndexDocRefEntity.TIME_FIELD_NAME_FIELD.getName(), entity.getTimeFieldName());
 
         values.put(AutoIndexDocRefEntity.RAW_DOC_REF_TYPE.getName(), entity.getRawDocRef().getType());

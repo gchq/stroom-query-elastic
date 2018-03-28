@@ -9,7 +9,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.animals.AnimalsQueryResourceIT;
 import stroom.autoindex.animals.app.AnimalSighting;
 import stroom.autoindex.app.Config;
@@ -18,7 +17,6 @@ import stroom.autoindex.indexing.*;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.tracker.AutoIndexTrackerDao;
 import stroom.autoindex.tracker.AutoIndexTrackerDaoImpl;
-import stroom.autoindex.tracker.TrackerWindow;
 import stroom.query.api.v2.*;
 import stroom.query.audit.authorisation.DocumentPermission;
 import stroom.query.audit.client.DocRefResourceHttpClient;
@@ -27,17 +25,15 @@ import stroom.query.audit.security.ServiceUser;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 
 import javax.ws.rs.core.Response;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static stroom.autoindex.AutoIndexQueryResourceIT.getAnimalSightingsFromResponse;
 import static stroom.autoindex.TestConstants.TEST_SERVICE_USER;
+import static stroom.autoindex.animals.AnimalsQueryResourceIT.getAnimalSightingsFromResponse;
 
 /**
  * This will run a test that ensures some portion of the data has been indexed
@@ -103,10 +99,6 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
     public void testForkBasedOnSingleRun() {
         // Create a valid auto index
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
-
-        // Just tell the window tracker that we already have data from 'now' back to test data end date
-        trackerDao.addWindow(autoIndex.getDocRef().getUuid(),
-                TrackerWindow.from(AnimalTestData.TO_DATE).to(LocalDateTime.now(Clock.systemUTC())));
 
         // Give our fixed test service user access to the doc refs
         // The wired Index Job DAO will use this user via Guice injection

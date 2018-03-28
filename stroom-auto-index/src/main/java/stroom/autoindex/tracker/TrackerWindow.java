@@ -1,6 +1,5 @@
 package stroom.autoindex.tracker;
 
-import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -8,23 +7,23 @@ import java.util.Optional;
  * Each instance encapsulates a single window of time for which data
  * has been extracted from the raw data source into the index source.
  */
-public class TrackerWindow implements HasBounds<LocalDateTime> {
-    private final LocalDateTime from;
-    private final LocalDateTime to;
+public class TrackerWindow implements HasBounds<Long> {
+    private final Long from;
+    private final Long to;
 
-    private TrackerWindow(final LocalDateTime from,
-                          final LocalDateTime to) {
+    private TrackerWindow(final Long from,
+                          final Long to) {
         this.from = from;
         this.to = to;
     }
 
     @Override
-    public LocalDateTime getFrom() {
+    public Long getFrom() {
         return from;
     }
 
     @Override
-    public LocalDateTime getTo() {
+    public Long getTo() {
         return to;
     }
 
@@ -33,19 +32,19 @@ public class TrackerWindow implements HasBounds<LocalDateTime> {
                 && Optional.ofNullable(this.to).isPresent();
     }
 
-    public static Builder from(final LocalDateTime from) {
+    public static Builder from(final Long from) {
         return new Builder(from);
     }
 
     public static class Builder {
-        private LocalDateTime from;
+        private Long from;
 
-        private Builder(final LocalDateTime from) {
+        private Builder(final Long from) {
             this.from = from;
         }
 
-        public TrackerWindow to(final LocalDateTime to) {
-            if (to.isBefore(this.from)) {
+        public TrackerWindow to(final Long to) {
+            if (to <= this.from) {
                 throw new IllegalArgumentException("The FROM date must be before the TO");
             }
             return new TrackerWindow(this.from, to);

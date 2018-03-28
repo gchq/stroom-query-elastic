@@ -1,16 +1,13 @@
 package stroom.autoindex.service;
 
 import org.jooq.Field;
+import org.jooq.types.ULong;
 import stroom.query.api.v2.DocRef;
 import stroom.query.audit.model.DocRefEntity;
 import stroom.query.jooq.DocRefJooqEntity;
 import stroom.query.jooq.JooqEntity;
 
-import java.time.temporal.ChronoUnit;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.jooq.impl.DSL.field;
 
@@ -32,8 +29,9 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
     private static final String INDEX_PREFIX = "index_";
 
     private static final String TIME_FIELD_NAME = "timeField";
-    private static final String INDEXING_WINDOW_AMOUNT = "indexWindowAmount";
-    private static final String INDEXING_WINDOW_UNIT = "indexWindowUnit";
+    private static final String INDEXING_WINDOW = "indexWindow";
+
+    private static final String TIMELINE_LATEST_VALUE = "timelineLatestValue";
 
     public static final Field<String> RAW_DOC_REF_TYPE = field(RAW_PREFIX + DOC_REF_TYPE, String.class);
     public static final Field<String> RAW_DOC_REF_UUID = field(RAW_PREFIX + DocRefEntity.UUID, String.class);
@@ -44,8 +42,9 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
     public static final Field<String> INDEX_DOC_REF_NAME = field(INDEX_PREFIX + DocRefEntity.NAME, String.class);
 
     public static final Field<String> TIME_FIELD_NAME_FIELD = field(TIME_FIELD_NAME, String.class);
-    public static final Field<Integer> INDEXING_WINDOW_AMOUNT_FIELD = field(INDEXING_WINDOW_AMOUNT, Integer.class);
-    public static final Field<String> INDEXING_WINDOW_UNIT_FIELD = field(INDEXING_WINDOW_UNIT, String.class);
+    public static final Field<ULong> INDEXING_WINDOW_FIELD = field(INDEXING_WINDOW, ULong.class);
+
+    public static final Field<ULong> TIMELINE_LATEST_VALUE_FIELD = field(TIMELINE_LATEST_VALUE, ULong.class);
 
     /**
      * This is the Doc Ref of the slow data source
@@ -66,12 +65,14 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
      * This is the amount of time to index at a time, it will govern the size/increments of the time windows.
      * Default is one day
      */
-    private int indexWindowAmount = 1;
+    private Long indexWindow = 1L;
 
     /**
-     * This is the units of the amount of time to index.
+     * This is the top value being used for the indexing timeline.
+     * This needs to move somewhere else. It should not require configuration, but
+     * it requires specific knowledge of the underlying data, so for now...
      */
-    private ChronoUnit indexWindowUnit = ChronoUnit.DAYS;
+    private Long timelineLatestValue;
 
     public DocRef getRawDocRef() {
         return rawDocRef;
@@ -85,12 +86,12 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
         return timeFieldName;
     }
 
-    public int getIndexWindowAmount() {
-        return indexWindowAmount;
+    public Long getIndexWindow() {
+        return indexWindow;
     }
 
-    public ChronoUnit getIndexWindowUnit() {
-        return indexWindowUnit;
+    public Long getTimelineLatestValue() {
+        return timelineLatestValue;
     }
 
     @Override
@@ -99,8 +100,8 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
         sb.append("rawDocRef=").append(rawDocRef);
         sb.append(", indexDocRef=").append(indexDocRef);
         sb.append(", timeFieldName='").append(timeFieldName).append('\'');
-        sb.append(", indexWindowAmount=").append(indexWindowAmount);
-        sb.append(", indexWindowUnit=").append(indexWindowUnit);
+        sb.append(", indexWindow=").append(indexWindow);
+        sb.append(", timelineLatestValue=").append(timelineLatestValue);
         sb.append('}');
         return sb.toString();
     }
@@ -111,16 +112,16 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
         AutoIndexDocRefEntity that = (AutoIndexDocRefEntity) o;
-        return indexWindowAmount == that.indexWindowAmount &&
+        return indexWindow == that.indexWindow &&
                 Objects.equals(rawDocRef, that.rawDocRef) &&
                 Objects.equals(indexDocRef, that.indexDocRef) &&
                 Objects.equals(timeFieldName, that.timeFieldName) &&
-                indexWindowUnit == that.indexWindowUnit;
+                Objects.equals(timelineLatestValue, that.timelineLatestValue);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), rawDocRef, indexDocRef, timeFieldName, indexWindowAmount, indexWindowUnit);
+        return Objects.hash(super.hashCode(), rawDocRef, indexDocRef, timeFieldName, indexWindow, timelineLatestValue);
     }
 
     public static final class Builder extends BaseBuilder<AutoIndexDocRefEntity, Builder> {
@@ -148,27 +149,13 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
             return this;
         }
 
-        public Builder indexWindowAmount(final int value) {
-            this.instance.indexWindowAmount = value;
+        public Builder indexWindow(final Long value) {
+            this.instance.indexWindow = value;
             return this;
         }
 
-        final static Set<ChronoUnit> allowedValues = Stream.of(
-                ChronoUnit.YEARS,
-                ChronoUnit.MONTHS,
-                ChronoUnit.DAYS,
-                ChronoUnit.HOURS,
-                ChronoUnit.MINUTES
-        ).collect(Collectors.toSet());
-
-        public Builder indexWindowUnits(final ChronoUnit value) {
-            if (!allowedValues.contains(value)) {
-                throw new IllegalArgumentException(
-                        String.format("Index Window Unit of %s not allowed, must be one of %s",
-                                value, allowedValues));
-            }
-
-            this.instance.indexWindowUnit = value;
+        public Builder timelineLatestValue(final Long value) {
+            this.instance.timelineLatestValue = value;
             return this;
         }
 

@@ -13,23 +13,23 @@ CREATE TABLE auto_index_doc_ref (
     index_uuid          VARCHAR(255),
     index_name          VARCHAR(255),
     timeField           VARCHAR(255),
-    indexWindowAmount   INT,
-    indexWindowUnit     VARCHAR(255),
+    indexWindow         BIGINT UNSIGNED,
+    timelineLatestValue BIGINT UNSIGNED,
     PRIMARY KEY         (uuid)
 ) ENGINE=InnoDB DEFAULT CHARSET latin1;
 
 CREATE TABLE tracker_window (
     docRefUuid      VARCHAR(255) NOT NULL,
-    fromTime        BIGINT UNSIGNED NOT NULL,
-    toTime          BIGINT UNSIGNED NOT NULL,
-    PRIMARY KEY     (docRefUuid, fromTime)
+    fromValue       BIGINT UNSIGNED NOT NULL,
+    toValue         BIGINT UNSIGNED NOT NULL,
+    PRIMARY KEY     (docRefUuid, fromValue)
 ) ENGINE=InnoDB DEFAULT CHARSET latin1;
 
 CREATE TABLE index_job (
     jobId           VARCHAR(255) NOT NULL,
     docRefUuid      VARCHAR(255) NOT NULL,
-    fromTime        BIGINT UNSIGNED NOT NULL,
-    toTime          BIGINT UNSIGNED NOT NULL,
+    fromValue       BIGINT UNSIGNED NOT NULL,
+    toValue         BIGINT UNSIGNED NOT NULL,
     createTime      BIGINT UNSIGNED NOT NULL,
     startedTime     BIGINT UNSIGNED NOT NULL,
     PRIMARY KEY     (jobId)

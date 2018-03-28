@@ -16,7 +16,6 @@ import stroom.query.audit.security.ServiceUser;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.ws.rs.core.Response;
-import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -77,9 +76,9 @@ public class IndexJobConsumer implements Consumer<IndexJob> {
         final QueryResourceHttpClient rawClientOpt = queryClientCache.apply(docRef.getType())
                 .orElseThrow(() -> new RuntimeException("Could not retrieve query client for " + docRef.getType()));
 
-        final String timeBoundTerm = String.format("%s,%s",
-                DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(indexJob.getTrackerWindow().getFrom()),
-                DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(indexJob.getTrackerWindow().getTo()));
+        final String timeBoundTerm = String.format("%d,%d",
+                indexJob.getTrackerWindow().getFrom(),
+                indexJob.getTrackerWindow().getTo());
 
         final ExpressionOperator timeBound = new ExpressionOperator.Builder()
                 .addTerm(autoIndex.getTimeFieldName(), ExpressionTerm.Condition.BETWEEN, timeBoundTerm)

@@ -177,9 +177,9 @@ public abstract class AbstractAutoIndexIntegrationTest {
                 .name(UUID.randomUUID().toString())
                 .rawDocRef(animalDocRef)
                 .indexDocRef(elasticDocRef)
-                .timeFieldName(AnimalSighting.TIME)
-                .indexWindowAmount(AnimalTestData.WINDOW_AMOUNT)
-                .indexWindowUnits(AnimalTestData.WINDOW_UNITS)
+                .timeFieldName(AnimalSighting.STREAM_ID)
+                .indexWindow(AnimalTestData.WINDOW_AMOUNT)
+                .timelineLatestValue(AnimalTestData.ROW_COUNT)
                 .build();
 
         final DocRef autoIndexDocRef = createDocument(autoIndexDocRefEntity);

@@ -46,6 +46,18 @@ public class AnimalQueryServiceImpl implements QueryService {
 
         return Optional.of(new DataSource.Builder()
                 .addFields(new DataSourceField.Builder()
+                        .type(DataSourceField.DataSourceFieldType.NUMERIC_FIELD)
+                        .name(AnimalSighting.STREAM_ID)
+                        .queryable(true)
+                        .addConditions(
+                                ExpressionTerm.Condition.EQUALS,
+                                ExpressionTerm.Condition.BETWEEN,
+                                ExpressionTerm.Condition.LESS_THAN_OR_EQUAL_TO,
+                                ExpressionTerm.Condition.LESS_THAN,
+                                ExpressionTerm.Condition.GREATER_THAN_OR_EQUAL_TO,
+                                ExpressionTerm.Condition.GREATER_THAN)
+                        .build())
+                .addFields(new DataSourceField.Builder()
                         .type(DataSourceField.DataSourceFieldType.FIELD)
                         .name(AnimalSighting.SPECIES)
                         .queryable(true)
@@ -105,6 +117,7 @@ public class AnimalQueryServiceImpl implements QueryService {
                 .flatMap(l -> l)
                 .map(as ->
                         Collections.unmodifiableMap(Stream.of(
+                                new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.STREAM_ID, as.getStreamId()),
                                 new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.SPECIES, as.getSpecies()),
                                 new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.LOCATION, as.getLocation()),
                                 new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.OBSERVER, as.getObserver()),
@@ -127,16 +140,18 @@ public class AnimalQueryServiceImpl implements QueryService {
         try (final Stream<String> stream = Files.lines(file)) {
 
             stream.map(l -> l.split(","))
-                    .filter(p -> p.length == 4)
+                    .filter(p -> p.length == 5)
                     .skip(1) // header row
                     .map(p -> new AnimalSighting.Builder()
-                            .species(p[0])
-                            .location(p[1])
-                            .observer(p[2])
-                            .time(LocalDateTime.parse(p[3], DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                            .streamId(Long.valueOf(p[0]))
+                            .species(p[1])
+                            .location(p[2])
+                            .observer(p[3])
+                            .time(LocalDateTime.parse(p[4], DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                             .build())
                     .filter(as -> {
                         Map<String, Object> csv = Stream.of(
+                                new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.STREAM_ID, as.getStreamId()),
                                 new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.SPECIES, as.getSpecies()),
                                 new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.LOCATION, as.getLocation()),
                                 new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.OBSERVER, as.getObserver()),
@@ -168,6 +183,8 @@ public class AnimalQueryServiceImpl implements QueryService {
                 case EQUALS: {
                     if (dataValue instanceof String) {
                         return dataValue.equals(term.getValue());
+                    } else if (dataValue instanceof Long) {
+                        return dataValue.equals(Long.valueOf(term.getValue()));
                     }
                 }
                 case CONTAINS: {
@@ -185,24 +202,53 @@ public class AnimalQueryServiceImpl implements QueryService {
 
                             return localDate.isAfter(from) && localDate.isBefore(to);
                         }
+                    } else if (dataValue instanceof Long) {
+                        final Long localLong = (Long) dataValue;
+                        final String[] parts = term.getValue().split(",");
+                        if (parts.length == 2) {
+                            final Long from = Long.valueOf(parts[0]);
+                            final Long to = Long.valueOf(parts[1]);
+
+                            return (localLong >= from) && (localLong < to);
+                        }
                     }
 
                     break;
                 }
-                case GREATER_THAN:
-                case GREATER_THAN_OR_EQUAL_TO: {
+                case GREATER_THAN:{
                     if (dataValue instanceof LocalDateTime) {
                         final LocalDateTime localDate = (LocalDateTime) dataValue;
                         final LocalDateTime from = LocalDateTime.parse(term.getValue(), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
                         return localDate.isAfter(from);
+                    } else if (dataValue instanceof Long) {
+                        return (Long) dataValue > Long.valueOf(term.getValue());
                     }
                 }
-                case LESS_THAN:
-                case LESS_THAN_OR_EQUAL_TO: {
+                case GREATER_THAN_OR_EQUAL_TO: {
+                    if (dataValue instanceof LocalDateTime) {
+                        final LocalDateTime localDate = (LocalDateTime) dataValue;
+                        final LocalDateTime from = LocalDateTime.parse(term.getValue(), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                        return localDate.isAfter(from) || localDate.equals(from);
+                    } else if (dataValue instanceof Long) {
+                        return (Long) dataValue >= Long.valueOf(term.getValue());
+                    }
+                }
+                case LESS_THAN: {
                     if (dataValue instanceof LocalDateTime) {
                         final LocalDateTime localDate = (LocalDateTime) dataValue;
                         final LocalDateTime to = LocalDateTime.parse(term.getValue(), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
                         return localDate.isBefore(to);
+                    } else if (dataValue instanceof Long) {
+                        return (Long) dataValue < Long.valueOf(term.getValue());
+                    }
+                }
+                case LESS_THAN_OR_EQUAL_TO: {
+                    if (dataValue instanceof LocalDateTime) {
+                        final LocalDateTime localDate = (LocalDateTime) dataValue;
+                        final LocalDateTime to = LocalDateTime.parse(term.getValue(), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                        return localDate.isBefore(to) || localDate.equals(to);
+                    } else if (dataValue instanceof Long) {
+                        return (Long) dataValue <= Long.valueOf(term.getValue());
                     }
                 }
                 case IN: {
