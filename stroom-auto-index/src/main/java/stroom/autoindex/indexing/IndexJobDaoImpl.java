@@ -9,7 +9,11 @@ import org.jooq.types.ULong;
 import stroom.autoindex.AutoIndexConstants;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
-import stroom.autoindex.tracker.*;
+import stroom.autoindex.tracker.AutoIndexTracker;
+import stroom.autoindex.tracker.AutoIndexTrackerDao;
+import stroom.autoindex.tracker.AutoIndexTrackerDaoImpl;
+import stroom.autoindex.tracker.NextWindowSelector;
+import stroom.autoindex.tracker.TrackerWindow;
 import stroom.query.audit.security.ServiceUser;
 
 import javax.inject.Inject;
@@ -17,7 +21,9 @@ import javax.inject.Named;
 import java.util.Optional;
 import java.util.UUID;
 
-import static stroom.autoindex.tracker.AutoIndexTrackerDaoImpl.*;
+import static stroom.autoindex.tracker.AutoIndexTrackerDaoImpl.FIELD_DOC_REF_UUID;
+import static stroom.autoindex.tracker.AutoIndexTrackerDaoImpl.FIELD_FROM;
+import static stroom.autoindex.tracker.AutoIndexTrackerDaoImpl.FIELD_TO;
 
 public class IndexJobDaoImpl implements IndexJobDao {
 

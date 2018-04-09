@@ -14,7 +14,7 @@ import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.FlatResult;
 import stroom.query.api.v2.SearchResponse;
-import stroom.query.audit.client.DocRefResourceHttpClient;
+import stroom.query.audit.rest.DocRefResource;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 
@@ -30,12 +30,12 @@ public class IndexWriterImpl implements IndexWriter {
     private static final Logger LOGGER = LoggerFactory.getLogger(IndexWriterImpl.class);
 
     private final TransportClient client;
-    private final QueryClientCache<DocRefResourceHttpClient> docRefClientCache;
+    private final QueryClientCache<DocRefResource> docRefClientCache;
     private final ServiceUser serviceUser;
 
     @Inject
     public IndexWriterImpl(final TransportClient client,
-                           final QueryClientCache<DocRefResourceHttpClient> docRefClientCache,
+                           final QueryClientCache<DocRefResource> docRefClientCache,
                            @Named(AutoIndexConstants.STROOM_SERVICE_USER)
                            final ServiceUser serviceUser) {
         this.client = client;

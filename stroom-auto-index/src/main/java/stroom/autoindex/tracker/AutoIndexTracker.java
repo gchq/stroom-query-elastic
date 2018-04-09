@@ -1,6 +1,11 @@
 package stroom.autoindex.tracker;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Each instance shows which time windows have been indexed from the raw data source into the indexed data source.
@@ -20,6 +25,11 @@ public class AutoIndexTracker {
 
     public static AutoIndexTracker forDocRef(final String docRefUuid) {
         return new AutoIndexTracker(docRefUuid);
+    }
+
+    public static AutoIndexTracker forBase(final AutoIndexTracker base) {
+        return new AutoIndexTracker(base.getDocRefUuid())
+                .withBounds(base.getTimelineBounds());
     }
 
     public AutoIndexTracker(final String docRefUuid) {

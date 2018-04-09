@@ -13,12 +13,13 @@ import java.util.TimerTask;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
+
 /**
  * This timer task is in charge of kicking off indexing tasks.
  * It looks for auto index documents that have unstarted indexing jobs.
  */
 public class IndexingTimerTask extends TimerTask {
-    public static final String TASK_HANDLER_NAME = "IndexingTaskHandler";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IndexingTimerTask.class);
 

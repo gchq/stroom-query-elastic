@@ -63,13 +63,6 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
      */
     private Long indexWindow = 1L;
 
-    /**
-     * This is the top value being used for the indexing timeline.
-     * This needs to move somewhere else. It should not require configuration, but
-     * it requires specific knowledge of the underlying data, so for now...
-     */
-    private Long timelineLatestValue;
-
     public DocRef getRawDocRef() {
         return rawDocRef;
     }
@@ -86,10 +79,6 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
         return indexWindow;
     }
 
-    public Long getTimelineLatestValue() {
-        return timelineLatestValue;
-    }
-
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("AutoIndexDocRefEntity{");
@@ -97,7 +86,6 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
         sb.append(", indexDocRef=").append(indexDocRef);
         sb.append(", timeFieldName='").append(timeFieldName).append('\'');
         sb.append(", indexWindow=").append(indexWindow);
-        sb.append(", timelineLatestValue=").append(timelineLatestValue);
         sb.append('}');
         return sb.toString();
     }

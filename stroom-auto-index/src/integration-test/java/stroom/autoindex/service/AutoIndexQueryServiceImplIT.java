@@ -1,4 +1,4 @@
-package stroom.autoindex;
+package stroom.autoindex.service;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -6,13 +6,15 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-import org.eclipse.jetty.http.HttpStatus;
 import org.elasticsearch.client.transport.TransportClient;
 import org.jooq.DSLContext;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import stroom.autoindex.AbstractAutoIndexIntegrationTest;
+import stroom.autoindex.AutoIndexConstants;
+import stroom.autoindex.QueryClientCache;
 import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.animals.AnimalsQueryResourceIT;
 import stroom.autoindex.animals.app.AnimalSighting;
@@ -20,13 +22,11 @@ import stroom.autoindex.app.Config;
 import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.indexing.IndexJob;
 import stroom.autoindex.indexing.IndexJobConsumer;
-import stroom.autoindex.indexing.IndexJobConsumerIT;
 import stroom.autoindex.indexing.IndexJobDao;
 import stroom.autoindex.indexing.IndexJobDaoImpl;
 import stroom.autoindex.indexing.IndexWriter;
 import stroom.autoindex.indexing.IndexWriterImpl;
 import stroom.autoindex.indexing.IndexingTimerTask;
-import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.tracker.AutoIndexTrackerDao;
 import stroom.autoindex.tracker.AutoIndexTrackerDaoImpl;
 import stroom.query.api.v2.ExpressionOperator;
@@ -40,13 +40,15 @@ import stroom.query.audit.client.QueryResourceHttpClient;
 import stroom.query.audit.rest.DocRefResource;
 import stroom.query.audit.rest.QueryResource;
 import stroom.query.audit.security.ServiceUser;
+import stroom.query.audit.service.DocRefService;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 
-import javax.ws.rs.core.Response;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -54,12 +56,8 @@ import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
 import static stroom.autoindex.TestConstants.TEST_SERVICE_USER;
 import static stroom.autoindex.animals.AnimalsQueryResourceIT.getAnimalSightingsFromResponse;
 
-/**
- * This will run a test that ensures some portion of the data has been indexed
- * and that the query gets split both ways
- */
-public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
-    private static final Logger LOGGER = LoggerFactory.getLogger(IndexJobConsumerIT.class);
+public class AutoIndexQueryServiceImplIT extends AbstractAutoIndexIntegrationTest {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AutoIndexQueryServiceImplIT.class);
 
     private static IndexJobDao indexJobDao;
 
@@ -78,6 +76,16 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
      */
     private static AutoIndexTrackerDao trackerDao;
 
+    /**
+     * This is the instance of the service under test
+     */
+    private static AutoIndexQueryServiceImpl service;
+
+    /**
+     * The cache of query resources, should serve up Client Spy's
+     */
+    private static QueryClientCache<QueryResource> queryClientCache;
+
     @BeforeClass
     public static void beforeClass() {
 
@@ -88,6 +96,7 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
                 bind(AutoIndexTrackerDao.class).to(AutoIndexTrackerDaoImpl.class);
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
                 bind(IndexWriter.class).to(IndexWriterImpl.class);
+                bind(DocRefService.class).to(AutoIndexDocRefServiceImpl.class);
                 bind(new TypeLiteral<Consumer<IndexJob>>(){})
                         .annotatedWith(Names.named(TASK_HANDLER_NAME))
                         .to(IndexJobConsumer.class)
@@ -100,7 +109,7 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
                 bind(TransportClient.class)
                         .toInstance(TransportClientBundle.createTransportClient(autoIndexAppRule.getConfiguration()));
                 bind(new TypeLiteral<QueryClientCache<QueryResource>>(){})
-                        .toInstance(new QueryClientCache<>(autoIndexAppRule.getConfiguration(), QueryResourceHttpClient::new));
+                        .toInstance(new QueryClientCache<>(autoIndexAppRule.getConfiguration(), u -> QueryResourceClientSpy.wrapping(new QueryResourceHttpClient(u))));
                 bind(new TypeLiteral<QueryClientCache<DocRefResource>>(){})
                         .toInstance(new QueryClientCache<>(autoIndexAppRule.getConfiguration(), DocRefResourceHttpClient::new));
             }
@@ -112,10 +121,12 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
         indexJobConsumer = (IndexJobConsumer) testIndexJobConsumerObj;
         indexJobDao = testInjector.getInstance(IndexJobDao.class);
         trackerDao = testInjector.getInstance(AutoIndexTrackerDao.class);
+        service = testInjector.getInstance(AutoIndexQueryServiceImpl.class);
+        queryClientCache = testInjector.getInstance(Key.get(new TypeLiteral<QueryClientCache<QueryResource>>(){}));
     }
 
     @Test
-    public void testForkBasedOnSingleRun() {
+    public void testServiceForksQuery() throws Exception, RuntimeException {
         // Create a valid auto index
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
 
@@ -150,17 +161,46 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
                 )
                 .build();
 
+        // Get hold of the various client spies for the query resource
+        final QueryResourceClientSpy<QueryResourceHttpClient> rawQueryClient =
+                queryClientCache.apply(autoIndex.getEntity().getRawDocRef().getType())
+                .filter(c -> c instanceof QueryResourceClientSpy)
+                .map(c -> (QueryResourceClientSpy<QueryResourceHttpClient>) c)
+                .orElseThrow(() -> new RuntimeException("Could not get query resource client spy (raw)"));
+
+        final QueryResourceClientSpy<QueryResourceHttpClient> indexQueryClient =
+                queryClientCache.apply(autoIndex.getEntity().getIndexDocRef().getType())
+                .filter(c -> c instanceof QueryResourceClientSpy)
+                .map(c -> (QueryResourceClientSpy<QueryResourceHttpClient>) c)
+                .orElseThrow(() -> new RuntimeException("Could not get query resource client spy (index)"));
+
+        // Clear any existing intercepted searches
+        Stream.of(rawQueryClient, indexQueryClient)
+                .forEach(QueryResourceClientSpy::clearCalls);
+
         // Conduct the search
         final SearchRequest searchRequest = AnimalsQueryResourceIT
                 .getTestSearchRequest(autoIndex.getDocRef(), expressionOperator, offset);
 
-        final Response response = autoIndexQueryClient.search(authRule.adminUser(), searchRequest);
-        assertEquals(HttpStatus.OK_200, response.getStatus());
-
-        final SearchResponse searchResponse = response.readEntity(SearchResponse.class);
+        final SearchResponse searchResponse =
+                service.search(authRule.adminUser(), searchRequest)
+                        .orElseThrow(() -> new RuntimeException("No search response given"));
 
         final Set<AnimalSighting> resultsSet = getAnimalSightingsFromResponse(searchResponse);
 
         assertTrue("No results seen", searchResponse.getResults().size() > 0);
+
+        // Check that the search was forked to both underlying data sources correctly
+        final List<QueryResourceClientSpy.SearchCall> rawSearchCalls = rawQueryClient.getSearchCalls();
+        final List<QueryResourceClientSpy.SearchCall> indexSearchCalls = indexQueryClient.getSearchCalls();
+
+        assertEquals(1, rawSearchCalls.size());
+        assertEquals(1, indexSearchCalls.size());
+
+        QueryResourceClientSpy.SearchCall rawSearchCall = rawSearchCalls.get(0);
+        QueryResourceClientSpy.SearchCall indexSearchCall = indexSearchCalls.get(0);
+
+        LOGGER.info("Raw Search Call {}", rawSearchCall);
+        LOGGER.info("Index Search Call {}", indexSearchCall);
     }
 }

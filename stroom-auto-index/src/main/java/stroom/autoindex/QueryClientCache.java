@@ -14,7 +14,7 @@ public class QueryClientCache<T> implements Function<String, Optional<T>> {
             new ConcurrentHashMap<>();
 
     public QueryClientCache(final Config configuration,
-                                final Function<String, T> supplier) {
+                            final Function<String, T> supplier) {
         this.configuration = configuration;
         this.supplier = supplier;
     }

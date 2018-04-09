@@ -1,6 +1,10 @@
 package stroom.autoindex.indexing;
 
-import com.google.inject.*;
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import org.jooq.DSLContext;
 import org.junit.Before;
@@ -19,7 +23,11 @@ import stroom.autoindex.tracker.AutoIndexTrackerDaoImpl;
 import stroom.autoindex.tracker.TrackerWindow;
 import stroom.query.audit.security.ServiceUser;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -28,6 +36,7 @@ import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
 
 /**
  * This suite of tests exercises the {@link IndexingTimerTask} and it's integration with
@@ -61,7 +70,7 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
                 bind(AutoIndexTrackerDao.class).to(AutoIndexTrackerDaoImpl.class);
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
                 bind(new TypeLiteral<Consumer<IndexJob>>(){})
-                        .annotatedWith(Names.named(IndexingTimerTask.TASK_HANDLER_NAME))
+                        .annotatedWith(Names.named(TASK_HANDLER_NAME))
                         .to(TestIndexJobConsumer.class)
                         .asEagerSingleton(); // singleton so that the test receives same instance as the underlying timer task
                 bind(IndexingConfig.class).toInstance(indexingConfig);
@@ -71,7 +80,7 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
             }
         });
 
-        final Key<Consumer<IndexJob>> taskHandlerKey = Key.get(new TypeLiteral<Consumer<IndexJob>>(){}, Names.named(IndexingTimerTask.TASK_HANDLER_NAME));
+        final Key<Consumer<IndexJob>> taskHandlerKey = Key.get(new TypeLiteral<Consumer<IndexJob>>(){}, Names.named(TASK_HANDLER_NAME));
         final Object testIndexJobConsumerObj = testInjector.getInstance(taskHandlerKey);
         assertTrue(testIndexJobConsumerObj instanceof TestIndexJobConsumer);
         testIndexJobConsumer = (TestIndexJobConsumer) testIndexJobConsumerObj;

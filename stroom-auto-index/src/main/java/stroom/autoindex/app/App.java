@@ -1,7 +1,11 @@
 package stroom.autoindex.app;
 
 import com.codahale.metrics.health.HealthCheck;
-import com.google.inject.*;
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 import io.dropwizard.Application;
@@ -12,7 +16,13 @@ import io.dropwizard.setup.Environment;
 import org.elasticsearch.client.transport.TransportClient;
 import stroom.autoindex.AutoIndexConstants;
 import stroom.autoindex.QueryClientCache;
-import stroom.autoindex.indexing.*;
+import stroom.autoindex.indexing.IndexJob;
+import stroom.autoindex.indexing.IndexJobConsumer;
+import stroom.autoindex.indexing.IndexJobDao;
+import stroom.autoindex.indexing.IndexJobDaoImpl;
+import stroom.autoindex.indexing.IndexWriter;
+import stroom.autoindex.indexing.IndexWriterImpl;
+import stroom.autoindex.indexing.IndexingTimerTask;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
 import stroom.autoindex.service.AutoIndexQueryServiceImpl;
@@ -20,12 +30,16 @@ import stroom.autoindex.tracker.AutoIndexTrackerDao;
 import stroom.autoindex.tracker.AutoIndexTrackerDaoImpl;
 import stroom.query.audit.client.DocRefResourceHttpClient;
 import stroom.query.audit.client.QueryResourceHttpClient;
+import stroom.query.audit.rest.DocRefResource;
+import stroom.query.audit.rest.QueryResource;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 import stroom.query.jooq.AuditedJooqDocRefBundle;
 
 import java.util.Timer;
 import java.util.function.Consumer;
+
+import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
 
 public class App extends Application<Config> {
 
@@ -62,14 +76,14 @@ public class App extends Application<Config> {
             protected void configure() {
                 bind(AutoIndexTrackerDao.class).to(AutoIndexTrackerDaoImpl.class);
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
-                bind(new TypeLiteral<QueryClientCache<QueryResourceHttpClient>>(){})
+                bind(new TypeLiteral<QueryClientCache<QueryResource>>(){})
                         .toInstance(new QueryClientCache<>(configuration, QueryResourceHttpClient::new));
-                bind(new TypeLiteral<QueryClientCache<DocRefResourceHttpClient>>(){})
+                bind(new TypeLiteral<QueryClientCache<DocRefResource>>(){})
                         .toInstance(new QueryClientCache<>(configuration, DocRefResourceHttpClient::new));
                 bind(new TypeLiteral<Consumer<IndexJob>>(){})
-                        .annotatedWith(Names.named(IndexingTimerTask.TASK_HANDLER_NAME))
+                        .annotatedWith(Names.named(TASK_HANDLER_NAME))
                         .to(IndexJobConsumer.class)
-                        .asEagerSingleton(); // singleton so that the test receives same instance as the underlying timer task
+                        .asEagerSingleton();
                 bind(IndexingConfig.class).toInstance(configuration.getIndexingConfig());
                 bind(IndexWriter.class).to(IndexWriterImpl.class);
                 bind(Config.class).toInstance(configuration);

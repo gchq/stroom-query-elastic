@@ -9,8 +9,17 @@ import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
-import stroom.query.api.v2.*;
-import stroom.query.audit.client.QueryResourceHttpClient;
+import stroom.query.api.v2.DocRef;
+import stroom.query.api.v2.ExpressionOperator;
+import stroom.query.api.v2.ExpressionTerm;
+import stroom.query.api.v2.Field;
+import stroom.query.api.v2.OffsetRange;
+import stroom.query.api.v2.Query;
+import stroom.query.api.v2.ResultRequest;
+import stroom.query.api.v2.SearchRequest;
+import stroom.query.api.v2.SearchResponse;
+import stroom.query.api.v2.TableSettings;
+import stroom.query.audit.rest.QueryResource;
 import stroom.query.audit.security.ServiceUser;
 
 import javax.inject.Inject;
@@ -28,7 +37,7 @@ public class IndexJobConsumer implements Consumer<IndexJob> {
 
     private final IndexingConfig indexingConfig;
 
-    private final QueryClientCache<QueryResourceHttpClient> queryClientCache;
+    private final QueryClientCache<QueryResource> queryClientCache;
 
     private final ServiceUser serviceUser;
 
@@ -38,7 +47,7 @@ public class IndexJobConsumer implements Consumer<IndexJob> {
         @Override
         public DataSource apply(final DocRef docRef) {
 
-            final QueryResourceHttpClient rawClientOpt = queryClientCache.apply(docRef.getType())
+            final QueryResource rawClientOpt = queryClientCache.apply(docRef.getType())
                     .orElseThrow(() -> new RuntimeException("Could not retrieve query client for " + docRef.getType()));
 
             final Response response = rawClientOpt.getDataSource(serviceUser, docRef);
@@ -55,9 +64,9 @@ public class IndexJobConsumer implements Consumer<IndexJob> {
     @Inject
     public IndexJobConsumer(final IndexJobDao indexJobDao,
                             final IndexingConfig indexingConfig,
-                            final QueryClientCache<QueryResourceHttpClient> queryClientCache,
+                            final QueryClientCache<QueryResource> queryClientCache,
                             @Named(AutoIndexConstants.STROOM_SERVICE_USER)
-                                final ServiceUser serviceUser,
+                            final ServiceUser serviceUser,
                             final IndexWriter indexWriter) {
         this.indexJobDao = indexJobDao;
         this.indexingConfig = indexingConfig;
@@ -73,7 +82,7 @@ public class IndexJobConsumer implements Consumer<IndexJob> {
 
         final AutoIndexDocRefEntity autoIndex = indexJob.getAutoIndexDocRefEntity();
         final DocRef docRef = autoIndex.getRawDocRef();
-        final QueryResourceHttpClient rawClientOpt = queryClientCache.apply(docRef.getType())
+        final QueryResource rawClientOpt = queryClientCache.apply(docRef.getType())
                 .orElseThrow(() -> new RuntimeException("Could not retrieve query client for " + docRef.getType()));
 
         final String timeBoundTerm = String.format("%d,%d",

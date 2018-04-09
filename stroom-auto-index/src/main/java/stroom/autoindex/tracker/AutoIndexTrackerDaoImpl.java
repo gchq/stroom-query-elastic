@@ -1,6 +1,11 @@
 package stroom.autoindex.tracker;
 
-import org.jooq.*;
+import org.jooq.Configuration;
+import org.jooq.DSLContext;
+import org.jooq.Field;
+import org.jooq.Record;
+import org.jooq.RecordMapper;
+import org.jooq.Table;
 import org.jooq.impl.DSL;
 import org.jooq.types.ULong;
 

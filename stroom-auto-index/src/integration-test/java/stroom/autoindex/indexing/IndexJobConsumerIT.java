@@ -1,6 +1,10 @@
 package stroom.autoindex.indexing;
 
-import com.google.inject.*;
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import org.elasticsearch.client.transport.TransportClient;
 import org.jooq.DSLContext;
@@ -20,6 +24,8 @@ import stroom.autoindex.tracker.AutoIndexTrackerDaoImpl;
 import stroom.query.audit.authorisation.DocumentPermission;
 import stroom.query.audit.client.DocRefResourceHttpClient;
 import stroom.query.audit.client.QueryResourceHttpClient;
+import stroom.query.audit.rest.DocRefResource;
+import stroom.query.audit.rest.QueryResource;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 
@@ -29,6 +35,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
 import static stroom.autoindex.TestConstants.TEST_SERVICE_USER;
 
 /**
@@ -68,7 +75,7 @@ public class IndexJobConsumerIT extends AbstractAutoIndexIntegrationTest {
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
                 bind(IndexWriter.class).to(IndexWriterImpl.class);
                 bind(new TypeLiteral<Consumer<IndexJob>>(){})
-                        .annotatedWith(Names.named(IndexingTimerTask.TASK_HANDLER_NAME))
+                        .annotatedWith(Names.named(TASK_HANDLER_NAME))
                         .to(IndexJobConsumer.class)
                         .asEagerSingleton(); // singleton so that the test receives same instance as the underlying timer task
                 bind(IndexingConfig.class).toInstance(indexingConfig);
@@ -78,14 +85,14 @@ public class IndexJobConsumerIT extends AbstractAutoIndexIntegrationTest {
                         .toInstance(serviceUser);
                 bind(TransportClient.class)
                         .toInstance(TransportClientBundle.createTransportClient(autoIndexAppRule.getConfiguration()));
-                bind(new TypeLiteral<QueryClientCache<QueryResourceHttpClient>>(){})
+                bind(new TypeLiteral<QueryClientCache<QueryResource>>(){})
                         .toInstance(new QueryClientCache<>(autoIndexAppRule.getConfiguration(), QueryResourceHttpClient::new));
-                bind(new TypeLiteral<QueryClientCache<DocRefResourceHttpClient>>(){})
+                bind(new TypeLiteral<QueryClientCache<DocRefResource>>(){})
                         .toInstance(new QueryClientCache<>(autoIndexAppRule.getConfiguration(), DocRefResourceHttpClient::new));
             }
         });
 
-        final Key<Consumer<IndexJob>> taskHandlerKey = Key.get(new TypeLiteral<Consumer<IndexJob>>(){}, Names.named(IndexingTimerTask.TASK_HANDLER_NAME));
+        final Key<Consumer<IndexJob>> taskHandlerKey = Key.get(new TypeLiteral<Consumer<IndexJob>>(){}, Names.named(TASK_HANDLER_NAME));
         final Object testIndexJobConsumerObj = testInjector.getInstance(taskHandlerKey);
         assertTrue(testIndexJobConsumerObj instanceof IndexJobConsumer);
         indexJobConsumer = (IndexJobConsumer) testIndexJobConsumerObj;
