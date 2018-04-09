@@ -27,6 +27,10 @@ public class TrackerWindow implements HasBounds<Long> {
         return to;
     }
 
+    public Long size() {
+        return to - from;
+    }
+
     public boolean isBound() {
         return Optional.ofNullable(this.from).isPresent()
                 && Optional.ofNullable(this.to).isPresent();

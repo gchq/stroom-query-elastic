@@ -15,11 +15,11 @@ import java.util.function.Consumer;
 
 public class AnimalTestData implements Consumer<Consumer<String>> {
 
-    public static final TrackerWindow TIMELINE_BOUNDS = TrackerWindow.from(1000L).to(4000L);
-    public static final Long ROW_COUNT = 1000L;
+    public static final TrackerWindow TIMELINE_BOUNDS = TrackerWindow.from(2000L).to(4000L);
+    public static final Long ROW_COUNT = TIMELINE_BOUNDS.size();
     public static final LocalDateTime FROM_DATE = LocalDateTime.of(2016, 1, 1, 0, 0, 0);
     public static final LocalDateTime TO_DATE = FROM_DATE.plus(2, ChronoUnit.YEARS);
-    public static final Long WINDOW_AMOUNT = 100L;
+    public static final Long WINDOW_AMOUNT = TIMELINE_BOUNDS.size() / 10;
 
     private AnimalTestData() {
 
@@ -34,9 +34,9 @@ public class AnimalTestData implements Consumer<Consumer<String>> {
         if (null == expectedTrackerWindows) {
             expectedTrackerWindows = new ArrayList<>();
 
-            Long currentTo = ROW_COUNT;
+            Long currentTo = TIMELINE_BOUNDS.getTo();
 
-            while (currentTo > 0) {
+            while (currentTo > TIMELINE_BOUNDS.getFrom()) {
                 Long thisFrom = currentTo - WINDOW_AMOUNT;
                 expectedTrackerWindows.add(TrackerWindow.from(thisFrom).to(currentTo));
                 currentTo = thisFrom;

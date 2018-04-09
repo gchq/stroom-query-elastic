@@ -22,6 +22,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import java.io.IOException;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
@@ -63,6 +64,7 @@ public class IndexWriterImpl implements IndexWriter {
                         .orElseThrow(() -> new RuntimeException("Could not get document entity for " + elasticDocRef));
 
         final BulkRequestBuilder bulkRequest = client.prepareBulk();
+        final AtomicBoolean resultsFound = new AtomicBoolean(false);
 
         searchResponse.getResults().stream()
                 .filter(r -> r instanceof FlatResult)
@@ -76,6 +78,7 @@ public class IndexWriterImpl implements IndexWriter {
                             final Object value = r.get(3 + x); // skip over the system fields
                             b.field(field.getName(), value);
                         }
+                        resultsFound.set(true);
                         b.endObject();
                         bulkRequest.add(
                                 client.prepareIndex(elasticIndex.getIndexName(),
@@ -87,10 +90,13 @@ public class IndexWriterImpl implements IndexWriter {
                     }
                 });
 
-        final BulkResponse bulkResponse = bulkRequest.get();
-        if (bulkResponse.hasFailures()) {
-            // process failures by iterating through each bulk response item
-            LOGGER.warn("Bulk Response has Failures {}", bulkResponse.buildFailureMessage());
+        // Only try to write results if we have something to send
+        if (resultsFound.get()) {
+            final BulkResponse bulkResponse = bulkRequest.get();
+            if (bulkResponse.hasFailures()) {
+                // process failures by iterating through each bulk response item
+                LOGGER.warn("Bulk Response has Failures {}", bulkResponse.buildFailureMessage());
+            }
         }
     }
 }

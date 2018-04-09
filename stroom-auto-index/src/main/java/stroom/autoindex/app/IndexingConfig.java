@@ -1,5 +1,9 @@
 package stroom.autoindex.app;
 
+/**
+ * Encapsulates the configuration of indexing for the whole system.
+ * How many tasks should be kicked off at once, how long between each set of tasks
+ */
 public class IndexingConfig {
 
     private Boolean enabled;

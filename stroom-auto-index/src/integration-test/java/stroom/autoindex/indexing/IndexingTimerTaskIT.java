@@ -101,20 +101,23 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
     @Test
     public void testRunsMultipleIterations() {
         final int numberCyclesToGetThroughAllIndexesOnce = 5;
-        final int numberOfOuterCycles = 3;
+        final int numberOfCyclesPerIndex = 3;
 
         // Create enough indexes to require numberCyclesToGetThroughAllIndexesOnce
         // iterations of the timer task run, to get through all the indexes
-        final Set<AutoIndexDocRefEntity> autoIndexes = IntStream.range(0, indexingConfig.getNumberOfTasksPerRun() * numberCyclesToGetThroughAllIndexesOnce)
+        final Set<AutoIndexDocRefEntity> autoIndexes =
+                IntStream.range(0, indexingConfig.getNumberOfTasksPerRun() * numberCyclesToGetThroughAllIndexesOnce)
                 .mapToObj(i -> createAutoIndex())
                 .map(EntityWithDocRef::getEntity)
                 .collect(Collectors.toSet());
 
         // Keep a record of the index jobs per doc ref
-        final ConcurrentHashMap<String, List<IndexJob>> lastIndexJobByDocRefUuid = new ConcurrentHashMap<>();
+        final ConcurrentHashMap<String, List<IndexJob>> jobsByDocRefUuid = new ConcurrentHashMap<>();
 
         // We then have an outer cycle which attempts to get through all the indexes in 'numberOuterCycles' number of times
-        IntStream.range(0, numberOfOuterCycles).forEach(cycle -> {
+        IntStream.range(0, numberOfCyclesPerIndex).forEach(cycle -> {
+
+            LOGGER.debug("Running Cycle {}", cycle);
 
             final Set<AutoIndexDocRefEntity> jobsToRun = IntStream.range(0, numberCyclesToGetThroughAllIndexesOnce)
                     .mapToObj(i -> {
@@ -123,7 +126,7 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
                     })
                     .peek(l -> assertEquals(indexingConfig.getNumberOfTasksPerRun(), l.size()))
                     .flatMap(List::stream)
-                    .peek(j -> lastIndexJobByDocRefUuid
+                    .peek(j -> jobsByDocRefUuid
                             .computeIfAbsent(j.getAutoIndexDocRefEntity().getUuid(),
                                     u -> new ArrayList<>())
                             .add(j)
@@ -132,13 +135,13 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
                     .collect(Collectors.toSet());
 
             assertEquals(autoIndexes.size(), jobsToRun.size());
-            assertEquals(autoIndexes, jobsToRun);
+            autoIndexes.forEach(ai -> assertTrue(String.format("Jobs to Run does not contain %s", ai), jobsToRun.contains(ai)));
         });
 
         // Check that the jobs go backwards in time, without gaps, for each doc ref UUID
         final AtomicInteger jobsCounted = new AtomicInteger(0);
         final AtomicInteger jobsCompared = new AtomicInteger(0);
-        lastIndexJobByDocRefUuid.forEach((uuid, jobs) -> {
+        jobsByDocRefUuid.forEach((uuid, jobs) -> {
             Optional<Long> lastFromOpt = Optional.empty();
 
             LOGGER.debug("Job's for UUID {}", uuid);
@@ -166,9 +169,9 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
         });
 
         // Double check that the comparisons happened in the volumes expected
-        assertEquals(indexingConfig.getNumberOfTasksPerRun() * numberCyclesToGetThroughAllIndexesOnce * numberOfOuterCycles,
+        assertEquals(indexingConfig.getNumberOfTasksPerRun() * numberCyclesToGetThroughAllIndexesOnce * numberOfCyclesPerIndex,
                 jobsCounted.intValue());
-        assertEquals((indexingConfig.getNumberOfTasksPerRun() * numberCyclesToGetThroughAllIndexesOnce) * (numberOfOuterCycles - 1),
+        assertEquals((indexingConfig.getNumberOfTasksPerRun() * numberCyclesToGetThroughAllIndexesOnce) * (numberOfCyclesPerIndex - 1),
                 jobsCompared.intValue());
     }
 }

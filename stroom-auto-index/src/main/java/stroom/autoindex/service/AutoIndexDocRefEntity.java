@@ -108,7 +108,7 @@ public class AutoIndexDocRefEntity extends DocRefJooqEntity {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
         AutoIndexDocRefEntity that = (AutoIndexDocRefEntity) o;
-        return indexWindow == that.indexWindow &&
+        return indexWindow.equals(that.indexWindow) &&
                 Objects.equals(rawDocRef, that.rawDocRef) &&
                 Objects.equals(indexDocRef, that.indexDocRef) &&
                 Objects.equals(timeFieldName, that.timeFieldName);
