@@ -40,8 +40,7 @@ class WindowMerger<COMPARABLE, HAS_BOUNDS extends HasBounds<COMPARABLE>> {
         }
 
         MergeProcessBuilder with(final HAS_BOUNDS ... existingWindows) {
-            this.existingWindows.addAll(Arrays.asList(existingWindows));
-            return this;
+            return with(Arrays.asList(existingWindows));
         }
 
 

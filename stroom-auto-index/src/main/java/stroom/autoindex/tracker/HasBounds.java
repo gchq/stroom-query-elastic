@@ -14,14 +14,14 @@ public interface HasBounds<T> {
     T getTo();
 
     /**
-     * Indicates if a value is within the window, inclusive start, inclusive at end.
+     * Indicates if a value is within the window, inclusive start, exclusive at end.
      * @param value The value to check
      * @param comparator A comparator to use between the value and the to/from values.
-     * @return True if the value is within the window (inclusive at both ends)
+     * @return True if the value is within the window (from inclusive, to exclusive)
      */
     default boolean isInside(final T value, final Comparator<T> comparator) {
         return (comparator.compare(getFrom(), value) <= 0)
-                && (comparator.compare(getTo(), value) >= 0);
+                && (comparator.compare(getTo(), value) > 0);
     }
 
     /**

@@ -26,7 +26,7 @@ public class HasBoundsTest {
         assertFalse(lower);
         assertTrue(onBottomEdge);
         assertTrue(within);
-        assertTrue(onTopEdge);
+        assertFalse(onTopEdge);
         assertFalse(higher);
     }
 
@@ -68,7 +68,7 @@ public class HasBoundsTest {
         assertFalse(lower);
         assertTrue(onBottomEdge);
         assertTrue(within);
-        assertTrue(onTopEdge);
+        assertFalse(onTopEdge);
         assertFalse(higher);
     }
 
