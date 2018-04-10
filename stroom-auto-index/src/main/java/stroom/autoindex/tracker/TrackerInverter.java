@@ -16,7 +16,10 @@ public class TrackerInverter {
     public AutoIndexTracker invert() {
         final AutoIndexTracker inverted = AutoIndexTracker.forBase(tracker);
 
-        final AtomicLong currentFrom = new AtomicLong(tracker.getTimelineBounds().getFrom());
+        final TrackerWindow timelineBounds = tracker.getTimelineBounds()
+                .orElseThrow(() -> new RuntimeException("Cannot invert a timeline that has no bounds"));
+
+        final AtomicLong currentFrom = new AtomicLong(timelineBounds.getFrom());
         tracker.getWindows().forEach(tw -> {
             // If there is some gap between our current from and this window from, fill that in
             if (currentFrom.longValue() < tw.getFrom()) {
@@ -28,10 +31,10 @@ public class TrackerInverter {
             currentFrom.set(tw.getTo());
         });
 
-        if (currentFrom.longValue() < tracker.getTimelineBounds().getTo()) {
+        if (currentFrom.longValue() < timelineBounds.getTo()) {
             inverted.withWindow(TrackerWindow
                     .from(currentFrom.longValue())
-                    .to(tracker.getTimelineBounds().getTo())
+                    .to(timelineBounds.getTo())
             );
         }
 

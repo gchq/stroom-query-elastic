@@ -6,12 +6,14 @@ import org.jooq.Record;
 import org.jooq.Table;
 import org.jooq.impl.DSL;
 import org.jooq.types.ULong;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import stroom.autoindex.AutoIndexConstants;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
 import stroom.autoindex.tracker.AutoIndexTracker;
-import stroom.autoindex.tracker.AutoIndexTrackerDao;
-import stroom.autoindex.tracker.AutoIndexTrackerDaoImpl;
+import stroom.autoindex.tracker.AutoIndexTrackerDaoJooqImpl;
+import stroom.autoindex.tracker.AutoIndexTrackerService;
 import stroom.autoindex.tracker.NextWindowSelector;
 import stroom.autoindex.tracker.TrackerWindow;
 import stroom.query.audit.security.ServiceUser;
@@ -21,11 +23,12 @@ import javax.inject.Named;
 import java.util.Optional;
 import java.util.UUID;
 
-import static stroom.autoindex.tracker.AutoIndexTrackerDaoImpl.FIELD_DOC_REF_UUID;
-import static stroom.autoindex.tracker.AutoIndexTrackerDaoImpl.FIELD_FROM;
-import static stroom.autoindex.tracker.AutoIndexTrackerDaoImpl.FIELD_TO;
+import static stroom.autoindex.tracker.AutoIndexTrackerDaoJooqImpl.FIELD_DOC_REF_UUID;
+import static stroom.autoindex.tracker.AutoIndexTrackerDaoJooqImpl.FIELD_FROM;
+import static stroom.autoindex.tracker.AutoIndexTrackerDaoJooqImpl.FIELD_TO;
 
 public class IndexJobDaoImpl implements IndexJobDao {
+    private static final Logger LOGGER = LoggerFactory.getLogger(IndexJobDaoImpl.class);
 
     private static final String JOB_ID = "jobId";
     private static final String STARTED_TIME = "startedTime";
@@ -37,18 +40,18 @@ public class IndexJobDaoImpl implements IndexJobDao {
     public static final Field<ULong> FIELD_CREATE_TIME = DSL.field(CREATE_TIME, ULong.class);
 
     private final DSLContext database;
-    private final AutoIndexTrackerDao autoIndexTrackerDao;
+    private final AutoIndexTrackerService autoIndexTrackerService;
     private final AutoIndexDocRefServiceImpl autoIndexDocRefService;
     private final ServiceUser serviceUser;
 
     @Inject
     public IndexJobDaoImpl(final DSLContext database,
-                           final AutoIndexTrackerDao autoIndexTrackerDao,
+                           final AutoIndexTrackerService autoIndexTrackerService,
                            final AutoIndexDocRefServiceImpl autoIndexDocRefService,
                            @Named(AutoIndexConstants.STROOM_SERVICE_USER)
                                final ServiceUser serviceUser) {
         this.database = database;
-        this.autoIndexTrackerDao = autoIndexTrackerDao;
+        this.autoIndexTrackerService = autoIndexTrackerService;
         this.autoIndexDocRefService = autoIndexDocRefService;
         this.serviceUser = serviceUser;
     }
@@ -68,45 +71,52 @@ public class IndexJobDaoImpl implements IndexJobDao {
                 .orElseGet(() -> {
                     // Get hold of the current state of the auto index, and its trackers
                     final AutoIndexDocRefEntity autoIndex = getAutoIndex(docRefUuid);
-                    final AutoIndexTracker tracker = autoIndexTrackerDao.get(docRefUuid);
+                    final AutoIndexTracker tracker = autoIndexTrackerService.get(docRefUuid);
+
+                    final Optional<TrackerWindow> timelineBounds = tracker.getTimelineBounds();
+                    if (!timelineBounds.isPresent()) {
+                        LOGGER.warn("Can't fetch Index Job for {}, timeline bounds not set", docRefUuid);
+                        return null;
+                    }
 
                     // Calculate the next window to try
                     final Optional<TrackerWindow> nextWindow = NextWindowSelector
-                            .withBounds(tracker.getTimelineBounds())
+                            .withBounds(timelineBounds.get())
                             .windowSize(autoIndex.getIndexWindow())
                             .existingWindows(tracker.getWindows())
                             .suggestNextWindow();
 
-                    if (nextWindow.isPresent()) {
-                        // Create a job for that window
-                        final IndexJob indexJob = IndexJob.forAutoIndex(autoIndex)
-                                .jobId(UUID.randomUUID().toString())
-                                .trackerWindow(nextWindow.get())
-                                .startedTimeMillis(0L)
-                                .createdTimeMillis(System.currentTimeMillis())
-                                .build();
-
-                        // Add to database
-                        DSL.using(c)
-                                .insertInto(JOB_TABLE)
-                                .columns(FIELD_JOB_ID,
-                                        FIELD_DOC_REF_UUID,
-                                        FIELD_STARTED_TIME,
-                                        FIELD_CREATE_TIME,
-                                        FIELD_FROM,
-                                        FIELD_TO)
-                                .values(indexJob.getJobId(),
-                                        docRefUuid,
-                                        ULong.valueOf(indexJob.getStartedTimeMillis()),
-                                        ULong.valueOf(indexJob.getCreatedTimeMillis()),
-                                        ULong.valueOf(indexJob.getTrackerWindow().getFrom()),
-                                        ULong.valueOf(indexJob.getTrackerWindow().getTo()))
-                                .execute();
-
-                        return indexJob;
-                    } else {
+                    if (!nextWindow.isPresent()) {
+                        LOGGER.warn("Can't fetch Index Job for {}, next window not available", docRefUuid);
                         return null;
                     }
+
+                    // Create a job for that window
+                    final IndexJob indexJob = IndexJob.forAutoIndex(autoIndex)
+                            .jobId(UUID.randomUUID().toString())
+                            .trackerWindow(nextWindow.get())
+                            .startedTimeMillis(0L)
+                            .createdTimeMillis(System.currentTimeMillis())
+                            .build();
+
+                    // Add to database
+                    DSL.using(c)
+                            .insertInto(JOB_TABLE)
+                            .columns(FIELD_JOB_ID,
+                                    FIELD_DOC_REF_UUID,
+                                    FIELD_STARTED_TIME,
+                                    FIELD_CREATE_TIME,
+                                    FIELD_FROM,
+                                    FIELD_TO)
+                            .values(indexJob.getJobId(),
+                                    docRefUuid,
+                                    ULong.valueOf(indexJob.getStartedTimeMillis()),
+                                    ULong.valueOf(indexJob.getCreatedTimeMillis()),
+                                    ULong.valueOf(indexJob.getTrackerWindow().getFrom()),
+                                    ULong.valueOf(indexJob.getTrackerWindow().getTo()))
+                            .execute();
+
+                    return indexJob;
                 })));
     }
 
@@ -140,7 +150,7 @@ public class IndexJobDaoImpl implements IndexJobDao {
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find Index Job for %s", jobId)));
 
         // then add the window to the tracker
-        autoIndexTrackerDao.addWindow(indexJob.getAutoIndexDocRefEntity().getUuid(), indexJob.getTrackerWindow());
+        autoIndexTrackerService.addWindow(indexJob.getAutoIndexDocRefEntity().getUuid(), indexJob.getTrackerWindow());
 
         // Now delete the job
         final int rowsAffected = database.transactionResult(c ->
@@ -163,7 +173,7 @@ public class IndexJobDaoImpl implements IndexJobDao {
                 .jobId(record.get(FIELD_JOB_ID))
                 .createdTimeMillis(record.get(FIELD_CREATE_TIME).longValue())
                 .startedTimeMillis(record.get(FIELD_STARTED_TIME).longValue())
-                .trackerWindow(AutoIndexTrackerDaoImpl.fromRecord(record))
+                .trackerWindow(AutoIndexTrackerDaoJooqImpl.fromRecord(record))
                 .build();
     }
 

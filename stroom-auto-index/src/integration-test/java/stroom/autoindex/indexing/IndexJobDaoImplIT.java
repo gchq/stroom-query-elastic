@@ -10,10 +10,13 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import stroom.autoindex.AbstractAutoIndexIntegrationTest;
 import stroom.autoindex.AutoIndexConstants;
+import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.tracker.AutoIndexTracker;
 import stroom.autoindex.tracker.AutoIndexTrackerDao;
-import stroom.autoindex.tracker.AutoIndexTrackerDaoImpl;
+import stroom.autoindex.tracker.AutoIndexTrackerDaoJooqImpl;
+import stroom.autoindex.tracker.AutoIndexTrackerService;
+import stroom.autoindex.tracker.AutoIndexTrackerServiceImpl;
 import stroom.query.audit.security.ServiceUser;
 
 import java.util.Collections;
@@ -32,7 +35,7 @@ public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
      */
     private static IndexJobDaoImpl indexJobDao;
 
-    private static AutoIndexTrackerDao autoIndexTrackerDao;
+    private static AutoIndexTrackerService autoIndexTrackerService;
 
     @BeforeClass
     public static void beforeClass() {
@@ -40,7 +43,8 @@ public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
             @Override
             protected void configure() {
                 bind(DSLContext.class).toInstance(initialiseJooqDbRule.withDatabase());
-                bind(AutoIndexTrackerDao.class).to(AutoIndexTrackerDaoImpl.class);
+                bind(AutoIndexTrackerDao.class).to(AutoIndexTrackerDaoJooqImpl.class);
+                bind(AutoIndexTrackerService.class).to(AutoIndexTrackerServiceImpl.class);
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
                 bind(ServiceUser.class)
                         .annotatedWith(Names.named(AutoIndexConstants.STROOM_SERVICE_USER))
@@ -49,13 +53,16 @@ public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
         });
 
         indexJobDao = testInjector.getInstance(IndexJobDaoImpl.class);
-        autoIndexTrackerDao = testInjector.getInstance(AutoIndexTrackerDao.class);
+        autoIndexTrackerService = testInjector.getInstance(AutoIndexTrackerService.class);
     }
 
     @Test
     public void testGetOrCreateValid() {
         // Create a valid auto index
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
+
+        autoIndexTrackerService.setTimelineBounds(autoIndex.getDocRef().getUuid(),
+                AnimalTestData.TIMELINE_BOUNDS);
 
         // Create an index job
         final IndexJob indexJob = indexJobDao.getOrCreate(autoIndex.getEntity())
@@ -81,6 +88,10 @@ public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
         // Create a valid auto index
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
 
+        // Timeline bounds must be set
+        autoIndexTrackerService.setTimelineBounds(autoIndex.getDocRef().getUuid(),
+                AnimalTestData.TIMELINE_BOUNDS);
+
         // Create an index job
         final IndexJob indexJob = indexJobDao.getOrCreate(autoIndex.getEntity())
                 .orElseThrow(() -> new AssertionError("Index Job Should exist"));
@@ -101,6 +112,10 @@ public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
         // Create a valid auto index
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
 
+        // Timeline bounds must be set
+        autoIndexTrackerService.setTimelineBounds(autoIndex.getDocRef().getUuid(),
+                AnimalTestData.TIMELINE_BOUNDS);
+
         // Create an index job
         final IndexJob indexJob = indexJobDao.getOrCreate(autoIndex.getEntity())
                 .orElseThrow(() -> new AssertionError("Index Job Should exist"));
@@ -114,7 +129,7 @@ public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
         assertFalse(indexJobAfterComplete.isPresent());
 
         // Retrieve the auto index entity and check the tracker window were updated
-        final AutoIndexTracker tracker = autoIndexTrackerDao.get(autoIndex.getDocRef().getUuid());
+        final AutoIndexTracker tracker = autoIndexTrackerService.get(autoIndex.getDocRef().getUuid());
         assertEquals(Collections.singletonList(indexJob.getTrackerWindow()), tracker.getWindows());
     }
 

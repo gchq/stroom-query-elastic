@@ -1,11 +1,14 @@
 package stroom.autoindex.tracker;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Each instance shows which time windows have been indexed from the raw data source into the indexed data source.
@@ -13,11 +16,6 @@ import java.util.Optional;
 public class AutoIndexTracker {
     public static final String TRACKER_WINDOW_TABLE_NAME = "tracker_window";
     public static final String TIMELINE_BOUNDS_TABLE_NAME = "timeline_bounds";
-
-    /**
-     * Special value of timeline that goes from min/max long values.
-     */
-    public static final TrackerWindow DEFAULT_TIMELINE_BOUNDS = TrackerWindow.from(Long.MIN_VALUE).to(Long.MAX_VALUE);
 
     private final String docRefUuid;
     private TrackerWindow timelineBounds;
@@ -29,7 +27,17 @@ public class AutoIndexTracker {
 
     public static AutoIndexTracker forBase(final AutoIndexTracker base) {
         return new AutoIndexTracker(base.getDocRefUuid())
-                .withBounds(base.getTimelineBounds());
+                .withBounds(base.getTimelineBounds()
+                        .map(TrackerWindow::copy)
+                        .orElse(null));
+    }
+
+    public static AutoIndexTracker copy(final AutoIndexTracker original) {
+        return forBase(original)
+                .withWindows(original.getWindows().stream()
+                        .map(TrackerWindow::copy)
+                        .sorted(Comparator.comparing(TrackerWindow::getFrom))
+                        .collect(Collectors.toList()));
     }
 
     public AutoIndexTracker(final String docRefUuid) {
@@ -46,17 +54,16 @@ public class AutoIndexTracker {
         return this;
     }
 
-    public AutoIndexTracker withWindow(final TrackerWindow window) {
-        this.windows.add(window);
-        return this;
+    public AutoIndexTracker withWindow(final TrackerWindow... window) {
+        return withWindows(Arrays.asList(window));
     }
 
     public String getDocRefUuid() {
         return docRefUuid;
     }
 
-    public TrackerWindow getTimelineBounds() {
-        return Optional.ofNullable(timelineBounds).orElse(DEFAULT_TIMELINE_BOUNDS);
+    public Optional<TrackerWindow> getTimelineBounds() {
+        return Optional.ofNullable(timelineBounds);
     }
 
     /**

@@ -27,7 +27,9 @@ import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
 import stroom.autoindex.service.AutoIndexQueryServiceImpl;
 import stroom.autoindex.tracker.AutoIndexTrackerDao;
-import stroom.autoindex.tracker.AutoIndexTrackerDaoImpl;
+import stroom.autoindex.tracker.AutoIndexTrackerDaoJooqImpl;
+import stroom.autoindex.tracker.AutoIndexTrackerService;
+import stroom.autoindex.tracker.AutoIndexTrackerServiceImpl;
 import stroom.query.audit.client.DocRefResourceHttpClient;
 import stroom.query.audit.client.QueryResourceHttpClient;
 import stroom.query.audit.rest.DocRefResource;
@@ -74,7 +76,8 @@ public class App extends Application<Config> {
         return Modules.combine(new AbstractModule() {
             @Override
             protected void configure() {
-                bind(AutoIndexTrackerDao.class).to(AutoIndexTrackerDaoImpl.class);
+                bind(AutoIndexTrackerDao.class).to(AutoIndexTrackerDaoJooqImpl.class);
+                bind(AutoIndexTrackerService.class).to(AutoIndexTrackerServiceImpl.class);
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
                 bind(new TypeLiteral<QueryClientCache<QueryResource>>(){})
                         .toInstance(new QueryClientCache<>(configuration, QueryResourceHttpClient::new));

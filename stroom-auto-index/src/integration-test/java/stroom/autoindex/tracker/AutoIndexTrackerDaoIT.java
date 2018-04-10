@@ -3,15 +3,15 @@ package stroom.autoindex.tracker;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import org.jooq.Configuration;
 import org.jooq.DSLContext;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import stroom.autoindex.AbstractAutoIndexIntegrationTest;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -21,7 +21,7 @@ public class AutoIndexTrackerDaoIT extends AbstractAutoIndexIntegrationTest {
     /**
      * Create our own Index Tracker DAO for direct testing
      */
-    private static AutoIndexTrackerDao autoIndexTrackerDao;
+    private static AutoIndexTrackerDao<Configuration> autoIndexTrackerDao;
 
     @BeforeClass
     public static void beforeClass() {
@@ -32,7 +32,7 @@ public class AutoIndexTrackerDaoIT extends AbstractAutoIndexIntegrationTest {
             }
         });
 
-        autoIndexTrackerDao = injector.getInstance(AutoIndexTrackerDaoImpl.class);
+        autoIndexTrackerDao = injector.getInstance(AutoIndexTrackerDaoJooqImpl.class);
     }
 
     @Test
@@ -41,7 +41,8 @@ public class AutoIndexTrackerDaoIT extends AbstractAutoIndexIntegrationTest {
         final String docRefUuid = UUID.randomUUID().toString();
 
         // When
-        final AutoIndexTracker tracker = autoIndexTrackerDao.get(docRefUuid);
+        final AutoIndexTracker tracker = autoIndexTrackerDao
+                .transactionResult((d, c) -> d.get(c, docRefUuid));
 
         // Then
         assertNotNull(tracker);
@@ -62,15 +63,20 @@ public class AutoIndexTrackerDaoIT extends AbstractAutoIndexIntegrationTest {
         final TrackerWindow threeMonthsAgoToTwoMonthsAgo = TrackerWindow.from(threeMonthsAgo).to(twoMonthsAgo);
 
         // When
-        final AutoIndexTracker tracker1 = autoIndexTrackerDao.addWindow(docRefUuid, oneMonthAgoToNow);
-        final AutoIndexTracker tracker2 = autoIndexTrackerDao.addWindow(docRefUuid, threeMonthsAgoToTwoMonthsAgo);
-        final AutoIndexTracker tracker3 = autoIndexTrackerDao.get(docRefUuid);
+        final AutoIndexTracker tracker1 = autoIndexTrackerDao.transactionResult((d, c) -> {
+            d.insertTracker(c, docRefUuid, oneMonthAgoToNow);
+            return d.get(c, docRefUuid);
+        });
+        final AutoIndexTracker tracker2 = autoIndexTrackerDao.transactionResult((d, c) -> {
+            d.insertTracker(c, docRefUuid, threeMonthsAgoToTwoMonthsAgo);
+            return d.get(c, docRefUuid);
+        });
+        final AutoIndexTracker tracker3 = autoIndexTrackerDao.transactionResult((d, c) -> d.get(c, docRefUuid));
 
         // Then
         assertEquals(Collections.singletonList(oneMonthAgoToNow),
                 tracker1.getWindows());
-        assertEquals(Stream.of(threeMonthsAgoToTwoMonthsAgo, oneMonthAgoToNow)
-                        .collect(Collectors.toList()),
+        assertEquals(Arrays.asList(threeMonthsAgoToTwoMonthsAgo, oneMonthAgoToNow),
                 tracker2.getWindows());
 
         assertEquals(tracker2, tracker3);
@@ -89,18 +95,38 @@ public class AutoIndexTrackerDaoIT extends AbstractAutoIndexIntegrationTest {
         final TrackerWindow twoMonthsAgoToOneMonthAgo = TrackerWindow.from(twoMonthsAgo).to(oneMonthAgo);
 
         // When
-        autoIndexTrackerDao.addWindow(docRefUuid, oneMonthAgoToNow);
-        autoIndexTrackerDao.addWindow(docRefUuid, twoMonthsAgoToOneMonthAgo);
-        final AutoIndexTracker tracker = autoIndexTrackerDao.get(docRefUuid);
+        final AutoIndexTracker tracker1 = autoIndexTrackerDao.transactionResult((d, c) -> {
+            d.insertTracker(c, docRefUuid, oneMonthAgoToNow);
+            return d.get(c, docRefUuid);
+        });
+        final AutoIndexTracker tracker2 = autoIndexTrackerDao.transactionResult((d, c) -> {
+            d.insertTracker(c, docRefUuid, twoMonthsAgoToOneMonthAgo);
+            return d.get(c, docRefUuid);
+        });
+        final AutoIndexTracker tracker = autoIndexTrackerDao.transactionResult((d, c) -> d.get(c, docRefUuid));
 
         // Then
         // Should up with one big window that covers it all
-        assertEquals(Collections.singletonList(TrackerWindow.from(twoMonthsAgo).to(now)),
+        assertEquals(
+                Arrays.asList(
+                        TrackerWindow.from(twoMonthsAgo).to(oneMonthAgo),
+                        TrackerWindow.from(oneMonthAgo).to(now)
+                ),
                 tracker.getWindows());
     }
 
     @Test
-    public void testClearWindow() {
+    public void testAddBelowBounds() {
+        // Given
+        final String docRefUuid = UUID.randomUUID().toString();
+        final Long now = 56L;
+        final Long oneWeekAgo = now - 10;
+        final Long twoWeeksAgo = oneWeekAgo - 10;
+
+    }
+
+    @Test
+    public void testDeleteWindow() {
         // Given
         final String docRefUuid = UUID.randomUUID().toString();
         final Long now = 45L;
@@ -113,10 +139,17 @@ public class AutoIndexTrackerDaoIT extends AbstractAutoIndexIntegrationTest {
         final TrackerWindow threeMonthsAgoToTwoMonthsAgo = TrackerWindow.from(threeMonthsAgo).to(twoMonthsAgo);
 
         // When
-        autoIndexTrackerDao.addWindow(docRefUuid, oneMonthAgoToNow);
-        autoIndexTrackerDao.addWindow(docRefUuid, threeMonthsAgoToTwoMonthsAgo);
-        autoIndexTrackerDao.clearWindows(docRefUuid);
-        final AutoIndexTracker tracker = autoIndexTrackerDao.get(docRefUuid);
+        autoIndexTrackerDao.transaction((d, c) ->
+                d.insertTracker(c, docRefUuid, oneMonthAgoToNow)
+        );
+        autoIndexTrackerDao.transaction((d, c) ->
+                d.insertTracker(c, docRefUuid, threeMonthsAgoToTwoMonthsAgo)
+        );
+        autoIndexTrackerDao.transaction((d, c) -> {
+            d.deleteTracker(c, docRefUuid, oneMonthAgoToNow);
+            d.deleteTracker(c, docRefUuid, threeMonthsAgoToTwoMonthsAgo);
+        });
+        final AutoIndexTracker tracker = autoIndexTrackerDao.transactionResult((d, c) -> d.get(c, docRefUuid));
 
         // Then
         assertEquals(0L, tracker.getWindows().size());

@@ -25,7 +25,7 @@ public class TrackerInverterTest {
 
         // Then
         assertEquals(docRefUuid, inverted.getDocRefUuid());
-        assertEquals(timelineBounds, inverted.getTimelineBounds());
+        assertEquals(timelineBounds, inverted.getTimelineBounds().orElse(null));
         assertEquals(
                 Collections.singletonList(TrackerWindow.from(20L).to(180L)),
                 inverted.getWindows());
@@ -45,7 +45,7 @@ public class TrackerInverterTest {
 
         // Then
         assertEquals(docRefUuid, inverted.getDocRefUuid());
-        assertEquals(timelineBounds, inverted.getTimelineBounds());
+        assertEquals(timelineBounds, inverted.getTimelineBounds().orElse(null));
         assertEquals(
                 Collections.singletonList(TrackerWindow.from(40L).to(200L)),
                 inverted.getWindows());
@@ -67,7 +67,7 @@ public class TrackerInverterTest {
 
         // Then
         assertEquals(docRefUuid, inverted.getDocRefUuid());
-        assertEquals(timelineBounds, inverted.getTimelineBounds());
+        assertEquals(timelineBounds, inverted.getTimelineBounds().orElse(null));
         assertEquals(
                 Arrays.asList(
                         TrackerWindow.from(20L).to(120L),
@@ -93,7 +93,7 @@ public class TrackerInverterTest {
 
         // Then
         assertEquals(docRefUuid, inverted.getDocRefUuid());
-        assertEquals(timelineBounds, inverted.getTimelineBounds());
+        assertEquals(timelineBounds, inverted.getTimelineBounds().orElse(null));
         assertEquals(
                 Arrays.asList(
                         TrackerWindow.from(100L).to(140L),
@@ -120,7 +120,7 @@ public class TrackerInverterTest {
 
         // Then
         assertEquals(docRefUuid, inverted.getDocRefUuid());
-        assertEquals(timelineBounds, inverted.getTimelineBounds());
+        assertEquals(timelineBounds, inverted.getTimelineBounds().orElse(null));
         assertEquals(
                 Arrays.asList(
                         TrackerWindow.from(100L).to(140L),

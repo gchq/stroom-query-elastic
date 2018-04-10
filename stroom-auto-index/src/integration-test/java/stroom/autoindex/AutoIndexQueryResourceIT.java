@@ -1,12 +1,22 @@
 package stroom.autoindex;
 
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import org.eclipse.jetty.http.HttpStatus;
+import org.jooq.DSLContext;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.animals.AnimalsQueryResourceIT;
 import stroom.autoindex.animals.app.AnimalSighting;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
+import stroom.autoindex.tracker.AutoIndexTrackerDao;
+import stroom.autoindex.tracker.AutoIndexTrackerDaoJooqImpl;
+import stroom.autoindex.tracker.AutoIndexTrackerService;
+import stroom.autoindex.tracker.AutoIndexTrackerServiceImpl;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.ExpressionOperator;
@@ -29,6 +39,27 @@ import static stroom.query.testing.FifoLogbackRule.containsAllOf;
 
 public class AutoIndexQueryResourceIT extends AbstractAutoIndexIntegrationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(AutoIndexQueryResourceIT.class);
+
+    /**
+     * We will use this to manually tell the system that we already have data that runs from 'now' back to
+     * the end date of our test data.
+     */
+    private static AutoIndexTrackerService autoIndexTrackerService;
+
+    @BeforeClass
+    public static void beforeClass() {
+
+        final Injector testInjector = Guice.createInjector(new AbstractModule() {
+            @Override
+            protected void configure() {
+                bind(DSLContext.class).toInstance(initialiseJooqDbRule.withDatabase());
+                bind(AutoIndexTrackerDao.class).to(AutoIndexTrackerDaoJooqImpl.class);
+                bind(AutoIndexTrackerService.class).to(AutoIndexTrackerServiceImpl.class);
+            }
+        });
+
+        autoIndexTrackerService = testInjector.getInstance(AutoIndexTrackerService.class);
+    }
 
     @Test
     public void testGetDataSource() {
@@ -57,6 +88,8 @@ public class AutoIndexQueryResourceIT extends AbstractAutoIndexIntegrationTest {
     @Test
     public void testSearch() {
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
+
+        autoIndexTrackerService.setTimelineBounds(autoIndex.getDocRef().getUuid(), AnimalTestData.TIMELINE_BOUNDS);
 
         final OffsetRange offset = new OffsetRange.Builder()
                 .length(100L)

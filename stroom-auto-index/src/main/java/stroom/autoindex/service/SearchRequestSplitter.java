@@ -43,9 +43,16 @@ public class SearchRequestSplitter {
         split(autoIndexDocRefEntity.getIndexDocRef(),
                 tracker,
                 splitSearchRequestBuilder);
-        split(autoIndexDocRefEntity.getRawDocRef(),
-                TrackerInverter.withTracker(tracker).invert(),
-                splitSearchRequestBuilder);
+
+        // Only query the raw doc ref if we can generate an inverted timeline
+        try {
+            final AutoIndexTracker invertedTracking = TrackerInverter.withTracker(tracker).invert();
+            split(autoIndexDocRefEntity.getRawDocRef(),
+                    invertedTracking,
+                    splitSearchRequestBuilder);
+        } catch (final RuntimeException e) {
+            // do nothing
+        }
 
         return splitSearchRequestBuilder.build();
     }

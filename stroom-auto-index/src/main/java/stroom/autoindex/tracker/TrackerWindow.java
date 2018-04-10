@@ -36,6 +36,13 @@ public class TrackerWindow implements HasBounds<Long> {
                 && Optional.ofNullable(this.to).isPresent();
     }
 
+    public static TrackerWindow copy(final TrackerWindow original) {
+        if (null != original) {
+            return from(original.getFrom()).to(original.getTo());
+        }
+        return null;
+    }
+
     public static Builder from(final Long from) {
         return new Builder(from);
     }
