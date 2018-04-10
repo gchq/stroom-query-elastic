@@ -9,6 +9,7 @@ import stroom.query.audit.security.ServiceUser;
 import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.Comparator;
+import java.util.Optional;
 import java.util.TimerTask;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -53,6 +54,7 @@ public class IndexingTimerTask extends TimerTask {
             // Get the list of unstarted index jobs
             autoIndexDocRefService.getAll(INTERNAL).stream()
                     .map(indexJobDao::getOrCreate)
+                    .filter(Optional::isPresent).map(Optional::get)
                     .filter(j -> j.getStartedTimeMillis() == 0)
                     .sorted(Comparator.comparingLong(IndexJob::getCreatedTimeMillis)) // ensure fair rotation
                     .limit(config.getNumberOfTasksPerRun())

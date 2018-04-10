@@ -58,11 +58,13 @@ public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
 
         // Create an index job
-        final IndexJob indexJob = indexJobDao.getOrCreate(autoIndex.getEntity());
+        final IndexJob indexJob = indexJobDao.getOrCreate(autoIndex.getEntity())
+                .orElseThrow(() -> new AssertionError("Index Job Should exist"));
         assertNotNull(indexJob);
 
         // Make a repeat request, should get the same index job back
-        final IndexJob sameIndexJob = indexJobDao.getOrCreate(autoIndex.getEntity());
+        final IndexJob sameIndexJob = indexJobDao.getOrCreate(autoIndex.getEntity())
+                .orElseThrow(() -> new AssertionError("Index Job Should exist"));
         assertEquals(indexJob.getJobId(), sameIndexJob.getJobId());
 
         final long indexJobsInTable = initialiseJooqDbRule.withDatabase()
@@ -80,7 +82,8 @@ public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
 
         // Create an index job
-        final IndexJob indexJob = indexJobDao.getOrCreate(autoIndex.getEntity());
+        final IndexJob indexJob = indexJobDao.getOrCreate(autoIndex.getEntity())
+                .orElseThrow(() -> new AssertionError("Index Job Should exist"));
         assertEquals(0, indexJob.getStartedTimeMillis());
 
         // Take note of the time, then mark the job as started
@@ -88,7 +91,8 @@ public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
         indexJobDao.markAsStarted(indexJob.getJobId());
 
         // Now re-fetch the job and check that the started time is there
-        final IndexJob jobAfterStarted = indexJobDao.getOrCreate(autoIndex.getEntity());
+        final IndexJob jobAfterStarted = indexJobDao.getOrCreate(autoIndex.getEntity())
+                .orElseThrow(() -> new AssertionError("Index Job Should exist"));
         assertTrue(jobAfterStarted.getStartedTimeMillis() >= timeBeforeMarking);
     }
 
@@ -98,7 +102,8 @@ public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
 
         // Create an index job
-        final IndexJob indexJob = indexJobDao.getOrCreate(autoIndex.getEntity());
+        final IndexJob indexJob = indexJobDao.getOrCreate(autoIndex.getEntity())
+                .orElseThrow(() -> new AssertionError("Index Job Should exist"));
         assertEquals(0, indexJob.getStartedTimeMillis());
 
         // Mark the job as complete

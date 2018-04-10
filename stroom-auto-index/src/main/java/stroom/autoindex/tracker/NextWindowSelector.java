@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -57,7 +58,7 @@ public class NextWindowSelector {
         return this;
     }
 
-    public TrackerWindow suggestNextWindow() {
+    public Optional<TrackerWindow> suggestNextWindow() {
         final List<TrackerWindow> reversedWindows = Lists.reverse(
                 this.existingWindows.stream()
                         .sorted(Comparator.comparing(TrackerWindow::getFrom))
@@ -72,14 +73,28 @@ public class NextWindowSelector {
                 this.timelineBounds,
                 mostRecentEpoch);
 
-        final TrackerWindow window = tryNextWindow(reversedWindows.iterator(), mostRecentEpoch);
+        final Optional<TrackerWindow> window = tryNextWindow(reversedWindows.iterator(), mostRecentEpoch);
         LOGGER.trace("Returning Window {}", window);
         return window;
     }
 
     public Stream<TrackerWindow> suggestNextWindows(final int count) {
-        return Stream.iterate(this.suggestNextWindow(),
-                tw -> this.existingWindows(tw).suggestNextWindow()).limit(count);
+        final Optional<TrackerWindow> firstWindow = this.suggestNextWindow();
+        if (firstWindow.isPresent()) {
+            return Stream.iterate(firstWindow,
+                    tw -> {
+                        if (tw.isPresent()) {
+                            return this.existingWindows(tw.get()).suggestNextWindow();
+                        } else {
+                            return Optional.empty();
+                        }
+                    })
+                    .limit(count)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get);
+        } else {
+            return Stream.empty();
+        }
     }
 
     public static NextWindowSelector withBounds(final TrackerWindow timelineBounds) {
@@ -92,10 +107,13 @@ public class NextWindowSelector {
      * @param currentTop The current timestamp we are windowing to. if there are gaps before this time, the window
      *                   returned will attempt to fill it.
      * @return The tracker window required to fill the next gap found looking backwards through time
+     *          The return value is optional, if we have reached the lower bounds of the timeline, it should stop
      */
-    private TrackerWindow tryNextWindow(final Iterator<TrackerWindow> iter,
+    private Optional<TrackerWindow> tryNextWindow(final Iterator<TrackerWindow> iter,
                                         final Long currentTop) {
-
+        if (currentTop <= timelineBounds.getFrom()) {
+            return Optional.empty();
+        }
         if (iter.hasNext()) {
             final TrackerWindow tw = iter.next();
 
@@ -104,17 +122,17 @@ public class NextWindowSelector {
             } else {
                 final Long potentialFrom = goBackToNextFrom(currentTop);
                 if (potentialFrom > tw.getTo()) {
-                    return TrackerWindow.from(potentialFrom).to(currentTop);
+                    return Optional.of(TrackerWindow.from(potentialFrom).to(currentTop));
                 } else {
-                    return TrackerWindow.from(tw.getTo()).to(currentTop);
+                    return Optional.of(TrackerWindow.from(tw.getTo()).to(currentTop));
                 }
             }
         } else {
             // We have run out of windows, going backwards, so just create one that is the window size
             // ending at the current top seconds
-            return TrackerWindow
+            return Optional.of(TrackerWindow
                     .from(goBackToNextFrom(currentTop))
-                    .to(currentTop);
+                    .to(currentTop));
         }
     }
 

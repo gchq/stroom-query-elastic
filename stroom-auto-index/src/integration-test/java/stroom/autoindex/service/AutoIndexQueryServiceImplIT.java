@@ -143,7 +143,8 @@ public class AutoIndexQueryServiceImplIT extends AbstractAutoIndexIntegrationTes
                 .done();
 
         // Manually force the indexing to occur
-        final IndexJob indexJob = indexJobDao.getOrCreate(autoIndex.getEntity());
+        final IndexJob indexJob = indexJobDao.getOrCreate(autoIndex.getEntity())
+                .orElseThrow(() -> new AssertionError("Index Job Should exist"));
         indexJobConsumer.accept(indexJob);
 
         // Now compose a query that covers all time

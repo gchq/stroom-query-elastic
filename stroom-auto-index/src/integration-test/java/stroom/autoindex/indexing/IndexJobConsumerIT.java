@@ -30,6 +30,7 @@ import stroom.query.audit.security.ServiceUser;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -117,7 +118,8 @@ public class IndexJobConsumerIT extends AbstractAutoIndexIntegrationTest {
                 .permission(DocumentPermission.UPDATE)
                 .done();
 
-        final IndexJob indexJob = indexJobDao.getOrCreate(autoIndex.getEntity());
+        final IndexJob indexJob = indexJobDao.getOrCreate(autoIndex.getEntity())
+                .orElseThrow(() -> new AssertionError("Index Job Should exist"));
 
         indexJobConsumer.accept(indexJob);
     }
@@ -142,6 +144,7 @@ public class IndexJobConsumerIT extends AbstractAutoIndexIntegrationTest {
         // Attempt to run the number of jobs that would completely cover the time range
         final List<IndexJob> jobs = AnimalTestData.getExpectedTrackerWindows().stream()
                 .map(tw -> indexJobDao.getOrCreate(autoIndex.getEntity()))
+                .filter(Optional::isPresent).map(Optional::get)
                 .peek(indexJobConsumer)
                 .collect(Collectors.toList());
 

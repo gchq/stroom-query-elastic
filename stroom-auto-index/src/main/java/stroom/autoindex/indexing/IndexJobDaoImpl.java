@@ -54,12 +54,13 @@ public class IndexJobDaoImpl implements IndexJobDao {
     }
 
     @Override
-    public IndexJob getOrCreate(final AutoIndexDocRefEntity autoIndexDocRefEntity) {
+    public Optional<IndexJob> getOrCreate(final AutoIndexDocRefEntity autoIndexDocRefEntity) {
 
         final String docRefUuid = autoIndexDocRefEntity.getUuid();
 
         // Get or create
-        return database.transactionResult(c -> Optional.ofNullable(
+        return Optional.ofNullable(
+                database.transactionResult(c -> Optional.ofNullable(
                 DSL.using(c).select()
                         .from(JOB_TABLE)
                         .where(FIELD_DOC_REF_UUID.equal(docRefUuid))
@@ -70,39 +71,43 @@ public class IndexJobDaoImpl implements IndexJobDao {
                     final AutoIndexTracker tracker = autoIndexTrackerDao.get(docRefUuid);
 
                     // Calculate the next window to try
-                    final TrackerWindow nextWindow = NextWindowSelector
+                    final Optional<TrackerWindow> nextWindow = NextWindowSelector
                             .withBounds(tracker.getTimelineBounds())
                             .windowSize(autoIndex.getIndexWindow())
                             .existingWindows(tracker.getWindows())
                             .suggestNextWindow();
 
-                    // Create a job for that window
-                    final IndexJob indexJob = IndexJob.forAutoIndex(autoIndex)
-                            .jobId(UUID.randomUUID().toString())
-                            .trackerWindow(nextWindow)
-                            .startedTimeMillis(0L)
-                            .createdTimeMillis(System.currentTimeMillis())
-                            .build();
+                    if (nextWindow.isPresent()) {
+                        // Create a job for that window
+                        final IndexJob indexJob = IndexJob.forAutoIndex(autoIndex)
+                                .jobId(UUID.randomUUID().toString())
+                                .trackerWindow(nextWindow.get())
+                                .startedTimeMillis(0L)
+                                .createdTimeMillis(System.currentTimeMillis())
+                                .build();
 
-                    // Add to database
-                    DSL.using(c)
-                            .insertInto(JOB_TABLE)
-                            .columns(FIELD_JOB_ID,
-                                    FIELD_DOC_REF_UUID,
-                                    FIELD_STARTED_TIME,
-                                    FIELD_CREATE_TIME,
-                                    FIELD_FROM,
-                                    FIELD_TO)
-                            .values(indexJob.getJobId(),
-                                    docRefUuid,
-                                    ULong.valueOf(indexJob.getStartedTimeMillis()),
-                                    ULong.valueOf(indexJob.getCreatedTimeMillis()),
-                                    ULong.valueOf(indexJob.getTrackerWindow().getFrom()),
-                                    ULong.valueOf(indexJob.getTrackerWindow().getTo()))
-                            .execute();
+                        // Add to database
+                        DSL.using(c)
+                                .insertInto(JOB_TABLE)
+                                .columns(FIELD_JOB_ID,
+                                        FIELD_DOC_REF_UUID,
+                                        FIELD_STARTED_TIME,
+                                        FIELD_CREATE_TIME,
+                                        FIELD_FROM,
+                                        FIELD_TO)
+                                .values(indexJob.getJobId(),
+                                        docRefUuid,
+                                        ULong.valueOf(indexJob.getStartedTimeMillis()),
+                                        ULong.valueOf(indexJob.getCreatedTimeMillis()),
+                                        ULong.valueOf(indexJob.getTrackerWindow().getFrom()),
+                                        ULong.valueOf(indexJob.getTrackerWindow().getTo()))
+                                .execute();
 
-                    return indexJob;
-                }));
+                        return indexJob;
+                    } else {
+                        return null;
+                    }
+                })));
     }
 
     @Override

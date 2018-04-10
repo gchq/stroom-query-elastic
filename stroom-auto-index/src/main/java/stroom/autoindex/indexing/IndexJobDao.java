@@ -11,11 +11,11 @@ import java.util.Optional;
 public interface IndexJobDao {
     /**
      * Find any existing indexing job for a doc ref, or create a new one using a suggested time window.
-     *
+     * If the timeline has been exhausted, this will return an {@link Optional#empty()}
      * @param autoIndexDocRefEntity The Auto Index Doc Ref Entity that we are fetching jobs for
-     * @return The index job found, or next one created.
+     * @return The index job found, or next one created. Or empty if the timeline has been exhausted.
      */
-    IndexJob getOrCreate(AutoIndexDocRefEntity autoIndexDocRefEntity);
+    Optional<IndexJob> getOrCreate(AutoIndexDocRefEntity autoIndexDocRefEntity);
 
     /**
      * Get a specific index job by it's job id.
