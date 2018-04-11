@@ -12,6 +12,7 @@ import stroom.query.audit.ExportDTO;
 import stroom.query.audit.model.DocRefEntity;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
+import stroom.query.audit.service.QueryApiException;
 import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 
 import java.io.IOException;
@@ -40,7 +41,7 @@ public abstract class AbstractElasticDocRefServiceImpl<T extends ElasticIndexDoc
     }
 
     @Override
-    public List<T> getAll(final ServiceUser user) throws Exception {
+    public List<T> getAll(final ServiceUser user) throws QueryApiException {
         return null;
     }
 
@@ -55,7 +56,7 @@ public abstract class AbstractElasticDocRefServiceImpl<T extends ElasticIndexDoc
 
     @Override
     public Optional<T> get(final ServiceUser user,
-                                                  final String uuid) throws Exception {
+                           final String uuid) throws QueryApiException {
         try {
             final GetResponse searchResponse = client
                         .prepareGet(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, uuid)
@@ -88,13 +89,13 @@ public abstract class AbstractElasticDocRefServiceImpl<T extends ElasticIndexDoc
             return Optional.empty();
         } catch (Exception e) {
             LOGGER.warn("Could not update index config", e);
-            throw new Exception(e);
+            throw new QueryApiException(e);
         }
     }
 
     @Override
     public Optional<DocRefInfo> getInfo(final ServiceUser user,
-                                        final String uuid) throws Exception {
+                                        final String uuid) throws QueryApiException {
         try {
             final GetResponse searchResponse = client
                     .prepareGet(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, uuid)
@@ -125,14 +126,14 @@ public abstract class AbstractElasticDocRefServiceImpl<T extends ElasticIndexDoc
             return Optional.empty();
         } catch (Exception e) {
             LOGGER.warn("Could not update index config", e);
-            throw new Exception(e);
+            throw new QueryApiException(e);
         }
     }
 
     @Override
     public Optional<T> createDocument(final ServiceUser user,
                                                        final String uuid,
-                                                       final String name) throws Exception {
+                                                       final String name) throws QueryApiException {
         try {
             final Long now = System.currentTimeMillis();
 
@@ -155,14 +156,14 @@ public abstract class AbstractElasticDocRefServiceImpl<T extends ElasticIndexDoc
                     .build());
         } catch (IOException e) {
             LOGGER.warn("Could not update index config", e);
-            throw new Exception(e);
+            throw new QueryApiException(e);
         }
     }
 
     @Override
     public Optional<T> update(final ServiceUser user,
                               final String uuid,
-                              final T update) throws Exception {
+                              final T update) throws QueryApiException {
         try {
             final Long now = System.currentTimeMillis();
 
@@ -187,7 +188,7 @@ public abstract class AbstractElasticDocRefServiceImpl<T extends ElasticIndexDoc
             return Optional.empty();
         } catch (IOException | RuntimeException e) {
             LOGGER.warn("Could not update index config", e);
-            throw new Exception(e);
+            throw new QueryApiException(e);
         }
 
         return get(user, uuid);
@@ -196,7 +197,7 @@ public abstract class AbstractElasticDocRefServiceImpl<T extends ElasticIndexDoc
     @Override
     public Optional<T> copyDocument(final ServiceUser user,
                                     final String originalUuid,
-                                    final String copyUuid) throws Exception {
+                                    final String copyUuid) throws QueryApiException {
         try {
             final GetResponse searchResponse = client
                     .prepareGet(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, originalUuid)
@@ -237,13 +238,13 @@ public abstract class AbstractElasticDocRefServiceImpl<T extends ElasticIndexDoc
             return Optional.empty();
         } catch (IOException | RuntimeException e) {
             LOGGER.warn("Could not update index config", e);
-            throw new Exception(e);
+            throw new QueryApiException(e);
         }
     }
 
     @Override
     public Optional<T> moveDocument(final ServiceUser user,
-                                    final String uuid) throws Exception {
+                                    final String uuid) throws QueryApiException {
         // two grapes? Who cares?!
         return get(user, uuid);
     }
@@ -251,7 +252,7 @@ public abstract class AbstractElasticDocRefServiceImpl<T extends ElasticIndexDoc
     @Override
     public Optional<T> renameDocument(final ServiceUser user,
                                       final String uuid,
-                                      final String name) throws Exception {
+                                      final String name) throws QueryApiException {
         try {
             final Long now = System.currentTimeMillis();
 
@@ -268,7 +269,7 @@ public abstract class AbstractElasticDocRefServiceImpl<T extends ElasticIndexDoc
             return Optional.empty();
         } catch (IOException e) {
             LOGGER.warn("Could not update index config", e);
-            throw new Exception(e);
+            throw new QueryApiException(e);
         }
 
         return get(user, uuid);
@@ -276,14 +277,14 @@ public abstract class AbstractElasticDocRefServiceImpl<T extends ElasticIndexDoc
 
     @Override
     public Optional<Boolean> deleteDocument(final ServiceUser user,
-                                            final String uuid) throws Exception {
+                                            final String uuid) throws QueryApiException {
         client.prepareDelete(STROOM_INDEX_NAME, DOC_REF_INDEXED_TYPE, uuid).get();
         return Optional.of(Boolean.TRUE);
     }
 
     @Override
     public ExportDTO exportDocument(final ServiceUser user,
-                                    final String uuid) throws Exception {
+                                    final String uuid) throws QueryApiException {
         return get(user, uuid)
                 .map(d -> {
                     ExportDTO.Builder b = ExportDTO
@@ -301,7 +302,7 @@ public abstract class AbstractElasticDocRefServiceImpl<T extends ElasticIndexDoc
                                                        final String uuid,
                                                        final String name,
                                                        final Boolean confirmed,
-                                                       final Map<String, String> dataMap) throws Exception {
+                                                       final Map<String, String> dataMap) throws QueryApiException {
         if (confirmed) {
             final Optional<T> index = createDocument(user, uuid, name);
 

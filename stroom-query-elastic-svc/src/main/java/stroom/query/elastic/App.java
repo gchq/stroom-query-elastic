@@ -47,14 +47,6 @@ public class App extends Application<Config> {
                 new ElasticHealthCheck(transportClientBundle.getTransportClient())
         );
 
-        environment.jersey().register(
-                new AbstractBinder() {
-                    @Override
-                    protected void configure() {
-                    }
-                }
-        );
-
         configureCors(environment);
     }
 

@@ -18,11 +18,11 @@ import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.*;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
+import stroom.query.audit.service.QueryApiException;
 import stroom.query.audit.service.QueryService;
 import stroom.query.common.v2.*;
 import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.store.ElasticStore;
-import stroom.util.shared.HasTerminate;
 
 import javax.inject.Inject;
 import java.util.*;
@@ -45,7 +45,7 @@ public class ElasticQueryServiceImpl implements QueryService {
 
     @Override
     public Optional<DataSource> getDataSource(final ServiceUser user,
-                                              final DocRef docRef) throws Exception {
+                                              final DocRef docRef) throws QueryApiException {
         LOGGER.debug("Getting Data Source for DocRef: " + docRef);
 
         try {
@@ -108,14 +108,14 @@ public class ElasticQueryServiceImpl implements QueryService {
             if (rootCause instanceof IndexNotFoundException) {
                 return Optional.empty();
             } else {
-                throw e;
+                throw new QueryApiException(e);
             }
         }
     }
 
     @Override
     public Optional<SearchResponse> search(final ServiceUser user,
-                                           final SearchRequest request) throws Exception {
+                                           final SearchRequest request) throws QueryApiException {
         try {
             final String queryUuid = request.getQuery().getDataSource().getUuid();
             final Optional<ElasticIndexDocRefEntity> elasticIndexConfigO = service.get(user, queryUuid);
@@ -167,13 +167,13 @@ public class ElasticQueryServiceImpl implements QueryService {
 
     @Override
     public Boolean destroy(final ServiceUser user,
-                           final QueryKey queryKey) throws Exception {
+                           final QueryKey queryKey) {
         return Boolean.TRUE;
     }
 
     @Override
     public Optional<DocRef> getDocRefForQueryKey(final ServiceUser user,
-                                                 final QueryKey queryKey) throws Exception {
+                                                 final QueryKey queryKey) {
         return Optional.empty();
     }
 
@@ -288,20 +288,9 @@ public class ElasticQueryServiceImpl implements QueryService {
 
                 if (coprocessorSettings instanceof TableCoprocessorSettings) {
                     final TableCoprocessorSettings tableCoprocessorSettings = (TableCoprocessorSettings) coprocessorSettings;
-                    final HasTerminate taskMonitor = new HasTerminate() {
-                        //TODO do something about this
-                        @Override
-                        public void terminate() {
-                            System.out.println("terminating");
-                        }
-
-                        @Override
-                        public boolean isTerminated() {
-                            return false;
-                        }
-                    };
-                    final Coprocessor coprocessor = new TableCoprocessor(
-                            tableCoprocessorSettings, fieldIndexMap, taskMonitor, paramMap);
+                    final Coprocessor coprocessor = new TableCoprocessor(tableCoprocessorSettings,
+                            fieldIndexMap,
+                            paramMap);
 
                     coprocessorMap.put(coprocessorId, coprocessor);
                 }

@@ -41,8 +41,7 @@ public class ElasticQueryResourceNoAuthIT extends QueryResourceNoAuthIT<ElasticI
             new DropwizardAppWithClientsRule<>(App.class, resourceFilePath("config_noauth.yml"));
 
     public ElasticQueryResourceNoAuthIT() {
-        super(ElasticIndexDocRefEntity.class,
-                ElasticIndexDocRefEntity.TYPE,
+        super(ElasticIndexDocRefEntity.TYPE,
                 appRule);
     }
 
@@ -153,7 +152,7 @@ public class ElasticQueryResourceNoAuthIT extends QueryResourceNoAuthIT<ElasticI
                 .name("DoesNotExist")
                 .build();
 
-        final Response response = queryClient.getDataSource(NoAuthValueFactoryProvider.ADMIN_USER, elasticIndexConfig);
+        final Response response = getQueryClient().getDataSource(NoAuthValueFactoryProvider.ADMIN_USER, elasticIndexConfig);
 
         assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
 
@@ -176,7 +175,7 @@ public class ElasticQueryResourceNoAuthIT extends QueryResourceNoAuthIT<ElasticI
 
         final SearchRequest searchRequest = getValidSearchRequest(docRef, speakerFinder, null);
 
-        final Response response = queryClient.search(NoAuthValueFactoryProvider.ADMIN_USER, searchRequest);
+        final Response response = getQueryClient().search(NoAuthValueFactoryProvider.ADMIN_USER, searchRequest);
 
         assertEquals(HttpStatus.SC_OK, response.getStatus());
 
@@ -233,7 +232,7 @@ public class ElasticQueryResourceNoAuthIT extends QueryResourceNoAuthIT<ElasticI
                 .build();
 
         final SearchRequest searchRequest = getValidSearchRequest(docRef, speakerFinder, null);
-        final Response response = queryClient.search(NoAuthValueFactoryProvider.ADMIN_USER, searchRequest);
+        final Response response = getQueryClient().search(NoAuthValueFactoryProvider.ADMIN_USER, searchRequest);
 
         assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
 
@@ -265,7 +264,7 @@ public class ElasticQueryResourceNoAuthIT extends QueryResourceNoAuthIT<ElasticI
                 .build();
 
         final SearchRequest searchRequest = getValidSearchRequest(docRef, speakerFinder, null);
-        final Response response = queryClient.search(NoAuthValueFactoryProvider.ADMIN_USER, searchRequest);
+        final Response response = getQueryClient().search(NoAuthValueFactoryProvider.ADMIN_USER, searchRequest);
 
         assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
 

@@ -14,6 +14,7 @@ import stroom.query.api.v2.SearchResponse;
 import stroom.query.audit.rest.QueryResource;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
+import stroom.query.audit.service.QueryApiException;
 import stroom.query.audit.service.QueryService;
 
 import javax.inject.Inject;
@@ -43,7 +44,7 @@ public class AutoIndexQueryServiceImpl implements QueryService {
 
     @Override
     public Optional<DataSource> getDataSource(final ServiceUser user,
-                                              final DocRef docRef) throws Exception {
+                                              final DocRef docRef) throws QueryApiException {
         final Optional<AutoIndexDocRefEntity> docRefEntityOpt =
                 docRefService.get(user, docRef.getUuid());
         if (!docRefEntityOpt.isPresent()) {
@@ -66,7 +67,7 @@ public class AutoIndexQueryServiceImpl implements QueryService {
 
     @Override
     public Optional<SearchResponse> search(final ServiceUser user,
-                                           final SearchRequest request) throws Exception {
+                                           final SearchRequest request) throws QueryApiException {
         // Retrieve the full Auto Index Doc Ref for the request
         final String docRefUuid = request.getQuery().getDataSource().getUuid();
         final Optional<AutoIndexDocRefEntity> docRefEntityOpt =
@@ -110,13 +111,13 @@ public class AutoIndexQueryServiceImpl implements QueryService {
 
     @Override
     public Boolean destroy(final ServiceUser user,
-                           final QueryKey queryKey) throws Exception {
+                           final QueryKey queryKey) throws QueryApiException {
         return Boolean.TRUE;
     }
 
     @Override
     public Optional<DocRef> getDocRefForQueryKey(final ServiceUser user,
-                                                 final QueryKey queryKey) throws Exception {
+                                                 final QueryKey queryKey) throws QueryApiException {
         return Optional.empty();
     }
 }

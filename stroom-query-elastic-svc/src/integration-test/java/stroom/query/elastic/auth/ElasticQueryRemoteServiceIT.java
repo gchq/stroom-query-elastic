@@ -9,16 +9,29 @@ import org.slf4j.LoggerFactory;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.elastic.test.ElasticTestIndexRule;
-import stroom.query.api.v2.*;
+import stroom.query.api.v2.DocRef;
+import stroom.query.api.v2.ExpressionOperator;
+import stroom.query.api.v2.ExpressionTerm;
+import stroom.query.api.v2.Field;
+import stroom.query.api.v2.FlatResult;
+import stroom.query.api.v2.OffsetRange;
+import stroom.query.api.v2.Query;
+import stroom.query.api.v2.ResultRequest;
+import stroom.query.api.v2.SearchRequest;
+import stroom.query.api.v2.SearchResponse;
+import stroom.query.api.v2.TableSettings;
 import stroom.query.audit.authorisation.DocumentPermission;
+import stroom.query.audit.client.NotFoundException;
 import stroom.query.audit.rest.AuditedDocRefResourceImpl;
 import stroom.query.audit.rest.AuditedQueryResourceImpl;
+import stroom.query.audit.service.QueryApiException;
 import stroom.query.elastic.App;
 import stroom.query.elastic.ShakespeareLine;
 import stroom.query.elastic.config.Config;
 import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.service.ElasticIndexDocRefServiceImpl;
 import stroom.query.testing.DropwizardAppWithClientsRule;
+import stroom.query.testing.QueryRemoteServiceIT;
 import stroom.query.testing.QueryResourceIT;
 import stroom.query.testing.StroomAuthenticationRule;
 
@@ -32,11 +45,12 @@ import java.util.stream.Collectors;
 import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static stroom.query.elastic.auth.ElasticDocRefResourceIT.LOCAL_ELASTIC_HTTP_HOST;
 import static stroom.query.testing.FifoLogbackRule.containsAllOf;
 
-public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEntity, Config> {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ElasticQueryResourceIT.class);
+public class ElasticQueryRemoteServiceIT extends QueryRemoteServiceIT<ElasticIndexDocRefEntity, Config> {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ElasticQueryRemoteServiceIT.class);
 
     // This Config is for the valid elastic index, the index and doc ref will be created
     // as part of the class setup
@@ -56,20 +70,21 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
 
     @ClassRule
     public static ElasticTestIndexRule stroomIndexRule = ElasticTestIndexRule
-            .forIndex(ElasticQueryResourceIT.class, ElasticIndexDocRefServiceImpl.STROOM_INDEX_NAME)
+            .forIndex(ElasticQueryRemoteServiceIT.class, ElasticIndexDocRefServiceImpl.STROOM_INDEX_NAME)
             .httpUrl(LOCAL_ELASTIC_HTTP_HOST)
             .build();
 
     @ClassRule
     public static ElasticTestIndexRule dataIndexRule = ElasticTestIndexRule
-            .forIndex(ElasticQueryResourceIT.class, DATA_INDEX_NAME)
+            .forIndex(ElasticQueryRemoteServiceIT.class, DATA_INDEX_NAME)
             .httpUrl(LOCAL_ELASTIC_HTTP_HOST)
             .mappingsResource(ELASTIC_DATA_MAPPINGS_FULL_FILE)
             .dataResource(ELASTIC_DATA_FILE)
             .build();
 
-    public ElasticQueryResourceIT() {
+    public ElasticQueryRemoteServiceIT() {
         super(ElasticIndexDocRefEntity.TYPE,
+                ElasticIndexDocRefEntity.class,
                 appRule,
                 authRule);
     }
@@ -150,7 +165,7 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
      * a completely non existent doc ref.
      */
     @Test
-    public void testGetDataSourceMissingDocRef() {
+    public void testGetDataSourceMissingDocRef() throws QueryApiException {
 
         // Create a random index config that is not registered with the system
         final DocRef elasticIndexConfig = new DocRef.Builder()
@@ -163,9 +178,12 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
                 .permission(DocumentPermission.READ)
                 .done();
 
-        final Response response = queryClient.getDataSource(authRule.adminUser(), elasticIndexConfig);
-
-        assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
+        try {
+            queryClient.getDataSource(authRule.adminUser(), elasticIndexConfig);
+            fail();
+        } catch (NotFoundException e) {
+            // good
+        }
 
         // Get
         auditLogRule.check()
@@ -174,7 +192,7 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
     }
 
     @Test
-    public void testSearchValid() {
+    public void testSearchValid() throws QueryApiException {
         final DocRef docRef = createDocument();
 
         final String SPEAKER_TERM = "WARWICK";
@@ -186,11 +204,8 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
 
         final SearchRequest searchRequest = getValidSearchRequest(docRef, speakerFinder, null);
 
-        final Response response = queryClient.search(authRule.adminUser(), searchRequest);
-
-        assertEquals(HttpStatus.SC_OK, response.getStatus());
-
-        final SearchResponse searchResponse = response.readEntity(SearchResponse.class);
+        final SearchResponse searchResponse = queryClient.search(authRule.adminUser(), searchRequest)
+                .orElseThrow(() -> new AssertionError("Response body missing"));
 
         final List<ShakespeareLine> lines = searchResponse.getResults().stream()
                 .map(r -> (FlatResult) r)
@@ -208,7 +223,12 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
         assertEquals(1, lines.size());
         assertEquals("4178", lines.get(0).getLineId());
 
-        queryClient.destroy(authRule.adminUser(), searchRequest.getKey());
+        try {
+            queryClient.destroy(authRule.adminUser(), searchRequest.getKey());
+            fail();
+        } catch (NotFoundException e) {
+            // Goodo, the elastic search doesn't hang onto searches
+        }
 
         // Create DocRef, Update Index, Get
 
@@ -230,7 +250,7 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
      * a completely non existent doc ref
      */
     @Test
-    public void testSearchMissingDocRef() {
+    public void testSearchMissingDocRef() throws QueryApiException {
 
         // Create a random index config that is not registered with the system
         final DocRef docRef = new DocRef.Builder()
@@ -252,9 +272,13 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
                 .build();
 
         final SearchRequest searchRequest = getValidSearchRequest(docRef, speakerFinder, null);
-        final Response response = queryClient.search(authRule.adminUser(), searchRequest);
 
-        assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
+        try {
+            queryClient.search(authRule.adminUser(), searchRequest);
+            fail();
+        } catch (NotFoundException e) {
+            // good
+        }
 
         auditLogRule.check()
                 .thereAreAtLeast(1)
@@ -269,7 +293,7 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
      * a docRef that exists, but the index does not exist.
      */
     @Test
-    public void testSearchMissingIndex() {
+    public void testSearchMissingIndex() throws QueryApiException {
 
         final DocRef docRef = createDocument(new ElasticIndexDocRefEntity.Builder()
                 .uuid(UUID.randomUUID().toString())
@@ -284,9 +308,12 @@ public class ElasticQueryResourceIT extends QueryResourceIT<ElasticIndexDocRefEn
                 .build();
 
         final SearchRequest searchRequest = getValidSearchRequest(docRef, speakerFinder, null);
-        final Response response = queryClient.search(authRule.adminUser(), searchRequest);
-
-        assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
+        try {
+            queryClient.search(authRule.adminUser(), searchRequest);
+            fail();
+        } catch (NotFoundException e) {
+            // good
+        }
 
         auditLogRule.check()
                 .thereAreAtLeast(3)
