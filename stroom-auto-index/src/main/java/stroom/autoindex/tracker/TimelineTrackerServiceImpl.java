@@ -3,38 +3,38 @@ package stroom.autoindex.tracker;
 import javax.inject.Inject;
 import java.util.Optional;
 
-public class AutoIndexTrackerServiceImpl implements AutoIndexTrackerService {
+public class TimelineTrackerServiceImpl implements TimelineTrackerService {
     private static final WindowMerger<Long, TrackerWindow> longTimeMerger =
             WindowMerger.<Long, TrackerWindow>withValueGenerator((from, to) -> TrackerWindow.from(from).to(to))
                     .comparator(Long::compareTo)
                     .build();
 
-    private final AutoIndexTrackerDao<?> autoIndexTrackerDao;
+    private final TimelineTrackerDao<?> timelineTrackerDao;
 
     @Inject
-    public AutoIndexTrackerServiceImpl(final AutoIndexTrackerDao autoIndexTrackerDao) {
-        this.autoIndexTrackerDao = autoIndexTrackerDao;
+    public TimelineTrackerServiceImpl(final TimelineTrackerDao timelineTrackerDao) {
+        this.timelineTrackerDao = timelineTrackerDao;
     }
 
     @Override
-    public AutoIndexTracker get(final String docRefUuid) {
-        return autoIndexTrackerDao.transactionResult((d, c) -> d.get(c, docRefUuid));
+    public TimelineTracker get(final String docRefUuid) {
+        return timelineTrackerDao.transactionResult((d, c) -> d.get(c, docRefUuid));
     }
 
     @Override
-    public AutoIndexTracker setTimelineBounds(final String docRefUuid,
-                                              final TrackerWindow timelineBounds) {
-        return autoIndexTrackerDao.transactionResult((d, c) -> {
+    public TimelineTracker setTimelineBounds(final String docRefUuid,
+                                             final TrackerWindow timelineBounds) {
+        return timelineTrackerDao.transactionResult((d, c) -> {
             d.setTimelineBounds(c, docRefUuid, timelineBounds);
             return d.get(c, docRefUuid);
         });
     }
 
     @Override
-    public AutoIndexTracker addWindow(final String docRefUuid,
-                                      final TrackerWindow window) {
-        return autoIndexTrackerDao.transactionResult((d, c) -> {
-            final AutoIndexTracker current = d.get(c, docRefUuid);
+    public TimelineTracker addWindow(final String docRefUuid,
+                                     final TrackerWindow window) {
+        return timelineTrackerDao.transactionResult((d, c) -> {
+            final TimelineTracker current = d.get(c, docRefUuid);
 
             // Attempt to merge this new window with any existing ones that can be replaced
             final Optional<TrackerWindow> windowToAdd = longTimeMerger.merge(window)
@@ -77,9 +77,9 @@ public class AutoIndexTrackerServiceImpl implements AutoIndexTrackerService {
     }
 
     @Override
-    public AutoIndexTracker clearWindows(final String docRefUuid) {
-        return autoIndexTrackerDao.transactionResult((d, c) -> {
-            final AutoIndexTracker current = d.get(c, docRefUuid);
+    public TimelineTracker clearWindows(final String docRefUuid) {
+        return timelineTrackerDao.transactionResult((d, c) -> {
+            final TimelineTracker current = d.get(c, docRefUuid);
             current.getWindows().forEach(tw -> d.deleteTracker(c, docRefUuid, tw));
             return d.get(c, docRefUuid);
         });
@@ -87,8 +87,8 @@ public class AutoIndexTrackerServiceImpl implements AutoIndexTrackerService {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("AutoIndexTrackerServiceImpl{");
-        sb.append("autoIndexTrackerDao=").append(autoIndexTrackerDao);
+        final StringBuilder sb = new StringBuilder("TimelineTrackerServiceImpl{");
+        sb.append("timelineTrackerDao=").append(timelineTrackerDao);
         sb.append('}');
         return sb.toString();
     }

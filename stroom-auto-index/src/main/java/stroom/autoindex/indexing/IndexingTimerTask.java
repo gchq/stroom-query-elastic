@@ -3,7 +3,9 @@ package stroom.autoindex.indexing;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.autoindex.app.IndexingConfig;
+import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
+import stroom.query.audit.model.DocRefEntity;
 import stroom.query.audit.security.ServiceUser;
 
 import javax.inject.Inject;
@@ -53,6 +55,7 @@ public class IndexingTimerTask extends TimerTask {
 
             // Get the list of unstarted index jobs
             autoIndexDocRefService.getAll(INTERNAL).stream()
+                    .map(DocRefEntity::getUuid)
                     .map(indexJobDao::getOrCreate)
                     .filter(Optional::isPresent).map(Optional::get)
                     .filter(j -> j.getStartedTimeMillis() == 0)

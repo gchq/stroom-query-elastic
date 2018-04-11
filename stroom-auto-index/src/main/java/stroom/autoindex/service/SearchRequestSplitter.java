@@ -1,6 +1,6 @@
 package stroom.autoindex.service;
 
-import stroom.autoindex.tracker.AutoIndexTracker;
+import stroom.autoindex.tracker.TimelineTracker;
 import stroom.autoindex.tracker.TrackerInverter;
 import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.ExpressionOperator;
@@ -17,7 +17,7 @@ import stroom.query.api.v2.SearchRequest;
 public class SearchRequestSplitter {
     private final SearchRequest searchRequest;
     private AutoIndexDocRefEntity autoIndexDocRefEntity;
-    private AutoIndexTracker tracker;
+    private TimelineTracker tracker;
 
     public static SearchRequestSplitter withSearchRequest(final SearchRequest searchRequest) {
         return new SearchRequestSplitter(searchRequest);
@@ -32,7 +32,7 @@ public class SearchRequestSplitter {
         return this;
     }
 
-    public SearchRequestSplitter tracker(final AutoIndexTracker value) {
+    public SearchRequestSplitter tracker(final TimelineTracker value) {
         this.tracker = value;
         return this;
     }
@@ -46,7 +46,7 @@ public class SearchRequestSplitter {
 
         // Only query the raw doc ref if we can generate an inverted timeline
         try {
-            final AutoIndexTracker invertedTracking = TrackerInverter.withTracker(tracker).invert();
+            final TimelineTracker invertedTracking = TrackerInverter.withTracker(tracker).invert();
             split(autoIndexDocRefEntity.getRawDocRef(),
                     invertedTracking,
                     splitSearchRequestBuilder);
@@ -58,7 +58,7 @@ public class SearchRequestSplitter {
     }
 
     private void split(final DocRef docRef,
-                       final AutoIndexTracker tracker,
+                       final TimelineTracker tracker,
                        final SplitSearchRequest.Builder splitSearchRequestBuilder) {
         // Get access to the input query
         final Query inputQuery = searchRequest.getQuery();

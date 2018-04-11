@@ -15,13 +15,13 @@ public class TrackerInverterTest {
         // Given
         final String docRefUuid = UUID.randomUUID().toString();
         final TrackerWindow timelineBounds = TrackerWindow.from(20L).to(200L);
-        final AutoIndexTracker tracker = AutoIndexTracker
+        final TimelineTracker tracker = TimelineTracker
                 .forDocRef(docRefUuid)
                 .withBounds(timelineBounds)
                 .withWindow(TrackerWindow.from(180L).to(200L));
 
         // When
-        final AutoIndexTracker inverted = TrackerInverter.withTracker(tracker).invert();
+        final TimelineTracker inverted = TrackerInverter.withTracker(tracker).invert();
 
         // Then
         assertEquals(docRefUuid, inverted.getDocRefUuid());
@@ -35,13 +35,13 @@ public class TrackerInverterTest {
         // Given
         final String docRefUuid = UUID.randomUUID().toString();
         final TrackerWindow timelineBounds = TrackerWindow.from(20L).to(200L);
-        final AutoIndexTracker tracker = AutoIndexTracker
+        final TimelineTracker tracker = TimelineTracker
                 .forDocRef(docRefUuid)
                 .withBounds(timelineBounds)
                 .withWindow(TrackerWindow.from(20L).to(40L));
 
         // When
-        final AutoIndexTracker inverted = TrackerInverter.withTracker(tracker).invert();
+        final TimelineTracker inverted = TrackerInverter.withTracker(tracker).invert();
 
         // Then
         assertEquals(docRefUuid, inverted.getDocRefUuid());
@@ -56,14 +56,14 @@ public class TrackerInverterTest {
         // Given
         final String docRefUuid = UUID.randomUUID().toString();
         final TrackerWindow timelineBounds = TrackerWindow.from(20L).to(200L);
-        final AutoIndexTracker tracker = AutoIndexTracker
+        final TimelineTracker tracker = TimelineTracker
                 .forDocRef(docRefUuid)
                 .withBounds(timelineBounds)
                 .withWindow(TrackerWindow.from(120L).to(140L))
                 .withWindow(TrackerWindow.from(180L).to(200L));
 
         // When
-        final AutoIndexTracker inverted = TrackerInverter.withTracker(tracker).invert();
+        final TimelineTracker inverted = TrackerInverter.withTracker(tracker).invert();
 
         // Then
         assertEquals(docRefUuid, inverted.getDocRefUuid());
@@ -82,14 +82,14 @@ public class TrackerInverterTest {
         // Given
         final String docRefUuid = UUID.randomUUID().toString();
         final TrackerWindow timelineBounds = TrackerWindow.from(20L).to(200L);
-        final AutoIndexTracker tracker = AutoIndexTracker
+        final TimelineTracker tracker = TimelineTracker
                 .forDocRef(docRefUuid)
                 .withBounds(timelineBounds)
                 .withWindow(TrackerWindow.from(20L).to(100L))
                 .withWindow(TrackerWindow.from(140L).to(160L));
 
         // When
-        final AutoIndexTracker inverted = TrackerInverter.withTracker(tracker).invert();
+        final TimelineTracker inverted = TrackerInverter.withTracker(tracker).invert();
 
         // Then
         assertEquals(docRefUuid, inverted.getDocRefUuid());
@@ -108,7 +108,7 @@ public class TrackerInverterTest {
         // Given
         final String docRefUuid = UUID.randomUUID().toString();
         final TrackerWindow timelineBounds = TrackerWindow.from(20L).to(200L);
-        final AutoIndexTracker tracker = AutoIndexTracker
+        final TimelineTracker tracker = TimelineTracker
                 .forDocRef(docRefUuid)
                 .withBounds(timelineBounds)
                 .withWindow(TrackerWindow.from(20L).to(100L))
@@ -116,7 +116,7 @@ public class TrackerInverterTest {
                 .withWindow(TrackerWindow.from(190L).to(2000L));
 
         // When
-        final AutoIndexTracker inverted = TrackerInverter.withTracker(tracker).invert();
+        final TimelineTracker inverted = TrackerInverter.withTracker(tracker).invert();
 
         // Then
         assertEquals(docRefUuid, inverted.getDocRefUuid());

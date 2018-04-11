@@ -26,10 +26,10 @@ import stroom.autoindex.indexing.IndexJobDaoImpl;
 import stroom.autoindex.indexing.IndexWriter;
 import stroom.autoindex.indexing.IndexWriterImpl;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
-import stroom.autoindex.tracker.AutoIndexTrackerDao;
-import stroom.autoindex.tracker.AutoIndexTrackerDaoJooqImpl;
-import stroom.autoindex.tracker.AutoIndexTrackerService;
-import stroom.autoindex.tracker.AutoIndexTrackerServiceImpl;
+import stroom.autoindex.tracker.TimelineTrackerDao;
+import stroom.autoindex.tracker.TimelineTrackerDaoJooqImpl;
+import stroom.autoindex.tracker.TimelineTrackerService;
+import stroom.autoindex.tracker.TimelineTrackerServiceImpl;
 import stroom.query.api.v2.ExpressionOperator;
 import stroom.query.api.v2.ExpressionTerm;
 import stroom.query.api.v2.OffsetRange;
@@ -77,7 +77,7 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
      * We will use this to manually tell the system that we already have data that runs from 'now' back to
      * the end date of our test data.
      */
-    private static AutoIndexTrackerService autoIndexTrackerService;
+    private static TimelineTrackerService timelineTrackerService;
 
     @BeforeClass
     public static void beforeClass() {
@@ -86,8 +86,8 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
             @Override
             protected void configure() {
                 bind(DSLContext.class).toInstance(initialiseJooqDbRule.withDatabase());
-                bind(AutoIndexTrackerDao.class).to(AutoIndexTrackerDaoJooqImpl.class);
-                bind(AutoIndexTrackerService.class).to(AutoIndexTrackerServiceImpl.class);
+                bind(TimelineTrackerDao.class).to(TimelineTrackerDaoJooqImpl.class);
+                bind(TimelineTrackerService.class).to(TimelineTrackerServiceImpl.class);
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
                 bind(IndexWriter.class).to(IndexWriterImpl.class);
                 bind(new TypeLiteral<Consumer<IndexJob>>(){})
@@ -113,15 +113,16 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
         assertTrue(testIndexJobConsumerObj instanceof IndexJobConsumer);
         indexJobConsumer = (IndexJobConsumer) testIndexJobConsumerObj;
         indexJobDao = testInjector.getInstance(IndexJobDao.class);
-        autoIndexTrackerService = testInjector.getInstance(AutoIndexTrackerService.class);
+        timelineTrackerService = testInjector.getInstance(TimelineTrackerService.class);
     }
 
     @Test
     public void testForkBasedOnSingleRun() {
         // Create a valid auto index
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
+        final String docRefUuid = autoIndex.getDocRef().getUuid();
 
-        autoIndexTrackerService.setTimelineBounds(autoIndex.getDocRef().getUuid(), AnimalTestData.TIMELINE_BOUNDS);
+        timelineTrackerService.setTimelineBounds(docRefUuid, AnimalTestData.TIMELINE_BOUNDS);
 
         // Give our fixed test service user access to the doc refs
         // The wired Index Job DAO will use this user via Guice injection
@@ -134,7 +135,7 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
                 .done();
 
         // Manually force the indexing to occur
-        final IndexJob indexJob = indexJobDao.getOrCreate(autoIndex.getEntity())
+        final IndexJob indexJob = indexJobDao.getOrCreate(docRefUuid)
                 .orElseThrow(() -> new AssertionError("Index Job Should exist"));
         indexJobConsumer.accept(indexJob);
 

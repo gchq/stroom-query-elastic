@@ -11,9 +11,9 @@ import org.slf4j.LoggerFactory;
 import stroom.autoindex.AutoIndexConstants;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
-import stroom.autoindex.tracker.AutoIndexTracker;
-import stroom.autoindex.tracker.AutoIndexTrackerDaoJooqImpl;
-import stroom.autoindex.tracker.AutoIndexTrackerService;
+import stroom.autoindex.tracker.TimelineTracker;
+import stroom.autoindex.tracker.TimelineTrackerDaoJooqImpl;
+import stroom.autoindex.tracker.TimelineTrackerService;
 import stroom.autoindex.tracker.NextWindowSelector;
 import stroom.autoindex.tracker.TrackerWindow;
 import stroom.query.audit.security.ServiceUser;
@@ -23,9 +23,9 @@ import javax.inject.Named;
 import java.util.Optional;
 import java.util.UUID;
 
-import static stroom.autoindex.tracker.AutoIndexTrackerDaoJooqImpl.FIELD_DOC_REF_UUID;
-import static stroom.autoindex.tracker.AutoIndexTrackerDaoJooqImpl.FIELD_FROM;
-import static stroom.autoindex.tracker.AutoIndexTrackerDaoJooqImpl.FIELD_TO;
+import static stroom.autoindex.tracker.TimelineTrackerDaoJooqImpl.FIELD_DOC_REF_UUID;
+import static stroom.autoindex.tracker.TimelineTrackerDaoJooqImpl.FIELD_FROM;
+import static stroom.autoindex.tracker.TimelineTrackerDaoJooqImpl.FIELD_TO;
 
 public class IndexJobDaoImpl implements IndexJobDao {
     private static final Logger LOGGER = LoggerFactory.getLogger(IndexJobDaoImpl.class);
@@ -33,33 +33,33 @@ public class IndexJobDaoImpl implements IndexJobDao {
     private static final String JOB_ID = "jobId";
     private static final String STARTED_TIME = "startedTime";
     private static final String CREATE_TIME = "createTime";
+    private static final String COMPLETED_TIME = "completedTime";
 
     public static final Table<Record> JOB_TABLE = DSL.table(IndexJob.TABLE_NAME);
     public static final Field<String> FIELD_JOB_ID = DSL.field(JOB_ID, String.class);
     public static final Field<ULong> FIELD_STARTED_TIME = DSL.field(STARTED_TIME, ULong.class);
     public static final Field<ULong> FIELD_CREATE_TIME = DSL.field(CREATE_TIME, ULong.class);
+    public static final Field<ULong> FIELD_COMPLETED_TIME = DSL.field(COMPLETED_TIME, ULong.class);
 
     private final DSLContext database;
-    private final AutoIndexTrackerService autoIndexTrackerService;
+    private final TimelineTrackerService timelineTrackerService;
     private final AutoIndexDocRefServiceImpl autoIndexDocRefService;
     private final ServiceUser serviceUser;
 
     @Inject
     public IndexJobDaoImpl(final DSLContext database,
-                           final AutoIndexTrackerService autoIndexTrackerService,
+                           final TimelineTrackerService timelineTrackerService,
                            final AutoIndexDocRefServiceImpl autoIndexDocRefService,
                            @Named(AutoIndexConstants.STROOM_SERVICE_USER)
                                final ServiceUser serviceUser) {
         this.database = database;
-        this.autoIndexTrackerService = autoIndexTrackerService;
+        this.timelineTrackerService = timelineTrackerService;
         this.autoIndexDocRefService = autoIndexDocRefService;
         this.serviceUser = serviceUser;
     }
 
     @Override
-    public Optional<IndexJob> getOrCreate(final AutoIndexDocRefEntity autoIndexDocRefEntity) {
-
-        final String docRefUuid = autoIndexDocRefEntity.getUuid();
+    public Optional<IndexJob> getOrCreate(final String docRefUuid) {
 
         // Get or create
         return Optional.ofNullable(
@@ -67,11 +67,13 @@ public class IndexJobDaoImpl implements IndexJobDao {
                 DSL.using(c).select()
                         .from(JOB_TABLE)
                         .where(FIELD_DOC_REF_UUID.equal(docRefUuid))
+                        .and(FIELD_STARTED_TIME.equal(ULong.valueOf(0L)))
+                        .and(FIELD_COMPLETED_TIME.equal(ULong.valueOf(0L)))
                         .fetchOne(this::getFromRecord))
                 .orElseGet(() -> {
                     // Get hold of the current state of the auto index, and its trackers
                     final AutoIndexDocRefEntity autoIndex = getAutoIndex(docRefUuid);
-                    final AutoIndexTracker tracker = autoIndexTrackerService.get(docRefUuid);
+                    final TimelineTracker tracker = timelineTrackerService.get(docRefUuid);
 
                     final Optional<TrackerWindow> timelineBounds = tracker.getTimelineBounds();
                     if (!timelineBounds.isPresent()) {
@@ -95,7 +97,6 @@ public class IndexJobDaoImpl implements IndexJobDao {
                     final IndexJob indexJob = IndexJob.forAutoIndex(autoIndex)
                             .jobId(UUID.randomUUID().toString())
                             .trackerWindow(nextWindow.get())
-                            .startedTimeMillis(0L)
                             .createdTimeMillis(System.currentTimeMillis())
                             .build();
 
@@ -104,14 +105,16 @@ public class IndexJobDaoImpl implements IndexJobDao {
                             .insertInto(JOB_TABLE)
                             .columns(FIELD_JOB_ID,
                                     FIELD_DOC_REF_UUID,
-                                    FIELD_STARTED_TIME,
                                     FIELD_CREATE_TIME,
+                                    FIELD_STARTED_TIME,
+                                    FIELD_COMPLETED_TIME,
                                     FIELD_FROM,
                                     FIELD_TO)
                             .values(indexJob.getJobId(),
                                     docRefUuid,
-                                    ULong.valueOf(indexJob.getStartedTimeMillis()),
                                     ULong.valueOf(indexJob.getCreatedTimeMillis()),
+                                    ULong.valueOf(indexJob.getStartedTimeMillis()),
+                                    ULong.valueOf(indexJob.getCompletedTimeMillis()),
                                     ULong.valueOf(indexJob.getTrackerWindow().getFrom()),
                                     ULong.valueOf(indexJob.getTrackerWindow().getTo()))
                             .execute();
@@ -136,6 +139,8 @@ public class IndexJobDaoImpl implements IndexJobDao {
                         .update(JOB_TABLE)
                         .set(FIELD_STARTED_TIME, ULong.valueOf(System.currentTimeMillis()))
                         .where(FIELD_JOB_ID.equal(jobId))
+                        .and(FIELD_STARTED_TIME.equal(ULong.valueOf(0L)))
+                        .and(FIELD_COMPLETED_TIME.equal(ULong.valueOf(0L)))
                         .execute());
 
         if (0 == rowsAffected) {
@@ -150,16 +155,19 @@ public class IndexJobDaoImpl implements IndexJobDao {
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find Index Job for %s", jobId)));
 
         // then add the window to the tracker
-        autoIndexTrackerService.addWindow(indexJob.getAutoIndexDocRefEntity().getUuid(), indexJob.getTrackerWindow());
+        timelineTrackerService.addWindow(indexJob.getAutoIndexDocRefEntity().getUuid(), indexJob.getTrackerWindow());
 
-        // Now delete the job
         final int rowsAffected = database.transactionResult(c ->
-                DSL.using(c).deleteFrom(JOB_TABLE)
+                DSL.using(c)
+                        .update(JOB_TABLE)
+                        .set(FIELD_COMPLETED_TIME, ULong.valueOf(System.currentTimeMillis()))
                         .where(FIELD_JOB_ID.equal(jobId))
+                        .and(FIELD_STARTED_TIME.greaterThan(ULong.valueOf(0L)))
+                        .and(FIELD_COMPLETED_TIME.equal(ULong.valueOf(0L)))
                         .execute());
 
         if (0 == rowsAffected) {
-            throw new RuntimeException(String.format("Could not mark Job %s as complete, rows affected %d", jobId, rowsAffected));
+            throw new RuntimeException(String.format("Could not mark Job %s as started, rows affected %d", jobId, rowsAffected));
         }
     }
 
@@ -173,7 +181,8 @@ public class IndexJobDaoImpl implements IndexJobDao {
                 .jobId(record.get(FIELD_JOB_ID))
                 .createdTimeMillis(record.get(FIELD_CREATE_TIME).longValue())
                 .startedTimeMillis(record.get(FIELD_STARTED_TIME).longValue())
-                .trackerWindow(AutoIndexTrackerDaoJooqImpl.fromRecord(record))
+                .completedTimeMillis(record.get(FIELD_COMPLETED_TIME).longValue())
+                .trackerWindow(TimelineTrackerDaoJooqImpl.fromRecord(record))
                 .build();
     }
 

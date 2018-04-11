@@ -3,18 +3,18 @@ package stroom.autoindex.tracker;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class TrackerInverter {
-    private final AutoIndexTracker tracker;
+    private final TimelineTracker tracker;
 
-    public static TrackerInverter withTracker(final AutoIndexTracker tracker) {
+    public static TrackerInverter withTracker(final TimelineTracker tracker) {
         return new TrackerInverter(tracker);
     }
 
-    private TrackerInverter(AutoIndexTracker tracker) {
+    private TrackerInverter(TimelineTracker tracker) {
         this.tracker = tracker;
     }
 
-    public AutoIndexTracker invert() {
-        final AutoIndexTracker inverted = AutoIndexTracker.forBase(tracker);
+    public TimelineTracker invert() {
+        final TimelineTracker inverted = TimelineTracker.forBase(tracker);
 
         final TrackerWindow timelineBounds = tracker.getTimelineBounds()
                 .orElseThrow(() -> new RuntimeException("Cannot invert a timeline that has no bounds"));

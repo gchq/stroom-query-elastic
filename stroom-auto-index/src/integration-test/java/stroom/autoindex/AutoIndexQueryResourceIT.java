@@ -13,10 +13,10 @@ import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.animals.AnimalsQueryResourceIT;
 import stroom.autoindex.animals.app.AnimalSighting;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
-import stroom.autoindex.tracker.AutoIndexTrackerDao;
-import stroom.autoindex.tracker.AutoIndexTrackerDaoJooqImpl;
-import stroom.autoindex.tracker.AutoIndexTrackerService;
-import stroom.autoindex.tracker.AutoIndexTrackerServiceImpl;
+import stroom.autoindex.tracker.TimelineTrackerDao;
+import stroom.autoindex.tracker.TimelineTrackerDaoJooqImpl;
+import stroom.autoindex.tracker.TimelineTrackerService;
+import stroom.autoindex.tracker.TimelineTrackerServiceImpl;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.ExpressionOperator;
@@ -44,7 +44,7 @@ public class AutoIndexQueryResourceIT extends AbstractAutoIndexIntegrationTest {
      * We will use this to manually tell the system that we already have data that runs from 'now' back to
      * the end date of our test data.
      */
-    private static AutoIndexTrackerService autoIndexTrackerService;
+    private static TimelineTrackerService timelineTrackerService;
 
     @BeforeClass
     public static void beforeClass() {
@@ -53,12 +53,12 @@ public class AutoIndexQueryResourceIT extends AbstractAutoIndexIntegrationTest {
             @Override
             protected void configure() {
                 bind(DSLContext.class).toInstance(initialiseJooqDbRule.withDatabase());
-                bind(AutoIndexTrackerDao.class).to(AutoIndexTrackerDaoJooqImpl.class);
-                bind(AutoIndexTrackerService.class).to(AutoIndexTrackerServiceImpl.class);
+                bind(TimelineTrackerDao.class).to(TimelineTrackerDaoJooqImpl.class);
+                bind(TimelineTrackerService.class).to(TimelineTrackerServiceImpl.class);
             }
         });
 
-        autoIndexTrackerService = testInjector.getInstance(AutoIndexTrackerService.class);
+        timelineTrackerService = testInjector.getInstance(TimelineTrackerService.class);
     }
 
     @Test
@@ -89,7 +89,7 @@ public class AutoIndexQueryResourceIT extends AbstractAutoIndexIntegrationTest {
     public void testSearch() {
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
 
-        autoIndexTrackerService.setTimelineBounds(autoIndex.getDocRef().getUuid(), AnimalTestData.TIMELINE_BOUNDS);
+        timelineTrackerService.setTimelineBounds(autoIndex.getDocRef().getUuid(), AnimalTestData.TIMELINE_BOUNDS);
 
         final OffsetRange offset = new OffsetRange.Builder()
                 .length(100L)

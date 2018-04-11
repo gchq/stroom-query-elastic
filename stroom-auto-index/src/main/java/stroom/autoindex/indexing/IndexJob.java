@@ -16,6 +16,7 @@ public class IndexJob {
     private final TrackerWindow trackerWindow;
     private final long createdTimeMillis;
     private final long startedTimeMillis;
+    private final long completedTimeMillis;
 
     private IndexJob(final Builder builder) {
         this.jobId = Objects.requireNonNull(builder.jobId);
@@ -23,6 +24,7 @@ public class IndexJob {
         this.trackerWindow = Objects.requireNonNull(builder.trackerWindow);
         this.createdTimeMillis = builder.createdTimeMillis;
         this.startedTimeMillis = builder.startedTimeMillis;
+        this.completedTimeMillis = builder.completedTimeMillis;
     }
 
     public String getJobId() {
@@ -45,6 +47,9 @@ public class IndexJob {
         return startedTimeMillis;
     }
 
+    public long getCompletedTimeMillis() {
+        return completedTimeMillis;
+    }
 
     @Override
     public String toString() {
@@ -54,6 +59,7 @@ public class IndexJob {
         sb.append(", trackerWindow=").append(trackerWindow);
         sb.append(", createdTimeMillis=").append(createdTimeMillis);
         sb.append(", startedTimeMillis=").append(startedTimeMillis);
+        sb.append(", completedTimeMillis=").append(completedTimeMillis);
         sb.append('}');
         return sb.toString();
     }
@@ -68,6 +74,7 @@ public class IndexJob {
         private TrackerWindow trackerWindow;
         private long createdTimeMillis;
         private long startedTimeMillis;
+        private long completedTimeMillis;
 
         private Builder(final AutoIndexDocRefEntity autoIndexDocRefEntity) {
             this.autoIndexDocRefEntity = autoIndexDocRefEntity;
@@ -90,6 +97,11 @@ public class IndexJob {
 
         public Builder startedTimeMillis(final long value) {
             this.startedTimeMillis = value;
+            return this;
+        }
+
+        public Builder completedTimeMillis(final long value) {
+            this.completedTimeMillis = value;
             return this;
         }
 

@@ -5,14 +5,14 @@ package stroom.autoindex.tracker;
  * for the persistence itself, but it adds the logic that keeps the tracking windows
  * and timeline bounds consistent.
  */
-public interface AutoIndexTrackerService {
+public interface TimelineTrackerService {
     /**
      * Retrieve or Create the tracking information for a given doc ref UUID.
      *
      * @param docRefUuid The UUID of the Auto Index Doc Ref
      * @return The tracking information found
      */
-    AutoIndexTracker get(final String docRefUuid);
+    TimelineTracker get(final String docRefUuid);
 
     /**
      * Sets the timeline bounds for a particular auto index doc ref.
@@ -20,7 +20,7 @@ public interface AutoIndexTrackerService {
      * @param timelineBounds The bounds to apply as the timeline of the underlying raw data source
      * @return The updated Auto Index Tracker
      */
-    AutoIndexTracker setTimelineBounds(final String docRefUuid, final TrackerWindow timelineBounds);
+    TimelineTracker setTimelineBounds(final String docRefUuid, final TrackerWindow timelineBounds);
 
     /**
      * Add a tracked window for a given Doc Ref UUID.
@@ -29,7 +29,7 @@ public interface AutoIndexTrackerService {
      * @param window The window to add
      * @return The total updated tracking information
      */
-    AutoIndexTracker addWindow(final String docRefUuid, final TrackerWindow window);
+    TimelineTracker addWindow(final String docRefUuid, final TrackerWindow window);
 
     /**
      * Used to explicitly clear down any existing time windows for a given tracker.
@@ -38,5 +38,5 @@ public interface AutoIndexTrackerService {
      * @param docRefUuid The UUID of the Auto Index Doc Ref
      * @return The updated tracking information (should be empty)
      */
-    AutoIndexTracker clearWindows(final String docRefUuid);
+    TimelineTracker clearWindows(final String docRefUuid);
 }

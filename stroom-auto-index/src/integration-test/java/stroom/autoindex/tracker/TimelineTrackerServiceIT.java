@@ -9,8 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.autoindex.AbstractAutoIndexIntegrationTest;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -19,50 +17,49 @@ import java.util.stream.Stream;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-public class AutoIndexTrackerServiceIT extends AbstractAutoIndexIntegrationTest {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AutoIndexTrackerServiceIT.class);
+public class TimelineTrackerServiceIT extends AbstractAutoIndexIntegrationTest {
+    private static final Logger LOGGER = LoggerFactory.getLogger(TimelineTrackerServiceIT.class);
 
     /**
      * Create our own Index Tracker Services for direct testing
      */
-    private static List<AutoIndexTrackerService> autoIndexTrackerServices;
+    private static List<TimelineTrackerService> timelineTrackerServices;
 
     @BeforeClass
     public static void beforeClass() {
-        autoIndexTrackerServices =
-                Stream.of(AutoIndexTrackerDaoJooqImpl.class, AutoIndexTrackerDaoTestImpl.class)
+        timelineTrackerServices =
+                Stream.of(TimelineTrackerDaoJooqImpl.class, TimelineTrackerDaoTestImpl.class)
                 .map(c -> Guice.createInjector(new AbstractModule() {
                     @Override
                     protected void configure() {
-                        bind(AutoIndexTrackerService.class).to(AutoIndexTrackerServiceImpl.class);
-                        bind(AutoIndexTrackerDao.class).to(c);
+                        bind(TimelineTrackerService.class).to(TimelineTrackerServiceImpl.class);
+                        bind(TimelineTrackerDao.class).to(c);
                         bind(DSLContext.class).toInstance(initialiseJooqDbRule.withDatabase());
                     }
                 }))
-        .map(i -> i.getInstance(AutoIndexTrackerService.class))
+        .map(i -> i.getInstance(TimelineTrackerService.class))
         .collect(Collectors.toList());
     }
 
     @Test
     public void testGetEmptyTracker() {
-        autoIndexTrackerServices.forEach(autoIndexTrackerService -> {
+        timelineTrackerServices.forEach(autoIndexTrackerService -> {
             LOGGER.debug("Using Service {}", autoIndexTrackerService);
 
             // Given
             final String docRefUuid = UUID.randomUUID().toString();
 
             // When
-            final AutoIndexTracker tracker = autoIndexTrackerService.get(docRefUuid);
+            final TimelineTracker tracker = autoIndexTrackerService.get(docRefUuid);
 
             // Then
-            assertNotNull(tracker);
-            assertEquals(docRefUuid, tracker.getDocRefUuid());
+            assertEquals(TimelineTracker.forDocRef(docRefUuid), tracker);
         });
     }
 
     @Test
     public void testAddNonContiguousWindows() {
-        autoIndexTrackerServices.forEach(autoIndexTrackerService -> {
+        timelineTrackerServices.forEach(autoIndexTrackerService -> {
             LOGGER.debug("Using Service {}", autoIndexTrackerService);
 
             // Given
@@ -77,15 +74,22 @@ public class AutoIndexTrackerServiceIT extends AbstractAutoIndexIntegrationTest 
             final TrackerWindow threeMonthsAgoToTwoMonthsAgo = TrackerWindow.from(threeMonthsAgo).to(twoMonthsAgo);
 
             // When
-            final AutoIndexTracker tracker1 = autoIndexTrackerService.addWindow(docRefUuid, oneMonthAgoToNow);
-            final AutoIndexTracker tracker2 = autoIndexTrackerService.addWindow(docRefUuid, threeMonthsAgoToTwoMonthsAgo);
-            final AutoIndexTracker tracker3 = autoIndexTrackerService.get(docRefUuid);
+            final TimelineTracker tracker1 = autoIndexTrackerService.addWindow(docRefUuid, oneMonthAgoToNow);
+            final TimelineTracker tracker2 = autoIndexTrackerService.addWindow(docRefUuid, threeMonthsAgoToTwoMonthsAgo);
+            final TimelineTracker tracker3 = autoIndexTrackerService.get(docRefUuid);
 
             // Then
-            assertEquals(Collections.singletonList(oneMonthAgoToNow),
-                    tracker1.getWindows());
-            assertEquals(Arrays.asList(threeMonthsAgoToTwoMonthsAgo, oneMonthAgoToNow),
-                    tracker2.getWindows());
+            assertEquals(
+                    TimelineTracker.forDocRef(docRefUuid)
+                            .withBounds(oneMonthAgoToNow)
+                            .withWindow(oneMonthAgoToNow),
+                    tracker1);
+            assertEquals(
+                    TimelineTracker.forDocRef(docRefUuid)
+                            .withBounds(TrackerWindow.from(threeMonthsAgo).to(now))
+                            .withWindow(threeMonthsAgoToTwoMonthsAgo)
+                            .withWindow(oneMonthAgoToNow),
+                    tracker2);
 
             assertEquals(tracker2, tracker3);
         });
@@ -93,44 +97,33 @@ public class AutoIndexTrackerServiceIT extends AbstractAutoIndexIntegrationTest 
 
     @Test
     public void testAddContiguousWindows() {
-        autoIndexTrackerServices.forEach(autoIndexTrackerService -> {
-            LOGGER.debug("Using Service {}", autoIndexTrackerService);
-
+        timelineTrackerServices.forEach(autoIndexTrackerService -> {
             // Given
             final String docRefUuid = UUID.randomUUID().toString();
-            final Long now = 35L;
-            final Long oneMonthAgo = now - 10;
-            final Long twoMonthsAgo = oneMonthAgo - 10;
+            final Long now = 56L;
+            final Long oneWeekAgo = now - 10;
+            final Long twoWeeksAgo = oneWeekAgo - 10;
 
-            // Two windows that should join up
-            final TrackerWindow oneMonthAgoToNow = TrackerWindow.from(oneMonthAgo).to(now);
-            final TrackerWindow twoMonthsAgoToOneMonthAgo = TrackerWindow.from(twoMonthsAgo).to(oneMonthAgo);
+            final TrackerWindow oneWeekAgoToNow = TrackerWindow.from(oneWeekAgo).to(now);
+            final TrackerWindow twoWeeksAgoToOneWeekAgo = TrackerWindow.from(twoWeeksAgo).to(oneWeekAgo);
 
             // When
-            autoIndexTrackerService.addWindow(docRefUuid, oneMonthAgoToNow);
-            autoIndexTrackerService.addWindow(docRefUuid, twoMonthsAgoToOneMonthAgo);
-            final AutoIndexTracker tracker = autoIndexTrackerService.get(docRefUuid);
+            autoIndexTrackerService.addWindow(docRefUuid, oneWeekAgoToNow);
+            autoIndexTrackerService.addWindow(docRefUuid, twoWeeksAgoToOneWeekAgo);
+            final TimelineTracker tracker = autoIndexTrackerService.get(docRefUuid);
 
             // Then
-            // Should up with one big window that covers it all
-            assertEquals(Collections.singletonList(TrackerWindow.from(twoMonthsAgo).to(now)),
-                    tracker.getWindows());
+            assertEquals(
+                    TimelineTracker.forDocRef(docRefUuid)
+                            .withBounds(TrackerWindow.from(twoWeeksAgo).to(now))
+                            .withWindow(TrackerWindow.from(twoWeeksAgo).to(now)),
+                    tracker);
         });
     }
 
     @Test
-    public void testAddBelowBounds() {
-        // Given
-        final String docRefUuid = UUID.randomUUID().toString();
-        final Long now = 56L;
-        final Long oneWeekAgo = now - 10;
-        final Long twoWeeksAgo = oneWeekAgo - 10;
-
-    }
-
-    @Test
     public void testClearWindow() {
-        autoIndexTrackerServices.forEach(autoIndexTrackerService -> {
+        timelineTrackerServices.forEach(autoIndexTrackerService -> {
             LOGGER.debug("Using Service {}", autoIndexTrackerService);
 
             // Given
@@ -148,12 +141,11 @@ public class AutoIndexTrackerServiceIT extends AbstractAutoIndexIntegrationTest 
             autoIndexTrackerService.addWindow(docRefUuid, oneMonthAgoToNow);
             autoIndexTrackerService.addWindow(docRefUuid, threeMonthsAgoToTwoMonthsAgo);
             autoIndexTrackerService.clearWindows(docRefUuid);
-            final AutoIndexTracker tracker = autoIndexTrackerService.get(docRefUuid);
+            final TimelineTracker tracker = autoIndexTrackerService.get(docRefUuid);
 
             // Then
-            assertEquals(0L, tracker.getWindows().size());
             assertEquals(
-                    AutoIndexTracker.forDocRef(docRefUuid)
+                    TimelineTracker.forDocRef(docRefUuid)
                             .withBounds(TrackerWindow.from(threeMonthsAgo).to(now)),
                     tracker);
         });

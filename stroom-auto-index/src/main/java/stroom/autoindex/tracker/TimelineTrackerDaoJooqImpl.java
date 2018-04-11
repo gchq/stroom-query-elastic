@@ -13,53 +13,53 @@ import javax.inject.Inject;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
-public class AutoIndexTrackerDaoJooqImpl implements AutoIndexTrackerDao<Configuration> {
+public class TimelineTrackerDaoJooqImpl implements TimelineTrackerDao<Configuration> {
     private final DSLContext database;
 
     private static final String DOC_REF_UUID = "docRefUuid";
     private static final String FROM = "fromValue";
     private static final String TO = "toValue";
 
-    private static final Table<Record> TRACKER_WINDOW_TABLE = DSL.table(AutoIndexTracker.TRACKER_WINDOW_TABLE_NAME);
-    private static final Table<Record> TIMELINE_BOUNDS_TABLE = DSL.table(AutoIndexTracker.TIMELINE_BOUNDS_TABLE_NAME);
+    private static final Table<Record> TRACKER_WINDOW_TABLE = DSL.table(TimelineTracker.TRACKER_WINDOW_TABLE_NAME);
+    private static final Table<Record> TIMELINE_BOUNDS_TABLE = DSL.table(TimelineTracker.TIMELINE_BOUNDS_TABLE_NAME);
     public static final Field<String> FIELD_DOC_REF_UUID = DSL.field(DOC_REF_UUID, String.class);
     public static final Field<ULong> FIELD_FROM = DSL.field(FROM, ULong.class);
     public static final Field<ULong> FIELD_TO = DSL.field(TO, ULong.class);
 
     @Inject
-    public AutoIndexTrackerDaoJooqImpl(final DSLContext database) {
+    public TimelineTrackerDaoJooqImpl(final DSLContext database) {
         this.database = database;
     }
 
     @Override
-    public AutoIndexTracker transactionResult(
-            final BiFunction<AutoIndexTrackerDao<Configuration>, Configuration, AutoIndexTracker> txFunction) {
+    public TimelineTracker transactionResult(
+            final BiFunction<TimelineTrackerDao<Configuration>, Configuration, TimelineTracker> txFunction) {
         return database.transactionResult(c -> txFunction.apply(this, c));
     }
 
     @Override
-    public void transaction(BiConsumer<AutoIndexTrackerDao<Configuration>, Configuration> txFunction) {
+    public void transaction(BiConsumer<TimelineTrackerDao<Configuration>, Configuration> txFunction) {
         database.transaction(c -> txFunction.accept(this, c));
     }
 
-    public AutoIndexTracker get(final Configuration c,
-                                final String docRefUuid) {
+    public TimelineTracker get(final Configuration c,
+                               final String docRefUuid) {
         final TrackerWindow timelineBounds = DSL.using(c).select()
                 .from(TIMELINE_BOUNDS_TABLE)
                 .where(FIELD_DOC_REF_UUID.equal(docRefUuid))
-                .fetchOne(AutoIndexTrackerDaoJooqImpl::fromRecord);
+                .fetchOne(TimelineTrackerDaoJooqImpl::fromRecord);
 
         return DSL.using(c)
                 .select()
                 .from(TRACKER_WINDOW_TABLE)
                 .where(FIELD_DOC_REF_UUID.equal(docRefUuid))
                 .orderBy(FIELD_FROM)
-                .fetch(AutoIndexTrackerDaoJooqImpl::fromRecord)
+                .fetch(TimelineTrackerDaoJooqImpl::fromRecord)
                 .stream()
                 .filter(TrackerWindow::isBound)
-                .reduce(AutoIndexTracker.forDocRef(docRefUuid)
+                .reduce(TimelineTracker.forDocRef(docRefUuid)
                                 .withBounds(timelineBounds),
-                        AutoIndexTracker::withWindow,
+                        TimelineTracker::withWindow,
                         (a, b) -> a.withWindows(b.getWindows()));
     }
 

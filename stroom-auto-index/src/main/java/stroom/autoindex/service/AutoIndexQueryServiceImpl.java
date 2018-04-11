@@ -4,8 +4,8 @@ import org.eclipse.jetty.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.autoindex.QueryClientCache;
-import stroom.autoindex.tracker.AutoIndexTracker;
-import stroom.autoindex.tracker.AutoIndexTrackerService;
+import stroom.autoindex.tracker.TimelineTracker;
+import stroom.autoindex.tracker.TimelineTrackerService;
 import stroom.datasource.api.v2.DataSource;
 import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.QueryKey;
@@ -29,12 +29,12 @@ public class AutoIndexQueryServiceImpl implements QueryService {
 
     private final QueryClientCache<QueryResource> queryClientCache;
 
-    private final AutoIndexTrackerService trackerService;
+    private final TimelineTrackerService trackerService;
 
     @Inject
     @SuppressWarnings("unchecked")
     public AutoIndexQueryServiceImpl(final DocRefService docRefService,
-                                     final AutoIndexTrackerService trackerService,
+                                     final TimelineTrackerService trackerService,
                                      final QueryClientCache<QueryResource> queryClientCache) {
         this.docRefService = docRefService;
         this.queryClientCache = queryClientCache;
@@ -77,7 +77,7 @@ public class AutoIndexQueryServiceImpl implements QueryService {
         final AutoIndexDocRefEntity docRefEntity = docRefEntityOpt.get();
 
         // Retrieve the tracker for this doc ref
-        final AutoIndexTracker tracker = trackerService.get(docRefUuid);
+        final TimelineTracker tracker = trackerService.get(docRefUuid);
 
         final SplitSearchRequest splitSearchRequest = SearchRequestSplitter.withSearchRequest(request)
                 .autoIndex(docRefEntity)

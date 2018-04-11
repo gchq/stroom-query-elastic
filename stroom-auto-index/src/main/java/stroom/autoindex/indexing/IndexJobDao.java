@@ -12,10 +12,10 @@ public interface IndexJobDao {
     /**
      * Find any existing indexing job for a doc ref, or create a new one using a suggested time window.
      * If the timeline has been exhausted, this will return an {@link Optional#empty()}
-     * @param autoIndexDocRefEntity The Auto Index Doc Ref Entity that we are fetching jobs for
+     * @param docRefUuid The Auto Index Doc Ref UUID that we are fetching jobs for
      * @return The index job found, or next one created. Or empty if the timeline has been exhausted.
      */
-    Optional<IndexJob> getOrCreate(AutoIndexDocRefEntity autoIndexDocRefEntity);
+    Optional<IndexJob> getOrCreate(String docRefUuid);
 
     /**
      * Get a specific index job by it's job id.
@@ -26,14 +26,13 @@ public interface IndexJobDao {
     Optional<IndexJob> get(String jobId);
 
     /**
-     * Given a specific job ID, set the 'started' flag to tre
-     * @param jobId The Job ID (randomly allocated when the job is created)
+     * Given a specific job ID, set the 'started' time to now
+     * @param jobId The Job ID
      */
     void markAsStarted(String jobId);
 
     /**
-     * Mark a job as complete, it should be deleted from the underlying table and
-     * the indexing windows should be updated
+     * Mark a job as complete, sets the completed time to 'now'.
      * @param jobId The Job ID
      */
     void markAsComplete(String jobId);

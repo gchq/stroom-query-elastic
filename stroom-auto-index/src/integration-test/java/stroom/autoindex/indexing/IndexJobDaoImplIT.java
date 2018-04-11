@@ -12,15 +12,14 @@ import stroom.autoindex.AbstractAutoIndexIntegrationTest;
 import stroom.autoindex.AutoIndexConstants;
 import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
-import stroom.autoindex.tracker.AutoIndexTracker;
-import stroom.autoindex.tracker.AutoIndexTrackerDao;
-import stroom.autoindex.tracker.AutoIndexTrackerDaoJooqImpl;
-import stroom.autoindex.tracker.AutoIndexTrackerService;
-import stroom.autoindex.tracker.AutoIndexTrackerServiceImpl;
+import stroom.autoindex.tracker.TimelineTracker;
+import stroom.autoindex.tracker.TimelineTrackerDao;
+import stroom.autoindex.tracker.TimelineTrackerDaoJooqImpl;
+import stroom.autoindex.tracker.TimelineTrackerService;
+import stroom.autoindex.tracker.TimelineTrackerServiceImpl;
 import stroom.query.audit.security.ServiceUser;
 
 import java.util.Collections;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
@@ -35,7 +34,7 @@ public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
      */
     private static IndexJobDaoImpl indexJobDao;
 
-    private static AutoIndexTrackerService autoIndexTrackerService;
+    private static TimelineTrackerService timelineTrackerService;
 
     @BeforeClass
     public static void beforeClass() {
@@ -43,8 +42,8 @@ public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
             @Override
             protected void configure() {
                 bind(DSLContext.class).toInstance(initialiseJooqDbRule.withDatabase());
-                bind(AutoIndexTrackerDao.class).to(AutoIndexTrackerDaoJooqImpl.class);
-                bind(AutoIndexTrackerService.class).to(AutoIndexTrackerServiceImpl.class);
+                bind(TimelineTrackerDao.class).to(TimelineTrackerDaoJooqImpl.class);
+                bind(TimelineTrackerService.class).to(TimelineTrackerServiceImpl.class);
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
                 bind(ServiceUser.class)
                         .annotatedWith(Names.named(AutoIndexConstants.STROOM_SERVICE_USER))
@@ -53,24 +52,25 @@ public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
         });
 
         indexJobDao = testInjector.getInstance(IndexJobDaoImpl.class);
-        autoIndexTrackerService = testInjector.getInstance(AutoIndexTrackerService.class);
+        timelineTrackerService = testInjector.getInstance(TimelineTrackerService.class);
     }
 
     @Test
     public void testGetOrCreateValid() {
         // Create a valid auto index
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
+        final String docRefUuid = autoIndex.getDocRef().getUuid();
 
-        autoIndexTrackerService.setTimelineBounds(autoIndex.getDocRef().getUuid(),
+        timelineTrackerService.setTimelineBounds(docRefUuid,
                 AnimalTestData.TIMELINE_BOUNDS);
 
         // Create an index job
-        final IndexJob indexJob = indexJobDao.getOrCreate(autoIndex.getEntity())
+        final IndexJob indexJob = indexJobDao.getOrCreate(docRefUuid)
                 .orElseThrow(() -> new AssertionError("Index Job Should exist"));
         assertNotNull(indexJob);
 
         // Make a repeat request, should get the same index job back
-        final IndexJob sameIndexJob = indexJobDao.getOrCreate(autoIndex.getEntity())
+        final IndexJob sameIndexJob = indexJobDao.getOrCreate(docRefUuid)
                 .orElseThrow(() -> new AssertionError("Index Job Should exist"));
         assertEquals(indexJob.getJobId(), sameIndexJob.getJobId());
 
@@ -87,13 +87,14 @@ public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
     public void testStartTask() {
         // Create a valid auto index
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
+        final String docRefUuid = autoIndex.getDocRef().getUuid();
 
         // Timeline bounds must be set
-        autoIndexTrackerService.setTimelineBounds(autoIndex.getDocRef().getUuid(),
+        timelineTrackerService.setTimelineBounds(docRefUuid,
                 AnimalTestData.TIMELINE_BOUNDS);
 
         // Create an index job
-        final IndexJob indexJob = indexJobDao.getOrCreate(autoIndex.getEntity())
+        final IndexJob indexJob = indexJobDao.getOrCreate(docRefUuid)
                 .orElseThrow(() -> new AssertionError("Index Job Should exist"));
         assertEquals(0, indexJob.getStartedTimeMillis());
 
@@ -102,7 +103,7 @@ public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
         indexJobDao.markAsStarted(indexJob.getJobId());
 
         // Now re-fetch the job and check that the started time is there
-        final IndexJob jobAfterStarted = indexJobDao.getOrCreate(autoIndex.getEntity())
+        final IndexJob jobAfterStarted = indexJobDao.get(indexJob.getJobId())
                 .orElseThrow(() -> new AssertionError("Index Job Should exist"));
         assertTrue(jobAfterStarted.getStartedTimeMillis() >= timeBeforeMarking);
     }
@@ -111,25 +112,30 @@ public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
     public void testCompleteTask() {
         // Create a valid auto index
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
+        final String docRefUuid = autoIndex.getDocRef().getUuid();
 
         // Timeline bounds must be set
-        autoIndexTrackerService.setTimelineBounds(autoIndex.getDocRef().getUuid(),
+        timelineTrackerService.setTimelineBounds(docRefUuid,
                 AnimalTestData.TIMELINE_BOUNDS);
 
         // Create an index job
-        final IndexJob indexJob = indexJobDao.getOrCreate(autoIndex.getEntity())
+        final IndexJob indexJob = indexJobDao.getOrCreate(docRefUuid)
                 .orElseThrow(() -> new AssertionError("Index Job Should exist"));
         assertEquals(0, indexJob.getStartedTimeMillis());
+
+        // Mark as started, as it has to be started before it can be completed
+        indexJobDao.markAsStarted(indexJob.getJobId());
 
         // Mark the job as complete
         indexJobDao.markAsComplete(indexJob.getJobId());
 
-        // Check that the job can no longer be found
-        final Optional<IndexJob> indexJobAfterComplete = indexJobDao.get(indexJob.getJobId());
-        assertFalse(indexJobAfterComplete.isPresent());
+        // Check that the job has the completed time set
+        final IndexJob indexJobAfterComplete = indexJobDao.get(indexJob.getJobId())
+                .orElseThrow(() -> new AssertionError("Index Job Should exist"));
+        assertTrue(indexJobAfterComplete.getCompletedTimeMillis() > 0);
 
         // Retrieve the auto index entity and check the tracker window were updated
-        final AutoIndexTracker tracker = autoIndexTrackerService.get(autoIndex.getDocRef().getUuid());
+        final TimelineTracker tracker = timelineTrackerService.get(docRefUuid);
         assertEquals(Collections.singletonList(indexJob.getTrackerWindow()), tracker.getWindows());
     }
 

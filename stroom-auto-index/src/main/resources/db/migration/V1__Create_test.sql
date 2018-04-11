@@ -38,5 +38,6 @@ CREATE TABLE index_job (
     toValue         BIGINT UNSIGNED NOT NULL,
     createTime      BIGINT UNSIGNED NOT NULL,
     startedTime     BIGINT UNSIGNED NOT NULL,
+    completedTime   BIGINT UNSIGNED NOT NULL,
     PRIMARY KEY     (jobId)
 ) ENGINE=InnoDB DEFAULT CHARSET latin1;

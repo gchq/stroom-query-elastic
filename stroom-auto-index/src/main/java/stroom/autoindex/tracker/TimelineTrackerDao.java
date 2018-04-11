@@ -6,21 +6,21 @@ import java.util.function.BiFunction;
 /**
  * Interface for persisting the auto index tracking information.
  * This interface just saves and loads information, for window merging and timeline bound
- * management, check {@link AutoIndexTrackerService} which will generally wrap this class.
+ * management, check {@link TimelineTrackerService} which will generally wrap this class.
  *
  * @param <TX> The class that represents a transaction.
  */
-public interface AutoIndexTrackerDao<TX> {
+public interface TimelineTrackerDao<TX> {
 
     /**
      * The caller should call this function to start a transaction, they can supply a function
      * that then executes all the operations in a transaction.
      *
      * @param txFunction The function supplied that will then make further calls on us.
-     * @return The current state of the AutoIndexTracker being modified.
+     * @return The current state of the TimelineTracker being modified.
      */
-    AutoIndexTracker transactionResult(
-            BiFunction<AutoIndexTrackerDao<TX>, TX, AutoIndexTracker> txFunction);
+    TimelineTracker transactionResult(
+            BiFunction<TimelineTrackerDao<TX>, TX, TimelineTracker> txFunction);
 
     /**
      * The caller should call this function to start a transaction, they can supply a function
@@ -28,7 +28,7 @@ public interface AutoIndexTrackerDao<TX> {
      *
      * @param txFunction The function supplied that will then make further calls on us.
      */
-    void transaction(BiConsumer<AutoIndexTrackerDao<TX>, TX> txFunction);
+    void transaction(BiConsumer<TimelineTrackerDao<TX>, TX> txFunction);
 
     /**
      * Simply return the current state of the tracking information.
@@ -37,8 +37,8 @@ public interface AutoIndexTrackerDao<TX> {
      * @param docRefUuid  The UUId of the Doc Ref to return tracking information.
      * @return The current state of the tracking information.
      */
-    AutoIndexTracker get(TX transaction,
-                         String docRefUuid);
+    TimelineTracker get(TX transaction,
+                        String docRefUuid);
 
     /**
      * Adds a window to the current tracking information.

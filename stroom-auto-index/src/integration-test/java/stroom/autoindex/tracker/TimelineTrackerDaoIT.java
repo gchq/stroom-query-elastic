@@ -16,12 +16,12 @@ import java.util.UUID;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-public class AutoIndexTrackerDaoIT extends AbstractAutoIndexIntegrationTest {
+public class TimelineTrackerDaoIT extends AbstractAutoIndexIntegrationTest {
 
     /**
      * Create our own Index Tracker DAO for direct testing
      */
-    private static AutoIndexTrackerDao<Configuration> autoIndexTrackerDao;
+    private static TimelineTrackerDao<Configuration> timelineTrackerDao;
 
     @BeforeClass
     public static void beforeClass() {
@@ -32,7 +32,7 @@ public class AutoIndexTrackerDaoIT extends AbstractAutoIndexIntegrationTest {
             }
         });
 
-        autoIndexTrackerDao = injector.getInstance(AutoIndexTrackerDaoJooqImpl.class);
+        timelineTrackerDao = injector.getInstance(TimelineTrackerDaoJooqImpl.class);
     }
 
     @Test
@@ -41,7 +41,7 @@ public class AutoIndexTrackerDaoIT extends AbstractAutoIndexIntegrationTest {
         final String docRefUuid = UUID.randomUUID().toString();
 
         // When
-        final AutoIndexTracker tracker = autoIndexTrackerDao
+        final TimelineTracker tracker = timelineTrackerDao
                 .transactionResult((d, c) -> d.get(c, docRefUuid));
 
         // Then
@@ -63,15 +63,15 @@ public class AutoIndexTrackerDaoIT extends AbstractAutoIndexIntegrationTest {
         final TrackerWindow threeMonthsAgoToTwoMonthsAgo = TrackerWindow.from(threeMonthsAgo).to(twoMonthsAgo);
 
         // When
-        final AutoIndexTracker tracker1 = autoIndexTrackerDao.transactionResult((d, c) -> {
+        final TimelineTracker tracker1 = timelineTrackerDao.transactionResult((d, c) -> {
             d.insertTracker(c, docRefUuid, oneMonthAgoToNow);
             return d.get(c, docRefUuid);
         });
-        final AutoIndexTracker tracker2 = autoIndexTrackerDao.transactionResult((d, c) -> {
+        final TimelineTracker tracker2 = timelineTrackerDao.transactionResult((d, c) -> {
             d.insertTracker(c, docRefUuid, threeMonthsAgoToTwoMonthsAgo);
             return d.get(c, docRefUuid);
         });
-        final AutoIndexTracker tracker3 = autoIndexTrackerDao.transactionResult((d, c) -> d.get(c, docRefUuid));
+        final TimelineTracker tracker3 = timelineTrackerDao.transactionResult((d, c) -> d.get(c, docRefUuid));
 
         // Then
         assertEquals(Collections.singletonList(oneMonthAgoToNow),
@@ -95,15 +95,15 @@ public class AutoIndexTrackerDaoIT extends AbstractAutoIndexIntegrationTest {
         final TrackerWindow twoMonthsAgoToOneMonthAgo = TrackerWindow.from(twoMonthsAgo).to(oneMonthAgo);
 
         // When
-        final AutoIndexTracker tracker1 = autoIndexTrackerDao.transactionResult((d, c) -> {
+        final TimelineTracker tracker1 = timelineTrackerDao.transactionResult((d, c) -> {
             d.insertTracker(c, docRefUuid, oneMonthAgoToNow);
             return d.get(c, docRefUuid);
         });
-        final AutoIndexTracker tracker2 = autoIndexTrackerDao.transactionResult((d, c) -> {
+        final TimelineTracker tracker2 = timelineTrackerDao.transactionResult((d, c) -> {
             d.insertTracker(c, docRefUuid, twoMonthsAgoToOneMonthAgo);
             return d.get(c, docRefUuid);
         });
-        final AutoIndexTracker tracker = autoIndexTrackerDao.transactionResult((d, c) -> d.get(c, docRefUuid));
+        final TimelineTracker tracker = timelineTrackerDao.transactionResult((d, c) -> d.get(c, docRefUuid));
 
         // Then
         // Should up with one big window that covers it all
@@ -116,16 +116,6 @@ public class AutoIndexTrackerDaoIT extends AbstractAutoIndexIntegrationTest {
     }
 
     @Test
-    public void testAddBelowBounds() {
-        // Given
-        final String docRefUuid = UUID.randomUUID().toString();
-        final Long now = 56L;
-        final Long oneWeekAgo = now - 10;
-        final Long twoWeeksAgo = oneWeekAgo - 10;
-
-    }
-
-    @Test
     public void testDeleteWindow() {
         // Given
         final String docRefUuid = UUID.randomUUID().toString();
@@ -134,25 +124,24 @@ public class AutoIndexTrackerDaoIT extends AbstractAutoIndexIntegrationTest {
         final Long twoMonthsAgo = oneMonthAgo - 10;
         final Long threeMonthsAgo = twoMonthsAgo - 10;
 
-        // Two non-contiguous windows
         final TrackerWindow oneMonthAgoToNow = TrackerWindow.from(oneMonthAgo).to(now);
         final TrackerWindow threeMonthsAgoToTwoMonthsAgo = TrackerWindow.from(threeMonthsAgo).to(twoMonthsAgo);
 
         // When
-        autoIndexTrackerDao.transaction((d, c) ->
+        timelineTrackerDao.transaction((d, c) ->
                 d.insertTracker(c, docRefUuid, oneMonthAgoToNow)
         );
-        autoIndexTrackerDao.transaction((d, c) ->
+        timelineTrackerDao.transaction((d, c) ->
                 d.insertTracker(c, docRefUuid, threeMonthsAgoToTwoMonthsAgo)
         );
-        autoIndexTrackerDao.transaction((d, c) -> {
+        timelineTrackerDao.transaction((d, c) -> {
             d.deleteTracker(c, docRefUuid, oneMonthAgoToNow);
             d.deleteTracker(c, docRefUuid, threeMonthsAgoToTwoMonthsAgo);
         });
-        final AutoIndexTracker tracker = autoIndexTrackerDao.transactionResult((d, c) -> d.get(c, docRefUuid));
+        final TimelineTracker tracker = timelineTrackerDao.transactionResult((d, c) -> d.get(c, docRefUuid));
 
         // Then
         assertEquals(0L, tracker.getWindows().size());
-        assertEquals(AutoIndexTracker.forDocRef(docRefUuid), tracker);
+        assertEquals(TimelineTracker.forDocRef(docRefUuid), tracker);
     }
 }

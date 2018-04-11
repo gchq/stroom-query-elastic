@@ -18,11 +18,11 @@ import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
-import stroom.autoindex.tracker.AutoIndexTracker;
-import stroom.autoindex.tracker.AutoIndexTrackerDao;
-import stroom.autoindex.tracker.AutoIndexTrackerDaoJooqImpl;
-import stroom.autoindex.tracker.AutoIndexTrackerService;
-import stroom.autoindex.tracker.AutoIndexTrackerServiceImpl;
+import stroom.autoindex.tracker.TimelineTracker;
+import stroom.autoindex.tracker.TimelineTrackerDao;
+import stroom.autoindex.tracker.TimelineTrackerDaoJooqImpl;
+import stroom.autoindex.tracker.TimelineTrackerService;
+import stroom.autoindex.tracker.TimelineTrackerServiceImpl;
 import stroom.autoindex.tracker.TrackerWindow;
 import stroom.query.audit.security.ServiceUser;
 
@@ -44,7 +44,7 @@ import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
 /**
  * This suite of tests exercises the {@link IndexingTimerTask} and it's integration with
  * the doc ref service {@link AutoIndexDocRefServiceImpl} and
- * the job DAO service {@link IndexJobDaoImpl} which is in turn dependant on the real {@link AutoIndexTrackerDaoJooqImpl}
+ * the job DAO service {@link IndexJobDaoImpl} which is in turn dependant on the real {@link TimelineTrackerDaoJooqImpl}
  */
 public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
 
@@ -52,7 +52,7 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
 
     private static IndexingTimerTask indexingTimerTask;
 
-    private static AutoIndexTrackerService autoIndexTrackerService;
+    private static TimelineTrackerService timelineTrackerService;
 
     private static IndexingConfig indexingConfig = IndexingConfig
             .asEnabled()
@@ -70,8 +70,8 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
             @Override
             protected void configure() {
                 bind(DSLContext.class).toInstance(initialiseJooqDbRule.withDatabase());
-                bind(AutoIndexTrackerDao.class).to(AutoIndexTrackerDaoJooqImpl.class);
-                bind(AutoIndexTrackerService.class).to(AutoIndexTrackerServiceImpl.class);
+                bind(TimelineTrackerDao.class).to(TimelineTrackerDaoJooqImpl.class);
+                bind(TimelineTrackerService.class).to(TimelineTrackerServiceImpl.class);
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
                 bind(new TypeLiteral<Consumer<IndexJob>>(){})
                         .annotatedWith(Names.named(TASK_HANDLER_NAME))
@@ -89,7 +89,7 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
         assertTrue(testIndexJobConsumerObj instanceof TestIndexJobConsumer);
         testIndexJobConsumer = (TestIndexJobConsumer) testIndexJobConsumerObj;
         indexingTimerTask = testInjector.getInstance(IndexingTimerTask.class);
-        autoIndexTrackerService = testInjector.getInstance(AutoIndexTrackerService.class);
+        timelineTrackerService = testInjector.getInstance(TimelineTrackerService.class);
     }
 
     @Before
@@ -103,7 +103,7 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
 
         // Timeline bounds must be set
-        autoIndexTrackerService.setTimelineBounds(autoIndex.getDocRef().getUuid(),
+        timelineTrackerService.setTimelineBounds(autoIndex.getDocRef().getUuid(),
                 AnimalTestData.TIMELINE_BOUNDS);
 
         indexingTimerTask.run();
@@ -127,7 +127,7 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
                 .mapToObj(i -> createAutoIndex())
                 .peek(i -> {
                     // Timeline bounds must be set
-                    autoIndexTrackerService.setTimelineBounds(i.getDocRef().getUuid(),
+                    timelineTrackerService.setTimelineBounds(i.getDocRef().getUuid(),
                             AnimalTestData.TIMELINE_BOUNDS);
                 })
                 .map(EntityWithDocRef::getEntity)
@@ -184,7 +184,7 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
             final Long from = jobs.get(jobs.size() - 1).getTrackerWindow().getFrom();
             final Long to = jobs.get(0).getTrackerWindow().getTo();
 
-            final AutoIndexTracker tracker = autoIndexTrackerService.get(uuid);
+            final TimelineTracker tracker = timelineTrackerService.get(uuid);
             assertEquals(
                     Collections.singletonList(TrackerWindow.from(from).to(to)),
                     tracker.getWindows());

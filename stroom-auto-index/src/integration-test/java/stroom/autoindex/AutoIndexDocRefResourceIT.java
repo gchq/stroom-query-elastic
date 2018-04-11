@@ -10,7 +10,7 @@ import stroom.autoindex.app.App;
 import stroom.autoindex.app.Config;
 import stroom.autoindex.indexing.IndexJob;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
-import stroom.autoindex.tracker.AutoIndexTracker;
+import stroom.autoindex.tracker.TimelineTracker;
 import stroom.elastic.test.ElasticTestIndexRule;
 import stroom.query.api.v2.DocRef;
 import stroom.query.elastic.model.ElasticIndexDocRefEntity;
@@ -45,8 +45,8 @@ public class AutoIndexDocRefResourceIT extends DocRefResourceIT<AutoIndexDocRefE
     public final InitialiseJooqDbRule clearDbRule = InitialiseJooqDbRule
             .withDataSourceFactory(() -> appRule.getConfiguration().getDataSourceFactory())
             .tableToClear(AutoIndexDocRefEntity.TABLE_NAME)
-            .tableToClear(AutoIndexTracker.TRACKER_WINDOW_TABLE_NAME)
-            .tableToClear(AutoIndexTracker.TIMELINE_BOUNDS_TABLE_NAME)
+            .tableToClear(TimelineTracker.TRACKER_WINDOW_TABLE_NAME)
+            .tableToClear(TimelineTracker.TIMELINE_BOUNDS_TABLE_NAME)
             .tableToClear(IndexJob.TABLE_NAME)
             .build();
 

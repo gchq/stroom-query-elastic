@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 /**
  * Each instance shows which time windows have been indexed from the raw data source into the indexed data source.
  */
-public class AutoIndexTracker {
+public class TimelineTracker {
     public static final String TRACKER_WINDOW_TABLE_NAME = "tracker_window";
     public static final String TIMELINE_BOUNDS_TABLE_NAME = "timeline_bounds";
 
@@ -21,18 +21,18 @@ public class AutoIndexTracker {
     private TrackerWindow timelineBounds;
     private final List<TrackerWindow> windows = new ArrayList<>();
 
-    public static AutoIndexTracker forDocRef(final String docRefUuid) {
-        return new AutoIndexTracker(docRefUuid);
+    public static TimelineTracker forDocRef(final String docRefUuid) {
+        return new TimelineTracker(docRefUuid);
     }
 
-    public static AutoIndexTracker forBase(final AutoIndexTracker base) {
-        return new AutoIndexTracker(base.getDocRefUuid())
+    public static TimelineTracker forBase(final TimelineTracker base) {
+        return new TimelineTracker(base.getDocRefUuid())
                 .withBounds(base.getTimelineBounds()
                         .map(TrackerWindow::copy)
                         .orElse(null));
     }
 
-    public static AutoIndexTracker copy(final AutoIndexTracker original) {
+    public static TimelineTracker copy(final TimelineTracker original) {
         return forBase(original)
                 .withWindows(original.getWindows().stream()
                         .map(TrackerWindow::copy)
@@ -40,21 +40,21 @@ public class AutoIndexTracker {
                         .collect(Collectors.toList()));
     }
 
-    public AutoIndexTracker(final String docRefUuid) {
+    public TimelineTracker(final String docRefUuid) {
         this.docRefUuid = docRefUuid;
     }
 
-    public AutoIndexTracker withBounds(final TrackerWindow timelineBounds) {
+    public TimelineTracker withBounds(final TrackerWindow timelineBounds) {
         this.timelineBounds = timelineBounds;
         return this;
     }
 
-    public AutoIndexTracker withWindows(final Collection<TrackerWindow> windows) {
+    public TimelineTracker withWindows(final Collection<TrackerWindow> windows) {
         this.windows.addAll(windows);
         return this;
     }
 
-    public AutoIndexTracker withWindow(final TrackerWindow... window) {
+    public TimelineTracker withWindow(final TrackerWindow... window) {
         return withWindows(Arrays.asList(window));
     }
 
@@ -76,7 +76,7 @@ public class AutoIndexTracker {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("AutoIndexTracker{");
+        final StringBuilder sb = new StringBuilder("TimelineTracker{");
         sb.append("docRefUuid='").append(docRefUuid).append('\'');
         sb.append(", timelineBounds=").append(getTimelineBounds());
         sb.append(", windows=").append(getWindows());
@@ -88,7 +88,7 @@ public class AutoIndexTracker {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        AutoIndexTracker that = (AutoIndexTracker) o;
+        TimelineTracker that = (TimelineTracker) o;
         return Objects.equals(docRefUuid, that.docRefUuid) &&
                 Objects.equals(timelineBounds, that.timelineBounds) &&
                 Objects.equals(getWindows(), that.getWindows());
