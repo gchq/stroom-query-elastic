@@ -2,9 +2,11 @@ package stroom.query.elastic.auth;
 
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import org.junit.ClassRule;
+import stroom.elastic.test.ElasticTestIndexRule;
 import stroom.query.elastic.App;
 import stroom.query.elastic.config.Config;
-import stroom.query.elastic.hibernate.ElasticIndexDocRefEntity;
+import stroom.query.elastic.model.ElasticIndexDocRefEntity;
+import stroom.query.elastic.service.ElasticIndexDocRefServiceImpl;
 import stroom.query.testing.DocRefResourceIT;
 import stroom.query.testing.DropwizardAppWithClientsRule;
 import stroom.query.testing.StroomAuthenticationRule;
@@ -18,16 +20,25 @@ import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
 public class ElasticDocRefResourceIT
         extends DocRefResourceIT<ElasticIndexDocRefEntity, Config> {
 
+    public static final String LOCAL_ELASTIC_HTTP_HOST = "localhost:19200";
+
     @ClassRule
     public static final DropwizardAppWithClientsRule<Config> appRule =
             new DropwizardAppWithClientsRule<>(App.class, resourceFilePath("config_auth.yml"));
 
     @ClassRule
-    public static StroomAuthenticationRule authRule =
-            new StroomAuthenticationRule(WireMockConfiguration.options().port(10080), ElasticIndexDocRefEntity.TYPE);
+    public static final StroomAuthenticationRule authRule =
+            new StroomAuthenticationRule(WireMockConfiguration.options().port(10080));
+
+    @ClassRule
+    public static final ElasticTestIndexRule stroomIndexRule = ElasticTestIndexRule
+            .forIndex(ElasticDocRefResourceIT.class, ElasticIndexDocRefServiceImpl.STROOM_INDEX_NAME)
+            .httpUrl(LOCAL_ELASTIC_HTTP_HOST)
+            .build();
 
     public ElasticDocRefResourceIT() {
-        super(ElasticIndexDocRefEntity.class,
+        super(ElasticIndexDocRefEntity.TYPE,
+                ElasticIndexDocRefEntity.class,
                 appRule,
                 authRule);
     }

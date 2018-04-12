@@ -2,23 +2,12 @@ package stroom.query.elastic.store;
 
 import stroom.mapreduce.v2.UnsafePairQueue;
 import stroom.query.api.v2.TableSettings;
-import stroom.query.common.v2.CompiledSorter;
-import stroom.query.common.v2.CompletionListener;
-import stroom.query.common.v2.Coprocessor;
-import stroom.query.common.v2.CoprocessorSettingsMap;
-import stroom.query.common.v2.Data;
-import stroom.query.common.v2.Item;
-import stroom.query.common.v2.Key;
-import stroom.query.common.v2.Payload;
-import stroom.query.common.v2.ResultStoreCreator;
-import stroom.query.common.v2.Store;
-import stroom.query.common.v2.StoreSize;
-import stroom.query.common.v2.TableCoprocessorSettings;
-import stroom.query.common.v2.TablePayload;
+import stroom.query.common.v2.*;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class ElasticStore implements Store {
     private CoprocessorSettingsMap coprocessorSettingsMap;
@@ -41,6 +30,16 @@ public class ElasticStore implements Store {
     @Override
     public boolean isComplete() {
         return true;
+    }
+
+    @Override
+    public void awaitCompletion() throws InterruptedException {
+
+    }
+
+    @Override
+    public boolean awaitCompletion(long timeout, TimeUnit unit) throws InterruptedException {
+        return false;
     }
 
     @Override
@@ -89,11 +88,6 @@ public class ElasticStore implements Store {
     @Override
     public StoreSize getStoreSize() {
         return storeSize;
-    }
-
-    @Override
-    public void registerCompletionListener(CompletionListener completionListener) {
-
     }
 
     public void process(CoprocessorSettingsMap coprocessorSettingsMap) {

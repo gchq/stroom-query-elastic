@@ -1,0 +1,80 @@
+server:
+  adminMinThreads: 1
+  adminMaxThreads: 10
+  adminContextPath: /
+  applicationContextPath: /
+  applicationConnectors:
+    - type: http
+      port: 9899
+  adminConnectors:
+    - type: http
+      port: 9900
+
+logging:
+  level: ${LOGGING_LEVEL:- ERROR}
+  loggers:
+    stroom: DEBUG
+    io.dropwizard: INFO
+    org.eclipse.jetty: INFO
+    org.flywaydb: INFO
+    "AUDIT":
+      level: INFO
+      additive: false
+      appenders:
+        - type: fifo
+  appenders:
+    - type: console
+      logFormat: "%-6level [%d{HH:mm:ss.SSS}] [%t] %logger{5} - %X{code} %msg %n"
+      timeZone: UTC
+
+token:
+  publicKeyUrl: http://localhost:10080/testAuthService/publicKey
+  jwsIssuer: stroom
+  algorithm: RS256
+
+
+authorisationService:
+  url: http://localhost:10080/api/authorisation/v1
+  isAuthorisedPath: /isAuthorised
+
+
+database:
+  driverClass: org.mariadb.jdbc.Driver
+  user: stroomuser
+  password: stroompassword1
+  url: jdbc:mariadb://localhost:7450/test
+  properties:
+    charSet: UTF-8
+    hibernate.dialect: org.hibernate.dialect.MySQLInnoDBDialect
+    hibernate.show_sql: false
+    hibernate.hbm2ddl.auto: validate
+
+jooq:
+  dialect: MYSQL
+  logExecutedSql: yes
+  renderSchema: yes
+  renderNameStyle: QUOTED
+  renderKeywordStyle: LOWER
+  renderFormatted: no
+  paramType: INDEXED
+  statementType: PREPARED_STATEMENT
+  executeLogging: no
+  executeWithOptimisticLocking: no
+  attachRecords: yes
+  updatablePrimaryKeys: no
+
+indexing:
+  enabled: true
+
+serviceUser:
+  name: stroomServiceUser
+  jwt: 232344
+
+elastic:
+  clusterName: docker-cluster
+  transportHosts: localhost:19300
+  httpHost: localhost:19200
+
+queryResourceUrlsByType:
+  ElasticIndex: http://localhost:18299
+  AnimalHuntingGroup: http://localhost:8899
