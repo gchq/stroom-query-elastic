@@ -62,8 +62,7 @@ public class AnimalsQueryResourceIT extends QueryResourceIT<AnimalDocRefEntity, 
             .build();
 
     public AnimalsQueryResourceIT() {
-        super(AnimalDocRefEntity.class,
-                AnimalDocRefEntity.TYPE,
+        super(AnimalDocRefEntity.TYPE,
                 appRule,
                 authRule);
     }

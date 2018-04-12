@@ -220,25 +220,17 @@ public abstract class AbstractAutoIndexIntegrationTest {
         }
 
         // Generate UUID's for the doc ref and it's parent folder
-        final String parentFolderUuid = UUID.randomUUID().toString();
         final DocRef docRef = new DocRef.Builder()
                 .uuid(docRefEntity.getUuid())
                 .type(docRefType)
                 .name(docRefEntity.getName())
                 .build();
 
-        // Ensure admin user can create the document in the folder
-        authRule.permitAdminUser()
-                .createInFolder(parentFolderUuid)
-                .docRefType(docRefType)
-                .done();
-
         // Create a doc ref to hang the search from
         final Response createResponse = docRefClient.createDocument(
                 authRule.adminUser(),
                 docRef.getUuid(),
-                docRef.getName(),
-                parentFolderUuid);
+                docRef.getName());
         assertEquals(HttpStatus.OK_200, createResponse.getStatus());
         createResponse.close();
 

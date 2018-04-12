@@ -16,6 +16,7 @@ import stroom.query.api.v2.SearchResponse;
 import stroom.query.audit.CriteriaStore;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
+import stroom.query.audit.service.QueryApiException;
 import stroom.query.audit.service.QueryService;
 import stroom.query.common.v2.Coprocessor;
 import stroom.query.common.v2.CoprocessorSettings;
@@ -25,7 +26,6 @@ import stroom.query.common.v2.SearchResponseCreator;
 import stroom.query.common.v2.StoreSize;
 import stroom.query.common.v2.TableCoprocessor;
 import stroom.query.common.v2.TableCoprocessorSettings;
-import stroom.util.shared.HasTerminate;
 
 import javax.inject.Inject;
 import java.io.IOException;
@@ -57,7 +57,7 @@ public class AnimalQueryServiceImpl implements QueryService {
 
     @Override
     public Optional<DataSource> getDataSource(final ServiceUser user,
-                                              final DocRef docRef) throws Exception {
+                                              final DocRef docRef) throws QueryApiException {
         final Optional<AnimalDocRefEntity> docRefEntity = docRefService.get(user, docRef.getUuid());
 
         if (!docRefEntity.isPresent()) {
@@ -117,7 +117,7 @@ public class AnimalQueryServiceImpl implements QueryService {
 
     @Override
     public Optional<SearchResponse> search(final ServiceUser user,
-                                           final SearchRequest request) throws Exception {
+                                           final SearchRequest request) throws QueryApiException {
         final String dataSourceUuid = request.getQuery().getDataSource().getUuid();
 
         final Optional<AnimalDocRefEntity> docRefEntity = docRefService.get(user, dataSourceUuid);
@@ -128,23 +128,27 @@ public class AnimalQueryServiceImpl implements QueryService {
 
         LOGGER.info("Searching for Animal Sightings in Doc Ref {}", docRefEntity);
 
-        final List<Map<String, Object>> results =
-        Files.walk(Paths.get(docRefEntity.get().getDataDirectory()))
-                .filter(p -> !Files.isDirectory(p))
-                .map(file -> findSightingsInFile(file,
-                        request.getQuery().getExpression())
-                )
-                .flatMap(l -> l)
-                .map(as ->
-                        Collections.unmodifiableMap(Stream.of(
-                                new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.STREAM_ID, as.getStreamId()),
-                                new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.SPECIES, as.getSpecies()),
-                                new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.LOCATION, as.getLocation()),
-                                new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.OBSERVER, as.getObserver()),
-                                new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.TIME, as.getTime())
-                        ).collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue)))
-                )
-                .collect(Collectors.toList());
+        final List<Map<String, Object>> results;
+        try {
+            results = Files.walk(Paths.get(docRefEntity.get().getDataDirectory()))
+                    .filter(p -> !Files.isDirectory(p))
+                    .map(file -> findSightingsInFile(file,
+                            request.getQuery().getExpression())
+                    )
+                    .flatMap(l -> l)
+                    .map(as ->
+                            Collections.unmodifiableMap(Stream.of(
+                                    new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.STREAM_ID, as.getStreamId()),
+                                    new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.SPECIES, as.getSpecies()),
+                                    new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.LOCATION, as.getLocation()),
+                                    new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.OBSERVER, as.getObserver()),
+                                    new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.TIME, as.getTime())
+                            ).collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue)))
+                    )
+                    .collect(Collectors.toList());
+        } catch (IOException e) {
+            throw new QueryApiException("Couldn't walk the files in the data directory", e);
+        }
 
         final SearchResponse searchResponse = projectResults(request, results);
 
@@ -306,13 +310,13 @@ public class AnimalQueryServiceImpl implements QueryService {
 
     @Override
     public Boolean destroy(final ServiceUser user,
-                           final QueryKey queryKey) throws Exception {
+                           final QueryKey queryKey) {
         return Boolean.TRUE;
     }
 
     @Override
     public Optional<DocRef> getDocRefForQueryKey(final ServiceUser user,
-                                                 final QueryKey queryKey) throws Exception {
+                                                 final QueryKey queryKey) {
         return Optional.empty();
     }
 
@@ -347,20 +351,9 @@ public class AnimalQueryServiceImpl implements QueryService {
 
                 if (coprocessorSettings instanceof TableCoprocessorSettings) {
                     final TableCoprocessorSettings tableCoprocessorSettings = (TableCoprocessorSettings) coprocessorSettings;
-                    final HasTerminate taskMonitor = new HasTerminate() {
-                        //TODO do something about this
-                        @Override
-                        public void terminate() {
-                            System.out.println("terminating");
-                        }
-
-                        @Override
-                        public boolean isTerminated() {
-                            return false;
-                        }
-                    };
-                    final Coprocessor coprocessor = new TableCoprocessor(
-                            tableCoprocessorSettings, fieldIndexMap, taskMonitor, paramMap);
+                    final Coprocessor coprocessor = new TableCoprocessor(tableCoprocessorSettings,
+                            fieldIndexMap,
+                            paramMap);
 
                     coprocessorMap.put(coprocessorId, coprocessor);
                 }

@@ -4,6 +4,7 @@ import stroom.query.audit.ExportDTO;
 import stroom.query.audit.model.DocRefEntity;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
+import stroom.query.audit.service.QueryApiException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,20 +25,20 @@ public class AnimalDocRefServiceImpl implements DocRefService<AnimalDocRefEntity
     }
 
     @Override
-    public List<AnimalDocRefEntity> getAll(final ServiceUser user) throws Exception {
+    public List<AnimalDocRefEntity> getAll(final ServiceUser user) throws QueryApiException {
         return new ArrayList<>(data.values());
     }
 
     @Override
     public Optional<AnimalDocRefEntity> get(final ServiceUser user,
-                                          final String uuid) throws Exception {
+                                          final String uuid) throws QueryApiException {
         return Optional.ofNullable(data.get(uuid));
     }
 
     @Override
     public Optional<AnimalDocRefEntity> createDocument(final ServiceUser user,
                                                        final String uuid,
-                                                       final String name) throws Exception {
+                                                       final String name) throws QueryApiException {
         final Long now = System.currentTimeMillis();
         data.put(uuid, new AnimalDocRefEntity.Builder()
                 .uuid(uuid)
@@ -54,7 +55,7 @@ public class AnimalDocRefServiceImpl implements DocRefService<AnimalDocRefEntity
     @Override
     public Optional<AnimalDocRefEntity> update(final ServiceUser user,
                                              final String uuid,
-                                             final AnimalDocRefEntity updatedConfig) throws Exception {
+                                             final AnimalDocRefEntity updatedConfig) throws QueryApiException {
         return get(user, uuid)
                 .map(d -> new AnimalDocRefEntity.Builder(d)
                         .updateTime(System.currentTimeMillis())
@@ -66,7 +67,7 @@ public class AnimalDocRefServiceImpl implements DocRefService<AnimalDocRefEntity
     @Override
     public Optional<AnimalDocRefEntity> copyDocument(final ServiceUser user,
                                                    final String originalUuid,
-                                                   final String copyUuid) throws Exception {
+                                                   final String copyUuid) throws QueryApiException {
         final AnimalDocRefEntity existing = data.get(originalUuid);
         if (null != existing) {
             createDocument(user, copyUuid, existing.getName());
@@ -78,14 +79,14 @@ public class AnimalDocRefServiceImpl implements DocRefService<AnimalDocRefEntity
 
     @Override
     public Optional<AnimalDocRefEntity> moveDocument(final ServiceUser user,
-                                                   final String uuid) throws Exception {
+                                                   final String uuid) throws QueryApiException {
         return get(user, uuid);
     }
 
     @Override
     public Optional<AnimalDocRefEntity> renameDocument(final ServiceUser user,
                                                      final String uuid,
-                                                     final String name) throws Exception {
+                                                     final String name) throws QueryApiException {
         return get(user, uuid)
                 .map(d -> new AnimalDocRefEntity.Builder(d)
                         .updateTime(System.currentTimeMillis())
@@ -96,7 +97,7 @@ public class AnimalDocRefServiceImpl implements DocRefService<AnimalDocRefEntity
 
     @Override
     public Optional<Boolean> deleteDocument(final ServiceUser user,
-                                            final String uuid) throws Exception {
+                                            final String uuid) throws QueryApiException {
         if (data.containsKey(uuid)) {
             data.remove(uuid);
             return Optional.of(Boolean.TRUE);
@@ -107,7 +108,7 @@ public class AnimalDocRefServiceImpl implements DocRefService<AnimalDocRefEntity
 
     @Override
     public ExportDTO exportDocument(final ServiceUser user,
-                                    final String uuid) throws Exception {
+                                    final String uuid) throws QueryApiException {
         return get(user, uuid)
                 .map(d -> new ExportDTO.Builder()
                         .value(DocRefEntity.NAME, d.getName())
@@ -123,7 +124,7 @@ public class AnimalDocRefServiceImpl implements DocRefService<AnimalDocRefEntity
                                                      final String uuid,
                                                      final String name,
                                                      final Boolean confirmed,
-                                                     final Map<String, String> dataMap) throws Exception {
+                                                     final Map<String, String> dataMap) throws QueryApiException {
         if (confirmed) {
             final Optional<AnimalDocRefEntity> index = createDocument(user, uuid, name);
 
