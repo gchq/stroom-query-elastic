@@ -76,4 +76,4 @@ elastic:
 
 queryResourceUrlsByType:
   ElasticIndex: http://localhost:18299
-  AnimalHuntingGroup: http://localhost:8899
+  CsvDirectory: http://localhost:8899

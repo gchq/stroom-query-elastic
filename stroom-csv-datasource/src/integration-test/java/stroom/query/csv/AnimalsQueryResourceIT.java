@@ -1,4 +1,4 @@
-package stroom.autoindex.animals;
+package stroom.query.csv;
 
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import org.eclipse.jetty.http.HttpStatus;
@@ -6,30 +6,11 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import stroom.autoindex.TestConstants;
-import stroom.autoindex.animals.app.AnimalApp;
-import stroom.autoindex.animals.app.AnimalFieldSupplier;
-import stroom.autoindex.animals.app.AnimalSighting;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
-import stroom.query.api.v2.DocRef;
-import stroom.query.api.v2.ExpressionOperator;
-import stroom.query.api.v2.ExpressionTerm;
-import stroom.query.api.v2.Field;
-import stroom.query.api.v2.FlatResult;
-import stroom.query.api.v2.OffsetRange;
-import stroom.query.api.v2.Query;
-import stroom.query.api.v2.Result;
-import stroom.query.api.v2.ResultRequest;
-import stroom.query.api.v2.SearchRequest;
-import stroom.query.api.v2.SearchResponse;
-import stroom.query.api.v2.TableSettings;
+import stroom.query.api.v2.*;
 import stroom.query.audit.rest.AuditedDocRefResourceImpl;
 import stroom.query.audit.rest.AuditedQueryResourceImpl;
-import stroom.query.csv.CsvConfig;
-import stroom.query.csv.CsvDataRow;
-import stroom.query.csv.CsvDocRefEntity;
-import stroom.query.csv.CsvFieldSupplier;
 import stroom.query.testing.DropwizardAppWithClientsRule;
 import stroom.query.testing.QueryResourceIT;
 import stroom.query.testing.StroomAuthenticationRule;
@@ -53,7 +34,7 @@ public class AnimalsQueryResourceIT extends QueryResourceIT<CsvDocRefEntity, Csv
 
     @ClassRule
     public static final DropwizardAppWithClientsRule<CsvConfig> appRule =
-            new DropwizardAppWithClientsRule<>(AnimalApp.class, resourceFilePath(TestConstants.ANIMALS_APP_CONFIG));
+            new DropwizardAppWithClientsRule<>(AnimalsApp.class, resourceFilePath(TestConstants.APP_CONFIG));
 
     @ClassRule
     public static final StroomAuthenticationRule authRule =
@@ -70,64 +51,6 @@ public class AnimalsQueryResourceIT extends QueryResourceIT<CsvDocRefEntity, Csv
         super(CsvDocRefEntity.TYPE,
                 appRule,
                 authRule);
-    }
-
-    @Test
-    public void testStreamIdSearch() {
-        final DocRef docRef = createDocument(new CsvDocRefEntity.Builder()
-                .dataDirectory(testDataRule.getFolder().getAbsolutePath())
-                .build());
-
-        auditLogRule.check().thereAreAtLeast(2)
-                .containsOrdered(containsAllOf(AuditedDocRefResourceImpl.CREATE_DOC_REF, docRef.getUuid()))
-                .containsOrdered(containsAllOf(AuditedDocRefResourceImpl.UPDATE_DOC_REF, docRef.getUuid()));
-
-        final OffsetRange offset = new OffsetRange.Builder()
-                .length(100L)
-                .offset(0L)
-                .build();
-        final Long testMaxStreamId = 100L;
-        final ExpressionOperator expressionOperator = new ExpressionOperator.Builder(ExpressionOperator.Op.AND)
-                .addTerm(AnimalSighting.STREAM_ID, ExpressionTerm.Condition.LESS_THAN, Long.toString(testMaxStreamId))
-                .build();
-
-        final SearchRequest searchRequest = getValidSearchRequest(docRef, expressionOperator, offset);
-
-        final Response response = queryClient.search(authRule.adminUser(), searchRequest);
-        assertEquals(HttpStatus.OK_200, response.getStatus());
-
-        final SearchResponse searchResponse = response.readEntity(SearchResponse.class);
-
-        final Set<AnimalSighting> resultsSet = new HashSet<>();
-
-        assertTrue("No results seen", searchResponse.getResults().size() > 0);
-        for (final Result result : searchResponse.getResults()) {
-            assertTrue(result instanceof FlatResult);
-
-            final FlatResult flatResult = (FlatResult) result;
-            flatResult.getValues().stream()
-                    //.map(objects -> objects.get(1))
-                    .map(o -> {
-                        final CsvDataRow row = new CsvDataRow();
-                        csvFieldSupplier.getFields()
-                                .forEach(f -> row.withField(f, o.get(f.getPosition() + 3))); // skip over 3 std fields
-                        return row;
-                    })
-                    .map(AnimalSighting::new)
-                    .forEach(resultsSet::add);
-        }
-
-        // Check that the returned data matches the conditions
-        resultsSet.stream().map(AnimalSighting::getStreamId)
-                .forEach(t -> assertTrue(testMaxStreamId > t));
-
-        LOGGER.info("Results from Search {}", resultsSet.size());
-        resultsSet.stream()
-                .map(Object::toString)
-                .forEach(LOGGER::info);
-
-        auditLogRule.check().thereAreAtLeast(1)
-                .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_SEARCH, docRef.getUuid()));
     }
 
     @Test
@@ -206,7 +129,6 @@ public class AnimalsQueryResourceIT extends QueryResourceIT<CsvDocRefEntity, Csv
                 .map(DataSourceField::getName)
                 .collect(Collectors.toSet());
 
-        assertTrue(resultFieldNames.contains(AnimalSighting.STREAM_ID));
         assertTrue(resultFieldNames.contains(AnimalSighting.SPECIES));
         assertTrue(resultFieldNames.contains(AnimalSighting.LOCATION));
         assertTrue(resultFieldNames.contains(AnimalSighting.OBSERVER));
@@ -248,10 +170,6 @@ public class AnimalsQueryResourceIT extends QueryResourceIT<CsvDocRefEntity, Csv
                                 .queryId(queryKey)
                                 .extractValues(false)
                                 .showDetail(false)
-                                .addFields(new Field.Builder()
-                                        .name(AnimalSighting.STREAM_ID)
-                                        .expression("${" + AnimalSighting.STREAM_ID + "}")
-                                        .build())
                                 .addFields(new Field.Builder()
                                         .name(AnimalSighting.SPECIES)
                                         .expression("${" + AnimalSighting.SPECIES + "}")

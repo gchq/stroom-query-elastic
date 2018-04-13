@@ -1,4 +1,4 @@
-package stroom.autoindex.animals.app;
+package stroom.query.csv;
 
 import com.codahale.metrics.health.HealthCheck;
 import com.google.inject.AbstractModule;
@@ -11,12 +11,16 @@ import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import org.jooq.DSLContext;
+import org.jooq.impl.DSL;
+import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.audit.AuditedQueryBundle;
-import stroom.query.csv.AuditedCsvBundle;
-import stroom.query.csv.CsvConfig;
-import stroom.query.csv.CsvFieldSupplier;
 
-public class AnimalApp extends Application<CsvConfig> {
+import java.util.stream.Stream;
+
+import static stroom.query.csv.AnimalSighting.*;
+
+public class AnimalsApp extends Application<CsvConfig> {
     private Injector injector;
 
     private AuditedCsvBundle auditedQueryBundle;

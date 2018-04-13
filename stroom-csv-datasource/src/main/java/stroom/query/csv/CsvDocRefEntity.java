@@ -1,13 +1,13 @@
-package stroom.autoindex.animals.app;
+package stroom.query.csv;
 
 import stroom.query.audit.model.DocRefEntity;
 
 import java.util.Objects;
 
-public class AnimalDocRefEntity extends DocRefEntity {
-    public static final String TYPE = "AnimalHuntingGroup";
+public class CsvDocRefEntity extends DocRefEntity {
+    public static final String TYPE = "CsvDirectory";
 
-    public static final String DATA_DIRECTORY = "Species";
+    public static final String DATA_DIRECTORY = "DataDirectory";
 
     private String dataDirectory;
 
@@ -24,7 +24,7 @@ public class AnimalDocRefEntity extends DocRefEntity {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
-        AnimalDocRefEntity that = (AnimalDocRefEntity) o;
+        CsvDocRefEntity that = (CsvDocRefEntity) o;
         return Objects.equals(dataDirectory, that.dataDirectory);
     }
 
@@ -35,20 +35,20 @@ public class AnimalDocRefEntity extends DocRefEntity {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("AnimalDocRefEntity{");
+        final StringBuilder sb = new StringBuilder("CsvDocRefEntity{");
         sb.append("super='").append(super.toString()).append('\'');
         sb.append("dataDirectory='").append(dataDirectory).append('\'');
         sb.append('}');
         return sb.toString();
     }
 
-    public static final class Builder extends DocRefEntity.BaseBuilder<AnimalDocRefEntity, Builder> {
+    public static final class Builder extends BaseBuilder<CsvDocRefEntity, Builder> {
 
         public Builder() {
-            this(new AnimalDocRefEntity());
+            this(new CsvDocRefEntity());
         }
 
-        public Builder(final AnimalDocRefEntity instance) {
+        public Builder(final CsvDocRefEntity instance) {
             super(instance);
         }
 

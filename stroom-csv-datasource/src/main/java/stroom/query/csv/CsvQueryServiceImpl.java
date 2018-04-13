@@ -1,31 +1,17 @@
-package stroom.autoindex.animals.app;
+package stroom.query.csv;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.dashboard.expression.v1.FieldIndexMap;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
-import stroom.query.api.v2.DocRef;
-import stroom.query.api.v2.ExpressionItem;
-import stroom.query.api.v2.ExpressionOperator;
-import stroom.query.api.v2.ExpressionTerm;
-import stroom.query.api.v2.Param;
-import stroom.query.api.v2.QueryKey;
-import stroom.query.api.v2.SearchRequest;
-import stroom.query.api.v2.SearchResponse;
+import stroom.query.api.v2.*;
 import stroom.query.audit.CriteriaStore;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.audit.service.QueryApiException;
 import stroom.query.audit.service.QueryService;
-import stroom.query.common.v2.Coprocessor;
-import stroom.query.common.v2.CoprocessorSettings;
-import stroom.query.common.v2.CoprocessorSettingsMap;
-import stroom.query.common.v2.Payload;
-import stroom.query.common.v2.SearchResponseCreator;
-import stroom.query.common.v2.StoreSize;
-import stroom.query.common.v2.TableCoprocessor;
-import stroom.query.common.v2.TableCoprocessorSettings;
+import stroom.query.common.v2.*;
 
 import javax.inject.Inject;
 import java.io.IOException;
@@ -34,85 +20,93 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class AnimalQueryServiceImpl implements QueryService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AnimalQueryServiceImpl.class);
+public class CsvQueryServiceImpl implements QueryService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CsvQueryServiceImpl.class);
 
-    private final DocRefService<AnimalDocRefEntity> docRefService;
+    private final DocRefService<CsvDocRefEntity> docRefService;
+    private final CsvFieldSupplier fieldSupplier;
 
     @Inject
     @SuppressWarnings("unchecked")
-    public AnimalQueryServiceImpl(final DocRefService docRefService) {
-        this.docRefService = (DocRefService<AnimalDocRefEntity>) docRefService;
+    public CsvQueryServiceImpl(final DocRefService docRefService,
+                               final CsvFieldSupplier fieldSupplier) {
+        this.docRefService = (DocRefService<CsvDocRefEntity>) docRefService;
+        this.fieldSupplier = fieldSupplier;
     }
 
     @Override
     public Optional<DataSource> getDataSource(final ServiceUser user,
                                               final DocRef docRef) throws QueryApiException {
-        final Optional<AnimalDocRefEntity> docRefEntity = docRefService.get(user, docRef.getUuid());
+        final Optional<CsvDocRefEntity> docRefEntity = docRefService.get(user, docRef.getUuid());
 
         if (!docRefEntity.isPresent()) {
             return Optional.empty();
         }
 
-        return Optional.of(new DataSource.Builder()
-                .addFields(new DataSourceField.Builder()
-                        .type(DataSourceField.DataSourceFieldType.NUMERIC_FIELD)
-                        .name(AnimalSighting.STREAM_ID)
-                        .queryable(true)
-                        .addConditions(
-                                ExpressionTerm.Condition.EQUALS,
-                                ExpressionTerm.Condition.BETWEEN,
-                                ExpressionTerm.Condition.LESS_THAN_OR_EQUAL_TO,
-                                ExpressionTerm.Condition.LESS_THAN,
-                                ExpressionTerm.Condition.GREATER_THAN_OR_EQUAL_TO,
-                                ExpressionTerm.Condition.GREATER_THAN)
-                        .build())
-                .addFields(new DataSourceField.Builder()
-                        .type(DataSourceField.DataSourceFieldType.FIELD)
-                        .name(AnimalSighting.SPECIES)
-                        .queryable(true)
-                        .addConditions(
-                                ExpressionTerm.Condition.EQUALS,
-                                ExpressionTerm.Condition.IN)
-                        .build())
-                .addFields(new DataSourceField.Builder()
-                        .type(DataSourceField.DataSourceFieldType.FIELD)
-                        .name(AnimalSighting.LOCATION)
-                        .queryable(true)
-                        .addConditions(
-                                ExpressionTerm.Condition.EQUALS,
-                                ExpressionTerm.Condition.IN)
-                        .build())
-                .addFields(new DataSourceField.Builder()
-                        .type(DataSourceField.DataSourceFieldType.FIELD)
-                        .name(AnimalSighting.OBSERVER)
-                        .queryable(true)
-                        .addConditions(
-                                ExpressionTerm.Condition.EQUALS,
-                                ExpressionTerm.Condition.IN)
-                        .build())
-                .addFields(new DataSourceField.Builder()
-                        .type(DataSourceField.DataSourceFieldType.DATE_FIELD)
-                        .name(AnimalSighting.TIME)
-                        .queryable(true)
-                        .addConditions(
-                                ExpressionTerm.Condition.BETWEEN,
-                                ExpressionTerm.Condition.LESS_THAN,
-                                ExpressionTerm.Condition.LESS_THAN_OR_EQUAL_TO,
-                                ExpressionTerm.Condition.GREATER_THAN,
-                                ExpressionTerm.Condition.GREATER_THAN_OR_EQUAL_TO)
-                        .build())
-                .build());
+        final DataSource.Builder builder = new DataSource.Builder();
+
+        fieldSupplier.getFields().map(csvField -> {
+            DataSourceField field = null;
+
+            switch (csvField.getType()) {
+                case DATE_FIELD:
+                    field = new DataSourceField.Builder()
+                            .type(DataSourceField.DataSourceFieldType.DATE_FIELD)
+                            .name(csvField.getName())
+                            .queryable(true)
+                            .addConditions(
+                                    ExpressionTerm.Condition.BETWEEN,
+                                    ExpressionTerm.Condition.LESS_THAN,
+                                    ExpressionTerm.Condition.LESS_THAN_OR_EQUAL_TO,
+                                    ExpressionTerm.Condition.GREATER_THAN,
+                                    ExpressionTerm.Condition.GREATER_THAN_OR_EQUAL_TO)
+                            .build();
+                    break;
+                case NUMERIC_FIELD:
+                    field = new DataSourceField.Builder()
+                            .type(DataSourceField.DataSourceFieldType.NUMERIC_FIELD)
+                            .name(csvField.getName())
+                            .queryable(true)
+                            .addConditions(
+                                    ExpressionTerm.Condition.EQUALS,
+                                    ExpressionTerm.Condition.BETWEEN,
+                                    ExpressionTerm.Condition.LESS_THAN_OR_EQUAL_TO,
+                                    ExpressionTerm.Condition.LESS_THAN,
+                                    ExpressionTerm.Condition.GREATER_THAN_OR_EQUAL_TO,
+                                    ExpressionTerm.Condition.GREATER_THAN)
+                            .build();
+                    break;
+                case FIELD:
+                    field = new DataSourceField.Builder()
+                            .type(DataSourceField.DataSourceFieldType.FIELD)
+                            .name(csvField.getName())
+                            .queryable(true)
+                            .addConditions(
+                                    ExpressionTerm.Condition.EQUALS,
+                                    ExpressionTerm.Condition.IN)
+                            .build();
+                    break;
+                case ID:
+                    field = new DataSourceField.Builder()
+                            .type(DataSourceField.DataSourceFieldType.ID)
+                            .name(csvField.getName())
+                            .queryable(true)
+                            .addConditions(
+                                    ExpressionTerm.Condition.EQUALS,
+                                    ExpressionTerm.Condition.IN)
+                            .build();
+                    break;
+            }
+
+            return field;
+        }).forEach(builder::addFields);
+
+        return Optional.of(builder.build());
     }
 
     @Override
@@ -120,7 +114,7 @@ public class AnimalQueryServiceImpl implements QueryService {
                                            final SearchRequest request) throws QueryApiException {
         final String dataSourceUuid = request.getQuery().getDataSource().getUuid();
 
-        final Optional<AnimalDocRefEntity> docRefEntity = docRefService.get(user, dataSourceUuid);
+        final Optional<CsvDocRefEntity> docRefEntity = docRefService.get(user, dataSourceUuid);
 
         if (!docRefEntity.isPresent()) {
             return Optional.empty();
@@ -132,19 +126,11 @@ public class AnimalQueryServiceImpl implements QueryService {
         try {
             results = Files.walk(Paths.get(docRefEntity.get().getDataDirectory()))
                     .filter(p -> !Files.isDirectory(p))
-                    .map(file -> findSightingsInFile(file,
+                    .map(file -> findInFile(file,
                             request.getQuery().getExpression())
                     )
                     .flatMap(l -> l)
-                    .map(as ->
-                            Collections.unmodifiableMap(Stream.of(
-                                    new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.STREAM_ID, as.getStreamId()),
-                                    new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.SPECIES, as.getSpecies()),
-                                    new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.LOCATION, as.getLocation()),
-                                    new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.OBSERVER, as.getObserver()),
-                                    new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.TIME, as.getTime())
-                            ).collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue)))
-                    )
+                    .map(CsvDataRow::getData)
                     .collect(Collectors.toList());
         } catch (IOException e) {
             throw new QueryApiException("Couldn't walk the files in the data directory", e);
@@ -155,35 +141,24 @@ public class AnimalQueryServiceImpl implements QueryService {
         return Optional.of(searchResponse);
     }
 
-    private Stream<AnimalSighting> findSightingsInFile(final Path file,
-                                                       final ExpressionOperator expressionOperator) {
-        final List<AnimalSighting> animalSightings = new ArrayList<>();
+    private Stream<CsvDataRow> findInFile(final Path file,
+                                          final ExpressionOperator expressionOperator) {
+        final List<CsvDataRow> animalSightings = new ArrayList<>();
 
         LOGGER.debug("File Found {}", file);
 
         try (final Stream<String> stream = Files.lines(file)) {
 
             stream.map(l -> l.split(","))
-                    .filter(p -> p.length == 5)
+                    .filter(p -> p.length == fieldSupplier.count())
                     .skip(1) // header row
-                    .map(p -> new AnimalSighting.Builder()
-                            .streamId(Long.valueOf(p[0]))
-                            .species(p[1])
-                            .location(p[2])
-                            .observer(p[3])
-                            .time(LocalDateTime.parse(p[4], DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                            .build())
-                    .filter(as -> {
-                        Map<String, Object> csv = Stream.of(
-                                new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.STREAM_ID, as.getStreamId()),
-                                new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.SPECIES, as.getSpecies()),
-                                new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.LOCATION, as.getLocation()),
-                                new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.OBSERVER, as.getObserver()),
-                                new AbstractMap.SimpleEntry<String, Object>(AnimalSighting.TIME, as.getTime())
-                        ).collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
-
-                        return filterCsv(csv, expressionOperator);
+                    .map(p -> {
+                        final CsvDataRow row = new CsvDataRow();
+                        fieldSupplier.getFields()
+                                .forEach(f -> row.withField(f, p[f.getPosition()]));
+                        return row;
                     })
+                    .filter(as -> filterCsv(as.getData(), expressionOperator))
                     .forEach(animalSightings::add);
 
         } catch (IOException e) {

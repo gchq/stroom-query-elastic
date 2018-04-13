@@ -1,4 +1,4 @@
-package stroom.autoindex.animals.app;
+package stroom.query.csv;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.dropwizard.Configuration;
@@ -9,7 +9,7 @@ import stroom.query.audit.security.TokenConfig;
 
 import javax.validation.constraints.NotNull;
 
-public class AnimalConfig extends Configuration implements HasAuthorisationConfig, HasTokenConfig {
+public class CsvConfig extends Configuration implements HasAuthorisationConfig, HasTokenConfig {
     @NotNull
     @JsonProperty("token")
     private TokenConfig tokenConfig;

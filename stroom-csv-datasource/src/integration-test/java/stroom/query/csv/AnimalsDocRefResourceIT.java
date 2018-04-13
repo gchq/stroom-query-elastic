@@ -1,11 +1,7 @@
-package stroom.autoindex.animals;
+package stroom.query.csv;
 
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import org.junit.ClassRule;
-import stroom.autoindex.TestConstants;
-import stroom.autoindex.animals.app.AnimalApp;
-import stroom.query.csv.CsvConfig;
-import stroom.query.csv.CsvDocRefEntity;
 import stroom.query.testing.DocRefResourceIT;
 import stroom.query.testing.DropwizardAppWithClientsRule;
 import stroom.query.testing.StroomAuthenticationRule;
@@ -20,7 +16,7 @@ public class AnimalsDocRefResourceIT extends DocRefResourceIT<CsvDocRefEntity, C
 
     @ClassRule
     public static final DropwizardAppWithClientsRule<CsvConfig> appRule =
-            new DropwizardAppWithClientsRule<>(AnimalApp.class, resourceFilePath(TestConstants.ANIMALS_APP_CONFIG));
+            new DropwizardAppWithClientsRule<>(AnimalsApp.class, resourceFilePath(TestConstants.APP_CONFIG));
 
     @ClassRule
     public static final StroomAuthenticationRule authRule =

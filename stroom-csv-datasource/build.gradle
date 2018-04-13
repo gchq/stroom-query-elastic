@@ -110,7 +110,6 @@ dependencies {
     testCompile testDeps.wiremock
 
     integrationTestCompile project(':elastic-test')
-    integrationTestCompile project(':stroom-csv-datasource')
     integrationTestCompile testDeps.stroomQueryTesting
     integrationTestCompile testDeps.dropwizard_testing
     integrationTestCompile testDeps.moshi

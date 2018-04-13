@@ -7,8 +7,6 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.animals.app.AnimalApp;
-import stroom.autoindex.animals.app.AnimalConfig;
-import stroom.autoindex.animals.app.AnimalDocRefEntity;
 import stroom.autoindex.animals.app.AnimalSighting;
 import stroom.autoindex.app.App;
 import stroom.autoindex.app.Config;
@@ -23,6 +21,8 @@ import stroom.query.audit.client.QueryResourceHttpClient;
 import stroom.query.audit.model.DocRefEntity;
 import stroom.query.audit.rest.AuditedDocRefResourceImpl;
 import stroom.query.audit.security.ServiceUser;
+import stroom.query.csv.CsvConfig;
+import stroom.query.csv.CsvDocRefEntity;
 import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.service.ElasticIndexDocRefServiceImpl;
 import stroom.query.testing.DropwizardAppWithClientsRule;
@@ -94,10 +94,10 @@ public abstract class AbstractAutoIndexIntegrationTest {
      * The animals application, and it's client
      */
     @ClassRule
-    public static final DropwizardAppWithClientsRule<AnimalConfig> animalsAppRule =
+    public static final DropwizardAppWithClientsRule<CsvConfig> animalsAppRule =
             new DropwizardAppWithClientsRule<>(AnimalApp.class, resourceFilePath(TestConstants.ANIMALS_APP_CONFIG));
 
-    private static DocRefResourceHttpClient<AnimalDocRefEntity> animalDocRefClient =
+    private static DocRefResourceHttpClient<CsvDocRefEntity> animalDocRefClient =
             new DocRefResourceHttpClient<>(TestConstants.ANIMAL_APP_HOST);
 
     /**
@@ -160,7 +160,7 @@ public abstract class AbstractAutoIndexIntegrationTest {
      * @return The AutoIndexDocRefEntity created, tied to the raw and indexed doc refs below it.
      */
     protected EntityWithDocRef<AutoIndexDocRefEntity> createAutoIndex() {
-        final DocRef animalDocRef = createDocument(new AnimalDocRefEntity.Builder()
+        final DocRef animalDocRef = createDocument(new CsvDocRefEntity.Builder()
                 .uuid(UUID.randomUUID().toString())
                 .name(UUID.randomUUID().toString())
                 .dataDirectory(testDataRule.getFolder().getAbsolutePath())
@@ -204,8 +204,8 @@ public abstract class AbstractAutoIndexIntegrationTest {
             @SuppressWarnings("unchecked")
             DocRefResourceHttpClient<DOC_REF_ENTITY> c = (DocRefResourceHttpClient<DOC_REF_ENTITY>) autoIndexDocRefClient;
             docRefClient = c;
-        } else if (docRefEntity instanceof AnimalDocRefEntity) {
-            docRefType = AnimalDocRefEntity.TYPE;
+        } else if (docRefEntity instanceof CsvDocRefEntity) {
+            docRefType = CsvDocRefEntity.TYPE;
             @SuppressWarnings("unchecked")
             DocRefResourceHttpClient<DOC_REF_ENTITY> c = (DocRefResourceHttpClient<DOC_REF_ENTITY>) animalDocRefClient;
             docRefClient = c;

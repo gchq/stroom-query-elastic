@@ -4,7 +4,6 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
-import stroom.autoindex.animals.app.AnimalDocRefEntity;
 import stroom.autoindex.animals.app.AnimalSighting;
 import stroom.autoindex.app.App;
 import stroom.autoindex.app.Config;
@@ -13,6 +12,7 @@ import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.tracker.TimelineTracker;
 import stroom.elastic.test.ElasticTestIndexRule;
 import stroom.query.api.v2.DocRef;
+import stroom.query.csv.CsvDocRefEntity;
 import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.service.ElasticIndexDocRefServiceImpl;
 import stroom.query.testing.DocRefResourceIT;
@@ -67,7 +67,7 @@ public class AutoIndexDocRefResourceIT extends DocRefResourceIT<AutoIndexDocRefE
                 .timeFieldName(AnimalSighting.TIME)
                 .rawDocRef(new DocRef.Builder()
                         .uuid(UUID.randomUUID().toString())
-                        .type(AnimalDocRefEntity.TYPE)
+                        .type(CsvDocRefEntity.TYPE)
                         .name(UUID.randomUUID().toString())
                         .build())
                 .indexDocRef(new DocRef.Builder()
