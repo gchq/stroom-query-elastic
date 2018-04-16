@@ -18,12 +18,12 @@ import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
-import stroom.autoindex.tracker.TimelineTracker;
-import stroom.autoindex.tracker.TimelineTrackerDao;
-import stroom.autoindex.tracker.TimelineTrackerDaoJooqImpl;
-import stroom.autoindex.tracker.TimelineTrackerService;
-import stroom.autoindex.tracker.TimelineTrackerServiceImpl;
-import stroom.autoindex.tracker.TrackerWindow;
+import stroom.tracking.TimelineTracker;
+import stroom.tracking.TimelineTrackerDao;
+import stroom.tracking.TimelineTrackerDaoJooqImpl;
+import stroom.tracking.TimelineTrackerService;
+import stroom.tracking.TimelineTrackerServiceImpl;
+import stroom.tracking.TrackerWindow;
 import stroom.query.audit.security.ServiceUser;
 
 import java.util.ArrayList;

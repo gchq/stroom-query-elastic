@@ -11,11 +11,11 @@ import org.slf4j.LoggerFactory;
 import stroom.autoindex.AutoIndexConstants;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
-import stroom.autoindex.tracker.TimelineTracker;
-import stroom.autoindex.tracker.TimelineTrackerDaoJooqImpl;
-import stroom.autoindex.tracker.TimelineTrackerService;
-import stroom.autoindex.tracker.NextWindowSelector;
-import stroom.autoindex.tracker.TrackerWindow;
+import stroom.tracking.TimelineTracker;
+import stroom.tracking.TimelineTrackerDaoJooqImpl;
+import stroom.tracking.TimelineTrackerService;
+import stroom.tracking.NextWindowSelector;
+import stroom.tracking.TrackerWindow;
 import stroom.query.audit.security.ServiceUser;
 
 import javax.inject.Inject;
@@ -23,9 +23,9 @@ import javax.inject.Named;
 import java.util.Optional;
 import java.util.UUID;
 
-import static stroom.autoindex.tracker.TimelineTrackerDaoJooqImpl.FIELD_DOC_REF_UUID;
-import static stroom.autoindex.tracker.TimelineTrackerDaoJooqImpl.FIELD_FROM;
-import static stroom.autoindex.tracker.TimelineTrackerDaoJooqImpl.FIELD_TO;
+import static stroom.tracking.TimelineTrackerDaoJooqImpl.FIELD_DOC_REF_UUID;
+import static stroom.tracking.TimelineTrackerDaoJooqImpl.FIELD_FROM;
+import static stroom.tracking.TimelineTrackerDaoJooqImpl.FIELD_TO;
 
 public class IndexJobDaoImpl implements IndexJobDao {
     private static final Logger LOGGER = LoggerFactory.getLogger(IndexJobDaoImpl.class);

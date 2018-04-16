@@ -77,8 +77,7 @@ public class TreesQuerySearchActorIT {
                 .build();
         final TestKit testProbe = new TestKit(system);
         final ActorRef searchActor = system.actorOf(
-                SearchBackendActor.props(true,
-                        CsvDocRefEntity.TYPE,
+                SearchBackendActor.props(CsvDocRefEntity.TYPE,
                         user,
                         queryService,
                         testProbe.getRef()));

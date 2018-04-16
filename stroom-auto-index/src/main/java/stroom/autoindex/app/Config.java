@@ -34,6 +34,11 @@ public class Config
 
     @Valid
     @NotNull
+    @JsonProperty("trackingDatabase")
+    private DataSourceFactory trackingDataSourceFactory = new DataSourceFactory();
+
+    @Valid
+    @NotNull
     @JsonProperty("jooq")
     private JooqFactory jooqFactory = new JooqFactory();
 
@@ -77,6 +82,10 @@ public class Config
 
     public final DataSourceFactory getDataSourceFactory() {
         return this.dataSourceFactory;
+    }
+
+    public DataSourceFactory getTrackingDataSourceFactory() {
+        return trackingDataSourceFactory;
     }
 
     public final FlywayFactory getFlywayFactory() {

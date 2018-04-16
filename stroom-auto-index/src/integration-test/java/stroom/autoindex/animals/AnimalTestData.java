@@ -1,7 +1,7 @@
 package stroom.autoindex.animals;
 
 import stroom.autoindex.animals.app.AnimalSighting;
-import stroom.autoindex.tracker.TrackerWindow;
+import stroom.tracking.TrackerWindow;
 import stroom.testdata.DataGenerator;
 import stroom.testdata.FlatDataWriterBuilder;
 

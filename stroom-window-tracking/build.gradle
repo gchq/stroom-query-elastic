@@ -87,7 +87,6 @@ dependencies {
     compile deps.stroomQueryJooq
     compile deps.stroomTestData
     compile project(':stroom-query-elastic-svc')
-    compile project(':stroom-window-tracking')
 
     compile deps.kafka
     compile deps.dropwizard_core

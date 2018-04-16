@@ -47,7 +47,7 @@ public class SearchBackendActorTest {
         final String type1 = "typeOne";
         final TestQueryService queryService = new TestQueryService(new SearchResponse.FlatResultBuilder().build());
         final TestKit testProbe = new TestKit(system);
-        final ActorRef searchActor = system.actorOf(SearchBackendActor.props(true, type1, user, queryService, testProbe.getRef()));
+        final ActorRef searchActor = system.actorOf(SearchBackendActor.props(type1, user, queryService, testProbe.getRef()));
 
         // When
         searchActor.tell(new SearchMessages.SearchJob(type1, new SearchRequest.Builder().build()), ActorRef.noSender());
@@ -68,7 +68,7 @@ public class SearchBackendActorTest {
         final String type1 = "typeOne";
         final TestQueryService queryService = new TestQueryService();
         final TestKit testProbe = new TestKit(system);
-        final ActorRef searchActor = system.actorOf(SearchBackendActor.props(true, type1, user, queryService, testProbe.getRef()));
+        final ActorRef searchActor = system.actorOf(SearchBackendActor.props(type1, user, queryService, testProbe.getRef()));
 
         // When
         searchActor.tell(new SearchMessages.SearchJob(type1, new SearchRequest.Builder().build()), ActorRef.noSender());
@@ -92,7 +92,7 @@ public class SearchBackendActorTest {
         final String type2 = "typeTwo";
         final TestQueryService queryService1 = new TestQueryService();
         final TestKit testProbe = new TestKit(system);
-        final ActorRef searchActor1 = system.actorOf(SearchBackendActor.props(true, type1, user, queryService1, testProbe.getRef()));
+        final ActorRef searchActor1 = system.actorOf(SearchBackendActor.props(type1, user, queryService1, testProbe.getRef()));
 
         // When
         searchActor1.tell(new SearchMessages.SearchJob(type2, new SearchRequest.Builder().build()), ActorRef.noSender());
@@ -102,7 +102,7 @@ public class SearchBackendActorTest {
     }
 
     @Test
-    public void testMultiple() {
+    public void testMultipleJobs() {
         // Given
         final ServiceUser user = new ServiceUser.Builder()
                 .name("Me")
@@ -111,7 +111,7 @@ public class SearchBackendActorTest {
         final String type1 = "typeOne";
         final TestQueryService queryService = new TestQueryService(new SearchResponse.FlatResultBuilder().build());
         final TestKit testProbe = new TestKit(system);
-        final ActorRef searchActor = system.actorOf(SearchBackendActor.props(true, type1, user, queryService, testProbe.getRef()));
+        final ActorRef searchActor = system.actorOf(SearchBackendActor.props(type1, user, queryService, testProbe.getRef()));
         final int numberOfJobs = 3;
 
         final long startTime = System.currentTimeMillis();

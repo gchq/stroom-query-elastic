@@ -1,7 +1,7 @@
 package stroom.autoindex.indexing;
 
 import stroom.autoindex.service.AutoIndexDocRefEntity;
-import stroom.autoindex.tracker.TrackerWindow;
+import stroom.tracking.TrackerWindow;
 
 import java.util.Objects;
 

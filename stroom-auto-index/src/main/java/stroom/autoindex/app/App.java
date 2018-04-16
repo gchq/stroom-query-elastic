@@ -14,6 +14,8 @@ import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.elasticsearch.client.transport.TransportClient;
+import org.jooq.DSLContext;
+import org.jooq.impl.DSL;
 import stroom.autoindex.AutoIndexConstants;
 import stroom.autoindex.QueryClientCache;
 import stroom.autoindex.indexing.IndexJob;
@@ -26,10 +28,7 @@ import stroom.autoindex.indexing.IndexingTimerTask;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
 import stroom.autoindex.service.AutoIndexQueryServiceImpl;
-import stroom.autoindex.tracker.TimelineTrackerDao;
-import stroom.autoindex.tracker.TimelineTrackerDaoJooqImpl;
-import stroom.autoindex.tracker.TimelineTrackerService;
-import stroom.autoindex.tracker.TimelineTrackerServiceImpl;
+import stroom.tracking.*;
 import stroom.query.audit.client.DocRefResourceHttpClient;
 import stroom.query.audit.client.QueryResourceHttpClient;
 import stroom.query.audit.rest.DocRefResource;
@@ -97,7 +96,8 @@ public class App extends Application<Config> {
                                 .build());
                 bind(TransportClient.class).toInstance(transportClientBundle.getTransportClient());
             }
-        }, auditedQueryBundle.getGuiceModule(configuration));
+        },
+                auditedQueryBundle.getGuiceModule(configuration));
     }
 
     @Override

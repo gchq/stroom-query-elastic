@@ -9,7 +9,7 @@ import stroom.autoindex.app.App;
 import stroom.autoindex.app.Config;
 import stroom.autoindex.indexing.IndexJob;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
-import stroom.autoindex.tracker.TimelineTracker;
+import stroom.tracking.TimelineTracker;
 import stroom.elastic.test.ElasticTestIndexRule;
 import stroom.query.api.v2.DocRef;
 import stroom.query.csv.CsvDocRefEntity;

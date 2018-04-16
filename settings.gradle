@@ -6,4 +6,5 @@ include 'stroom-auto-index'
 include 'elastic-test'
 include 'stroom-csv-datasource'
 include 'stroom-query-akka'
+include 'stroom-window-tracking'
 

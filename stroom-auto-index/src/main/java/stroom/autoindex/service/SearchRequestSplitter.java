@@ -1,7 +1,7 @@
 package stroom.autoindex.service;
 
-import stroom.autoindex.tracker.TimelineTracker;
-import stroom.autoindex.tracker.TrackerInverter;
+import stroom.tracking.TimelineTracker;
+import stroom.tracking.TrackerInverter;
 import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.ExpressionOperator;
 import stroom.query.api.v2.ExpressionTerm;
