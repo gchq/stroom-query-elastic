@@ -5,4 +5,5 @@ include 'stroom-query-elastic-ui'
 include 'stroom-auto-index'
 include 'elastic-test'
 include 'stroom-csv-datasource'
+include 'stroom-query-akka'
 

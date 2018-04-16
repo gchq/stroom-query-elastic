@@ -80,6 +80,8 @@ dependencies {
     compile deps.simple_java_mail
     compile deps.elasticSearch
 
+    compile 'com.typesafe.akka:akka-actor_2.12:2.5.8'
+
     runtime deps.mysql_connector_java
     runtime deps.mariadb_connector
 
@@ -87,8 +89,10 @@ dependencies {
     testCompile testDeps.assertj
     testCompile 'org.apache.directory.studio:org.apache.commons.io:2.4'
     testCompile testDeps.wiremock
+    testCompile 'com.typesafe.akka:akka-testkit_2.12:2.5.3'
 
     integrationTestCompile project(':elastic-test')
+    integrationTestCompile project(':stroom-csv-datasource')
     integrationTestCompile testDeps.stroomQueryTesting
     integrationTestCompile testDeps.dropwizard_testing
     integrationTestCompile testDeps.moshi
