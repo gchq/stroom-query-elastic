@@ -32,13 +32,7 @@ class TestIndexJobConsumer implements IndexJobHandler {
     public IndexJob write(final IndexJob indexJob,
                           final SearchResponse searchResponse) {
         LOGGER.info("Writing for Index Job {}", indexJob.getJobId());
-        // Do nowt
+        indexJobDao.markAsComplete(indexJob.getJobId());
         return indexJob;
-    }
-
-    @Override
-    public IndexJob complete(final IndexJob indexJob) {
-        LOGGER.info("Completing Index Job {}", indexJob.getJobId());
-        return indexJobDao.markAsComplete(indexJob.getJobId());
     }
 }

@@ -35,6 +35,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
 import static stroom.autoindex.TestConstants.TEST_SERVICE_USER;
@@ -123,9 +124,20 @@ public class IndexJobHandlerImplIT extends AbstractAutoIndexIntegrationTest {
         final IndexJob indexJob = indexJobDao.getOrCreate(docRefUuid)
                 .orElseThrow(() -> new AssertionError("Index Job Should exist"));
 
+        final long timeBeforeStart = System.currentTimeMillis();
         final SearchResponse searchResponse = indexJobHandler.search(indexJob);
+        final IndexJob indexJobPostSearch = indexJobDao.get(indexJob.getJobId())
+                .orElseThrow(() -> new AssertionError("Index Job Should exist"));
+        assertTrue(indexJobPostSearch.getStartedTimeMillis() >= timeBeforeStart);
+        assertEquals(0L, indexJobPostSearch.getCompletedTimeMillis());
+
+        final long timeBeforeWrite = System.currentTimeMillis();
         final IndexJob postWrite = indexJobHandler.write(indexJob, searchResponse);
-        final IndexJob postComplete = indexJobHandler.complete(postWrite);
+        final IndexJob indexJobPostWrite = indexJobDao.get(postWrite.getJobId())
+                .orElseThrow(() -> new AssertionError("Index Job Should exist"));
+        assertEquals(indexJob.getJobId(), indexJobPostWrite.getJobId());
+        assertTrue(indexJobPostWrite.getCompletedTimeMillis() >= timeBeforeWrite);
+
     }
 
     @Test
@@ -152,8 +164,7 @@ public class IndexJobHandlerImplIT extends AbstractAutoIndexIntegrationTest {
                 .filter(Optional::isPresent).map(Optional::get)
                 .map(indexJob -> {
                     final SearchResponse sr = indexJobHandler.search(indexJob);
-                    indexJobHandler.write(indexJob, sr);
-                    return indexJobHandler.complete(indexJob);
+                    return indexJobHandler.write(indexJob, sr);
                 })
                 .collect(Collectors.toList());
 

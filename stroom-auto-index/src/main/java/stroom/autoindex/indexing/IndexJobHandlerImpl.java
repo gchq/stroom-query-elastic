@@ -98,6 +98,8 @@ public class IndexJobHandlerImpl implements IndexJobHandler {
     @Override
     public IndexJob write(final IndexJob indexJob,
                           final SearchResponse searchResponse) {
+        indexJobDao.markAsComplete(indexJob.getJobId());
+
         final AutoIndexDocRefEntity autoIndex = indexJob.getAutoIndexDocRefEntity();
         final DocRef docRef = autoIndex.getRawDocRef();
 
@@ -105,11 +107,6 @@ public class IndexJobHandlerImpl implements IndexJobHandler {
         indexWriter.writeResults(autoIndex.getIndexDocRef(), dataSource, searchResponse);
 
         return indexJob;
-    }
-
-    @Override
-    public IndexJob complete(final IndexJob indexJob) {
-        return indexJobDao.markAsComplete(indexJob.getJobId());
     }
 
     private SearchRequest getSearchRequest(final DocRef docRef,

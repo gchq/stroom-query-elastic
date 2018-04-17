@@ -13,10 +13,6 @@ public final class IndexJobMessages {
         return new WriteIndexJob(indexJob, searchResponse);
     }
 
-    public static CompleteIndexJob complete(final IndexJob indexJob) {
-        return new CompleteIndexJob(indexJob);
-    }
-
     private static class IndexJobMessage {
         private final IndexJob indexJob;
 
@@ -47,12 +43,6 @@ public final class IndexJobMessages {
 
         public SearchResponse getSearchResponse() {
             return searchResponse;
-        }
-    }
-
-    public static class CompleteIndexJob extends IndexJobMessage {
-        public CompleteIndexJob(final IndexJob indexJob) {
-            super(indexJob);
         }
     }
 

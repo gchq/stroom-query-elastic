@@ -137,7 +137,6 @@ public class AutoIndexQueryServiceImplIT extends AbstractAutoIndexIntegrationTes
                 .orElseThrow(() -> new AssertionError("Index Job Should exist"));
         final SearchResponse indexingSearchResponse = indexJobHandler.search(indexJob);
         indexJobHandler.write(indexJob, indexingSearchResponse);
-        indexJobHandler.complete(indexJob);
 
         // Now compose a query that covers all time
         final OffsetRange offset = new OffsetRange.Builder()

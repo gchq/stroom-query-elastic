@@ -44,16 +44,8 @@ public class IndexJobActor extends AbstractActor {
                 })
                 .match(IndexJobMessages.WriteIndexJob.class, writeJob -> {
 
-                    CompletableFuture<IndexJobMessages.CompleteIndexJob> result =
-                            CompletableFuture.supplyAsync(() -> jobHandler.write(writeJob.getIndexJob(), writeJob.getSearchResponse()))
-                            .thenApply(IndexJobMessages::complete);
-
-                    pipe(result, getContext().dispatcher()).to(getSelf());
-                })
-                .match(IndexJobMessages.CompleteIndexJob.class, completeJob -> {
-
                     CompletableFuture<IndexJob> result =
-                            CompletableFuture.supplyAsync(() -> jobHandler.complete(completeJob.getIndexJob()));
+                            CompletableFuture.supplyAsync(() -> jobHandler.write(writeJob.getIndexJob(), writeJob.getSearchResponse()));
 
                     pipe(result, getContext().dispatcher()).to(this.postJobHandler);
                 })
