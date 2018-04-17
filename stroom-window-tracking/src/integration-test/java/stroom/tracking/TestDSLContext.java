@@ -27,6 +27,7 @@ public final class TestDSLContext {
 
                 // Point it to the database
                 flyway.setDataSource(DB_URL, DB_USER, DB_PASSWORD);
+                flyway.setLocations("classpath:/tracking/migration");
 
                 // Start the migration
                 flyway.migrate();

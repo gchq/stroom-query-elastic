@@ -1,6 +1,9 @@
 package stroom.autoindex.app;
 
-import akka.actor.*;
+import akka.actor.AbstractActor;
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
 import com.codahale.metrics.health.HealthCheck;
 import com.google.inject.*;
 import com.google.inject.name.Names;

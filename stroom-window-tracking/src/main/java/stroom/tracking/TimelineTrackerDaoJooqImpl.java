@@ -5,7 +5,6 @@ import org.jooq.impl.DSL;
 import org.jooq.types.ULong;
 
 import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 

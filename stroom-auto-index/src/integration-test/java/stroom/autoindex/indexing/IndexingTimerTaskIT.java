@@ -1,6 +1,5 @@
 package stroom.autoindex.indexing;
 
-import akka.actor.Actor;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.testkit.javadsl.TestKit;

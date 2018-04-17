@@ -3,7 +3,6 @@ package stroom.tracking;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.name.Names;
 import org.jooq.Configuration;
 import org.jooq.DSLContext;
 import org.junit.BeforeClass;
