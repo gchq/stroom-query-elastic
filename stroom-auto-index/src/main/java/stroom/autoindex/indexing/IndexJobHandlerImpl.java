@@ -17,12 +17,11 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.ws.rs.core.Response;
 import java.util.UUID;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
-public class IndexJobConsumer implements Consumer<IndexJob> {
+public class IndexJobHandlerImpl implements IndexJobHandler {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(IndexJobConsumer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(IndexJobHandlerImpl.class);
 
     private final IndexJobDao indexJobDao;
 
@@ -53,12 +52,12 @@ public class IndexJobConsumer implements Consumer<IndexJob> {
     };
 
     @Inject
-    public IndexJobConsumer(final IndexJobDao indexJobDao,
-                            final IndexingConfig indexingConfig,
-                            final QueryClientCache<QueryResource> queryClientCache,
-                            @Named(AutoIndexConstants.STROOM_SERVICE_USER)
+    public IndexJobHandlerImpl(final IndexJobDao indexJobDao,
+                               final IndexingConfig indexingConfig,
+                               final QueryClientCache<QueryResource> queryClientCache,
+                               @Named(AutoIndexConstants.STROOM_SERVICE_USER)
                             final ServiceUser serviceUser,
-                            final IndexWriter indexWriter) {
+                               final IndexWriter indexWriter) {
         this.indexJobDao = indexJobDao;
         this.indexingConfig = indexingConfig;
         this.queryClientCache = queryClientCache;
@@ -67,7 +66,7 @@ public class IndexJobConsumer implements Consumer<IndexJob> {
     }
 
     @Override
-    public void accept(final IndexJob indexJob) {
+    public IndexJob apply(final IndexJob indexJob) {
         LOGGER.debug("Handling Job " + indexJob);
         indexJobDao.markAsStarted(indexJob.getJobId());
 
@@ -97,7 +96,7 @@ public class IndexJobConsumer implements Consumer<IndexJob> {
 
         indexWriter.writeResults(autoIndex.getIndexDocRef(), dataSource, searchResponse);
 
-        indexJobDao.markAsComplete(indexJob.getJobId());
+        return indexJobDao.markAsComplete(indexJob.getJobId());
     }
 
     private SearchRequest getSearchRequest(final DocRef docRef,

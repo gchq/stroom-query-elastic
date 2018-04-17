@@ -7,13 +7,13 @@ import akka.actor.Props;
 import akka.japi.Creator;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static akka.pattern.PatternsCS.pipe;
 
 
 public class IndexJobActor extends AbstractActor {
-    public static Props props(final Consumer<IndexJob> jobHandler,
+    public static Props props(final IndexJobHandler jobHandler,
                               final ActorRef postJobHandler) {
         return Props.create(new Creator<Actor>() {
             @Override
@@ -23,10 +23,10 @@ public class IndexJobActor extends AbstractActor {
         });
     }
 
-    private final Consumer<IndexJob> jobHandler;
+    private final IndexJobHandler jobHandler;
     private final ActorRef postJobHandler;
 
-    private IndexJobActor(final Consumer<IndexJob> jobHandler,
+    private IndexJobActor(final IndexJobHandler jobHandler,
                           final ActorRef postJobHandler) {
         this.jobHandler = jobHandler;
         this.postJobHandler = postJobHandler;
@@ -38,10 +38,7 @@ public class IndexJobActor extends AbstractActor {
                 .match(IndexJob.class, indexJob -> {
 
                     CompletableFuture<IndexJob> result =
-                            CompletableFuture.supplyAsync(() -> {
-                                jobHandler.accept(indexJob);
-                                return indexJob;
-                            });
+                            CompletableFuture.supplyAsync(() -> jobHandler.apply(indexJob));
 
                     pipe(result, getContext().dispatcher()).to(this.postJobHandler);
                 }).build();

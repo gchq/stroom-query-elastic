@@ -127,42 +127,54 @@ public class IndexJobDaoImpl implements IndexJobDao {
     }
 
     @Override
-    public void markAsStarted(final String jobId) {
-        final int rowsAffected = database.transactionResult(c ->
-                DSL.using(c)
-                        .update(JOB_TABLE)
-                        .set(FIELD_STARTED_TIME, ULong.valueOf(System.currentTimeMillis()))
-                        .where(FIELD_JOB_ID.equal(jobId))
-                        .and(FIELD_STARTED_TIME.equal(ULong.valueOf(0L)))
-                        .and(FIELD_COMPLETED_TIME.equal(ULong.valueOf(0L)))
-                        .execute());
+    public IndexJob markAsStarted(final String jobId) {
+        return database.transactionResult(c -> {
+            final int rowsAffected = DSL.using(c)
+                    .update(JOB_TABLE)
+                    .set(FIELD_STARTED_TIME, ULong.valueOf(System.currentTimeMillis()))
+                    .where(FIELD_JOB_ID.equal(jobId))
+                    .and(FIELD_STARTED_TIME.equal(ULong.valueOf(0L)))
+                    .and(FIELD_COMPLETED_TIME.equal(ULong.valueOf(0L)))
+                    .execute();
 
-        if (0 == rowsAffected) {
-            throw new RuntimeException(String.format("Could not mark Job %s as started, rows affected %d", jobId, rowsAffected));
-        }
+            if (0 == rowsAffected) {
+                throw new RuntimeException(String.format("Could not mark Job %s as started, rows affected %d", jobId, rowsAffected));
+            }
+
+            return DSL.using(c).select()
+                    .from(JOB_TABLE)
+                    .where(FIELD_JOB_ID.equal(jobId))
+                    .fetchOne(this::getFromRecord);
+        });
     }
 
     @Override
-    public void markAsComplete(final String jobId) {
-        // Fetch the job
-        final IndexJob indexJob = get(jobId)
-                .orElseThrow(() -> new RuntimeException(String.format("Could not find Index Job for %s", jobId)));
+    public IndexJob markAsComplete(final String jobId) {
+        return database.transactionResult(c -> {
+            // First attempt to update the completed time
+            final int rowsAffected = DSL.using(c)
+                    .update(JOB_TABLE)
+                    .set(FIELD_COMPLETED_TIME, ULong.valueOf(System.currentTimeMillis()))
+                    .where(FIELD_JOB_ID.equal(jobId))
+                    .and(FIELD_STARTED_TIME.greaterThan(ULong.valueOf(0L)))
+                    .and(FIELD_COMPLETED_TIME.equal(ULong.valueOf(0L)))
+                    .execute();
 
-        // then add the window to the tracker
-        timelineTrackerService.addWindow(indexJob.getAutoIndexDocRefEntity().getUuid(), indexJob.getTrackerWindow());
+            if (0 == rowsAffected) {
+                throw new RuntimeException(String.format("Could not mark Job %s as started, rows affected %d", jobId, rowsAffected));
+            }
 
-        final int rowsAffected = database.transactionResult(c ->
-                DSL.using(c)
-                        .update(JOB_TABLE)
-                        .set(FIELD_COMPLETED_TIME, ULong.valueOf(System.currentTimeMillis()))
-                        .where(FIELD_JOB_ID.equal(jobId))
-                        .and(FIELD_STARTED_TIME.greaterThan(ULong.valueOf(0L)))
-                        .and(FIELD_COMPLETED_TIME.equal(ULong.valueOf(0L)))
-                        .execute());
+            // Now retrieve the updated state
+            final IndexJob indexJob = DSL.using(c).select()
+                    .from(JOB_TABLE)
+                    .where(FIELD_JOB_ID.equal(jobId))
+                    .fetchOne(this::getFromRecord);
 
-        if (0 == rowsAffected) {
-            throw new RuntimeException(String.format("Could not mark Job %s as started, rows affected %d", jobId, rowsAffected));
-        }
+            // then add the window to the tracker
+            timelineTrackerService.addWindow(indexJob.getAutoIndexDocRefEntity().getUuid(), indexJob.getTrackerWindow());
+
+            return indexJob;
+        });
     }
 
     private IndexJob getFromRecord(final Record record) {

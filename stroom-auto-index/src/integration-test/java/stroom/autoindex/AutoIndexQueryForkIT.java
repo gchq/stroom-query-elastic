@@ -33,7 +33,7 @@ import javax.ws.rs.core.Response;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Set;
-import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -46,7 +46,7 @@ import static stroom.autoindex.animals.AnimalsQueryResourceIT.getAnimalSightings
  * and that the query gets split both ways
  */
 public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
-    private static final Logger LOGGER = LoggerFactory.getLogger(IndexJobConsumerIT.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(IndexJobHandlerImplIT.class);
 
     private static IndexJobDao indexJobDao;
 
@@ -57,7 +57,7 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
     /**
      * We are only really testing that the integration of the window and job management causes the right tasks to be fired off.
      */
-    private static IndexJobConsumer indexJobConsumer;
+    private static IndexJobHandlerImpl indexJobHandler;
 
     /**
      * We will use this to manually tell the system that we already have data that runs from 'now' back to
@@ -76,9 +76,9 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
                 bind(TimelineTrackerService.class).to(TimelineTrackerServiceImpl.class);
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
                 bind(IndexWriter.class).to(IndexWriterImpl.class);
-                bind(new TypeLiteral<Consumer<IndexJob>>(){})
+                bind(IndexJobHandler.class)
                         .annotatedWith(Names.named(TASK_HANDLER_NAME))
-                        .to(IndexJobConsumer.class)
+                        .to(IndexJobHandlerImpl.class)
                         .asEagerSingleton(); // singleton so that the test receives same instance as the underlying timer task
                 bind(IndexingConfig.class).toInstance(indexingConfig);
                 bind(Config.class).toInstance(autoIndexAppRule.getConfiguration());
@@ -94,10 +94,10 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
             }
         });
 
-        final Key<Consumer<IndexJob>> taskHandlerKey = Key.get(new TypeLiteral<Consumer<IndexJob>>(){}, Names.named(TASK_HANDLER_NAME));
+        final Key<IndexJobHandler> taskHandlerKey = Key.get(IndexJobHandler.class, Names.named(TASK_HANDLER_NAME));
         final Object testIndexJobConsumerObj = testInjector.getInstance(taskHandlerKey);
-        assertTrue(testIndexJobConsumerObj instanceof IndexJobConsumer);
-        indexJobConsumer = (IndexJobConsumer) testIndexJobConsumerObj;
+        assertTrue(testIndexJobConsumerObj instanceof IndexJobHandlerImpl);
+        indexJobHandler = (IndexJobHandlerImpl) testIndexJobConsumerObj;
         indexJobDao = testInjector.getInstance(IndexJobDao.class);
         timelineTrackerService = testInjector.getInstance(TimelineTrackerService.class);
     }
@@ -123,7 +123,7 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
         // Manually force the indexing to occur
         final IndexJob indexJob = indexJobDao.getOrCreate(docRefUuid)
                 .orElseThrow(() -> new AssertionError("Index Job Should exist"));
-        indexJobConsumer.accept(indexJob);
+        indexJobHandler.apply(indexJob);
 
         // Now compose a query that covers all time
         final OffsetRange offset = new OffsetRange.Builder()

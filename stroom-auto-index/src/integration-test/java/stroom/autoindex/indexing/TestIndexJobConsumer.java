@@ -4,13 +4,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import java.util.function.Consumer;
 
 /**
  * A Consumer of Index Jobs that simple marks any it receives as started then completed immediately.
  * It makes the list of IndexJobs that are accumulated and then extracted by the running tests.
  */
-class TestIndexJobConsumer implements Consumer<IndexJob> {
+class TestIndexJobConsumer implements IndexJobHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(TestIndexJobConsumer.class);
 
     private final IndexJobDao indexJobDao;
@@ -21,9 +20,9 @@ class TestIndexJobConsumer implements Consumer<IndexJob> {
     }
 
     @Override
-    public void accept(final IndexJob indexJob) {
+    public IndexJob apply(final IndexJob indexJob) {
         LOGGER.debug("Handling Job " + indexJob);
         indexJobDao.markAsStarted(indexJob.getJobId());
-        indexJobDao.markAsComplete(indexJob.getJobId());
+        return indexJobDao.markAsComplete(indexJob.getJobId());
     }
 }

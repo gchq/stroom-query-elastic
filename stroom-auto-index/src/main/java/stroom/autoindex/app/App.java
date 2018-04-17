@@ -111,7 +111,7 @@ public class App extends Application<Config> {
 
             @Provides
             @Named(TASK_HANDLER_NAME)
-            public ActorRef indexJobConsumerActorRef(final IndexJobConsumer jobHandler,
+            public ActorRef indexJobConsumerActorRef(final IndexJobHandlerImpl jobHandler,
                                                      @Named(INDEX_JOB_POST_HANDLER)
                                                      final ActorRef postHandler) {
                 return actorSystem.getActorSystem().actorOf(IndexJobActor.props(jobHandler, postHandler));

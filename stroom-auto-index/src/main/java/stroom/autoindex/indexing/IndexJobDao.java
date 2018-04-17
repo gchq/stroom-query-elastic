@@ -26,12 +26,14 @@ public interface IndexJobDao {
     /**
      * Given a specific job ID, set the 'started' time to now
      * @param jobId The Job ID
+     * @return The updated Index Job
      */
-    void markAsStarted(String jobId);
+    IndexJob markAsStarted(String jobId);
 
     /**
      * Mark a job as complete, sets the completed time to 'now'.
      * @param jobId The Job ID
+     * @return The updated Index Job
      */
-    void markAsComplete(String jobId);
+    IndexJob markAsComplete(String jobId);
 }
