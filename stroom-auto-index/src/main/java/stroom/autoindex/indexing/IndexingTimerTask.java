@@ -60,6 +60,7 @@ public class IndexingTimerTask extends TimerTask {
                     .filter(j -> j.getStartedTimeMillis() == 0)
                     .sorted(Comparator.comparingLong(IndexJob::getCreatedTimeMillis)) // ensure fair rotation
                     .limit(config.getNumberOfTasksPerRun())
+                    .map(IndexJobMessages::search) // wrap as messages for actor
                     .forEach(t -> indexJobActor.tell(t, ActorRef.noSender()));
 
         } catch (final Exception e) {

@@ -56,7 +56,7 @@ public class IndexJobHandlerImpl implements IndexJobHandler {
                                final IndexingConfig indexingConfig,
                                final QueryClientCache<QueryResource> queryClientCache,
                                @Named(AutoIndexConstants.STROOM_SERVICE_USER)
-                            final ServiceUser serviceUser,
+                               final ServiceUser serviceUser,
                                final IndexWriter indexWriter) {
         this.indexJobDao = indexJobDao;
         this.indexingConfig = indexingConfig;
@@ -66,7 +66,7 @@ public class IndexJobHandlerImpl implements IndexJobHandler {
     }
 
     @Override
-    public IndexJob apply(final IndexJob indexJob) {
+    public SearchResponse search(IndexJob indexJob) {
         LOGGER.debug("Handling Job " + indexJob);
         indexJobDao.markAsStarted(indexJob.getJobId());
 
@@ -92,10 +92,23 @@ public class IndexJobHandlerImpl implements IndexJobHandler {
             throw new RuntimeException("Invalid response from Query Search " + searchRawResponse.getStatus());
         }
 
-        final SearchResponse searchResponse = searchRawResponse.readEntity(SearchResponse.class);
+        return searchRawResponse.readEntity(SearchResponse.class);
+    }
 
+    @Override
+    public IndexJob write(final IndexJob indexJob,
+                          final SearchResponse searchResponse) {
+        final AutoIndexDocRefEntity autoIndex = indexJob.getAutoIndexDocRefEntity();
+        final DocRef docRef = autoIndex.getRawDocRef();
+
+        final DataSource dataSource = fieldNamesCache.apply(docRef);
         indexWriter.writeResults(autoIndex.getIndexDocRef(), dataSource, searchResponse);
 
+        return indexJob;
+    }
+
+    @Override
+    public IndexJob complete(final IndexJob indexJob) {
         return indexJobDao.markAsComplete(indexJob.getJobId());
     }
 

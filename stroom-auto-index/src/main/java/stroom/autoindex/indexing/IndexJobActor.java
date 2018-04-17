@@ -7,7 +7,6 @@ import akka.actor.Props;
 import akka.japi.Creator;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 import static akka.pattern.PatternsCS.pipe;
 
@@ -35,12 +34,30 @@ public class IndexJobActor extends AbstractActor {
     @Override
     public Receive createReceive() {
         return receiveBuilder()
-                .match(IndexJob.class, indexJob -> {
+                .match(IndexJobMessages.SearchIndexJob.class, indexJob -> {
+
+                    CompletableFuture<IndexJobMessages.WriteIndexJob> result =
+                            CompletableFuture.supplyAsync(() -> jobHandler.search(indexJob.getIndexJob()))
+                            .thenApply(s -> IndexJobMessages.write(indexJob.getIndexJob(), s));
+
+                    pipe(result, getContext().dispatcher()).to(getSelf());
+                })
+                .match(IndexJobMessages.WriteIndexJob.class, writeJob -> {
+
+                    CompletableFuture<IndexJobMessages.CompleteIndexJob> result =
+                            CompletableFuture.supplyAsync(() -> jobHandler.write(writeJob.getIndexJob(), writeJob.getSearchResponse()))
+                            .thenApply(IndexJobMessages::complete);
+
+                    pipe(result, getContext().dispatcher()).to(getSelf());
+                })
+                .match(IndexJobMessages.CompleteIndexJob.class, completeJob -> {
 
                     CompletableFuture<IndexJob> result =
-                            CompletableFuture.supplyAsync(() -> jobHandler.apply(indexJob));
+                            CompletableFuture.supplyAsync(() -> jobHandler.complete(completeJob.getIndexJob()));
 
                     pipe(result, getContext().dispatcher()).to(this.postJobHandler);
-                }).build();
+                })
+
+                .build();
     }
 }

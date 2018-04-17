@@ -123,7 +123,9 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
         // Manually force the indexing to occur
         final IndexJob indexJob = indexJobDao.getOrCreate(docRefUuid)
                 .orElseThrow(() -> new AssertionError("Index Job Should exist"));
-        indexJobHandler.apply(indexJob);
+        final SearchResponse indexingSearchResponse = indexJobHandler.search(indexJob);
+        indexJobHandler.write(indexJob, indexingSearchResponse);
+        indexJobHandler.complete(indexJob);
 
         // Now compose a query that covers all time
         final OffsetRange offset = new OffsetRange.Builder()

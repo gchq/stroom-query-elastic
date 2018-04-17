@@ -3,12 +3,13 @@ package stroom.autoindex.indexing;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.tracking.TrackerWindow;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * Encapsulates a single indexing job, operates on a specific auto index for a specific window of time.
  */
-public class IndexJob {
+public class IndexJob implements Serializable {
     public static final String TABLE_NAME = "index_job";
 
     private final String jobId;

@@ -1,5 +1,6 @@
 package stroom.tracking;
 
+import java.io.Serializable;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -7,7 +8,7 @@ import java.util.Optional;
  * Each instance encapsulates a single window of time for which data
  * has been extracted from the raw data source into the index source.
  */
-public class TrackerWindow implements HasBounds<Long> {
+public class TrackerWindow implements HasBounds<Long>, Serializable {
     private final Long from;
     private final Long to;
 

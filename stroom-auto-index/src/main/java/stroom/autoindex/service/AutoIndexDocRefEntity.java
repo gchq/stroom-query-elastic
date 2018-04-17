@@ -7,6 +7,7 @@ import stroom.query.audit.model.DocRefEntity;
 import stroom.query.jooq.DocRefJooqEntity;
 import stroom.query.jooq.JooqEntity;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 import static org.jooq.impl.DSL.field;
@@ -19,7 +20,7 @@ import static org.jooq.impl.DSL.field;
  * querying data within the populated tracker windows.
  */
 @JooqEntity(tableName=AutoIndexDocRefEntity.TABLE_NAME)
-public class AutoIndexDocRefEntity extends DocRefJooqEntity {
+public class AutoIndexDocRefEntity extends DocRefJooqEntity implements Serializable {
     public static final String TABLE_NAME = "auto_index_doc_ref";
 
     private static final String DOC_REF_TYPE = "type";

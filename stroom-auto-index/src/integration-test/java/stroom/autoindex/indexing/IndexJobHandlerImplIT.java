@@ -15,6 +15,7 @@ import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.app.Config;
 import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
+import stroom.query.api.v2.SearchResponse;
 import stroom.query.audit.authorisation.DocumentPermission;
 import stroom.query.audit.client.DocRefResourceHttpClient;
 import stroom.query.audit.client.QueryResourceHttpClient;
@@ -122,7 +123,9 @@ public class IndexJobHandlerImplIT extends AbstractAutoIndexIntegrationTest {
         final IndexJob indexJob = indexJobDao.getOrCreate(docRefUuid)
                 .orElseThrow(() -> new AssertionError("Index Job Should exist"));
 
-        indexJobHandler.apply(indexJob);
+        final SearchResponse searchResponse = indexJobHandler.search(indexJob);
+        final IndexJob postWrite = indexJobHandler.write(indexJob, searchResponse);
+        final IndexJob postComplete = indexJobHandler.complete(postWrite);
     }
 
     @Test
@@ -147,7 +150,11 @@ public class IndexJobHandlerImplIT extends AbstractAutoIndexIntegrationTest {
         final List<IndexJob> jobs = AnimalTestData.getExpectedTrackerWindows().stream()
                 .map(tw -> indexJobDao.getOrCreate(docRefUuid))
                 .filter(Optional::isPresent).map(Optional::get)
-                .map(indexJobHandler)
+                .map(indexJob -> {
+                    final SearchResponse sr = indexJobHandler.search(indexJob);
+                    indexJobHandler.write(indexJob, sr);
+                    return indexJobHandler.complete(indexJob);
+                })
                 .collect(Collectors.toList());
 
         LOGGER.debug("Index Jobs Processed {}", jobs.size());
