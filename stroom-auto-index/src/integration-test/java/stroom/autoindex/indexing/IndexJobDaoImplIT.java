@@ -12,20 +12,13 @@ import stroom.autoindex.AbstractAutoIndexIntegrationTest;
 import stroom.autoindex.AutoIndexConstants;
 import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
-import stroom.tracking.TimelineTracker;
-import stroom.tracking.TimelineTrackerDao;
-import stroom.tracking.TimelineTrackerDaoJooqImpl;
-import stroom.tracking.TimelineTrackerService;
-import stroom.tracking.TimelineTrackerServiceImpl;
 import stroom.query.audit.security.ServiceUser;
+import stroom.tracking.*;
 
 import java.util.Collections;
 import java.util.UUID;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
 

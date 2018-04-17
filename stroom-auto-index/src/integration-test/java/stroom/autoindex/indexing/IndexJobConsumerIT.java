@@ -1,10 +1,6 @@
 package stroom.autoindex.indexing;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.TypeLiteral;
+import com.google.inject.*;
 import com.google.inject.name.Names;
 import org.elasticsearch.client.transport.TransportClient;
 import org.jooq.DSLContext;
@@ -19,10 +15,6 @@ import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.app.Config;
 import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
-import stroom.tracking.TimelineTrackerDao;
-import stroom.tracking.TimelineTrackerDaoJooqImpl;
-import stroom.tracking.TimelineTrackerService;
-import stroom.tracking.TimelineTrackerServiceImpl;
 import stroom.query.audit.authorisation.DocumentPermission;
 import stroom.query.audit.client.DocRefResourceHttpClient;
 import stroom.query.audit.client.QueryResourceHttpClient;
@@ -30,6 +22,10 @@ import stroom.query.audit.rest.DocRefResource;
 import stroom.query.audit.rest.QueryResource;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.elastic.transportClient.TransportClientBundle;
+import stroom.tracking.TimelineTrackerDao;
+import stroom.tracking.TimelineTrackerDaoJooqImpl;
+import stroom.tracking.TimelineTrackerService;
+import stroom.tracking.TimelineTrackerServiceImpl;
 
 import java.util.List;
 import java.util.Optional;

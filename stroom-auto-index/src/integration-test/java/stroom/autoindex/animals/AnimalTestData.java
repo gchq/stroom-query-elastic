@@ -1,9 +1,9 @@
 package stroom.autoindex.animals;
 
 import stroom.autoindex.animals.app.AnimalSighting;
-import stroom.tracking.TrackerWindow;
 import stroom.testdata.DataGenerator;
 import stroom.testdata.FlatDataWriterBuilder;
+import stroom.tracking.TrackerWindow;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

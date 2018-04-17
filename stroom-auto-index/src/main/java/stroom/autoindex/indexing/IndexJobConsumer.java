@@ -9,16 +9,7 @@ import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
-import stroom.query.api.v2.DocRef;
-import stroom.query.api.v2.ExpressionOperator;
-import stroom.query.api.v2.ExpressionTerm;
-import stroom.query.api.v2.Field;
-import stroom.query.api.v2.OffsetRange;
-import stroom.query.api.v2.Query;
-import stroom.query.api.v2.ResultRequest;
-import stroom.query.api.v2.SearchRequest;
-import stroom.query.api.v2.SearchResponse;
-import stroom.query.api.v2.TableSettings;
+import stroom.query.api.v2.*;
 import stroom.query.audit.rest.QueryResource;
 import stroom.query.audit.security.ServiceUser;
 

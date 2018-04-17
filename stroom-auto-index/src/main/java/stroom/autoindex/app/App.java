@@ -1,11 +1,8 @@
 package stroom.autoindex.app;
 
+import akka.actor.*;
 import com.codahale.metrics.health.HealthCheck;
-import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Module;
-import com.google.inject.TypeLiteral;
+import com.google.inject.*;
 import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 import io.dropwizard.Application;
@@ -14,21 +11,13 @@ import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.elasticsearch.client.transport.TransportClient;
-import org.jooq.DSLContext;
-import org.jooq.impl.DSL;
 import stroom.autoindex.AutoIndexConstants;
 import stroom.autoindex.QueryClientCache;
-import stroom.autoindex.indexing.IndexJob;
-import stroom.autoindex.indexing.IndexJobConsumer;
-import stroom.autoindex.indexing.IndexJobDao;
-import stroom.autoindex.indexing.IndexJobDaoImpl;
-import stroom.autoindex.indexing.IndexWriter;
-import stroom.autoindex.indexing.IndexWriterImpl;
-import stroom.autoindex.indexing.IndexingTimerTask;
+import stroom.autoindex.akka.ManagedActorSystem;
+import stroom.autoindex.indexing.*;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
 import stroom.autoindex.service.AutoIndexQueryServiceImpl;
-import stroom.tracking.*;
 import stroom.query.audit.client.DocRefResourceHttpClient;
 import stroom.query.audit.client.QueryResourceHttpClient;
 import stroom.query.audit.rest.DocRefResource;
@@ -36,14 +25,20 @@ import stroom.query.audit.rest.QueryResource;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 import stroom.query.jooq.AuditedJooqDocRefBundle;
+import stroom.tracking.TimelineTrackerDao;
+import stroom.tracking.TimelineTrackerDaoJooqImpl;
+import stroom.tracking.TimelineTrackerService;
+import stroom.tracking.TimelineTrackerServiceImpl;
 
+import javax.inject.Named;
 import java.util.Timer;
-import java.util.function.Consumer;
 
+import static stroom.autoindex.AutoIndexConstants.INDEX_JOB_POST_HANDLER;
 import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
 
 public class App extends Application<Config> {
 
+    private ManagedActorSystem actorSystem;
     private Injector injector;
 
     private AuditedJooqDocRefBundle<Config,
@@ -62,6 +57,8 @@ public class App extends Application<Config> {
                 return Result.healthy("Keeps Dropwizard Happy");
             }
         });
+
+        environment.lifecycle().manage(actorSystem);
 
         if (configuration.getIndexingConfig().getEnabled()) {
             final Timer timer = new Timer();
@@ -82,10 +79,6 @@ public class App extends Application<Config> {
                         .toInstance(new QueryClientCache<>(configuration, QueryResourceHttpClient::new));
                 bind(new TypeLiteral<QueryClientCache<DocRefResource>>(){})
                         .toInstance(new QueryClientCache<>(configuration, DocRefResourceHttpClient::new));
-                bind(new TypeLiteral<Consumer<IndexJob>>(){})
-                        .annotatedWith(Names.named(TASK_HANDLER_NAME))
-                        .to(IndexJobConsumer.class)
-                        .asEagerSingleton();
                 bind(IndexingConfig.class).toInstance(configuration.getIndexingConfig());
                 bind(IndexWriter.class).to(IndexWriterImpl.class);
                 bind(Config.class).toInstance(configuration);
@@ -95,6 +88,30 @@ public class App extends Application<Config> {
                                 .jwt(configuration.getServiceUser().getJwt())
                                 .build());
                 bind(TransportClient.class).toInstance(transportClientBundle.getTransportClient());
+                bind(ActorSystem.class).toInstance(actorSystem.getActorSystem());
+            }
+
+            @Provides
+            @Named(INDEX_JOB_POST_HANDLER)
+            public ActorRef indexJobPostHandler() {
+                return actorSystem.getActorSystem().actorOf(Props.create(AbstractActor.class, () -> new AbstractActor() {
+                    @Override
+                    public Receive createReceive() {
+                        return receiveBuilder()
+                                .match(IndexJob.class, indexJob -> {
+                                    // do nothing...for now
+                                })
+                                .build();
+                    }
+                }));
+            }
+
+            @Provides
+            @Named(TASK_HANDLER_NAME)
+            public ActorRef indexJobConsumerActorRef(final IndexJobConsumer jobHandler,
+                                                     @Named(INDEX_JOB_POST_HANDLER)
+                                                     final ActorRef postHandler) {
+                return actorSystem.getActorSystem().actorOf(IndexJobActor.props(jobHandler, postHandler));
             }
         },
                 auditedQueryBundle.getGuiceModule(configuration));
@@ -103,6 +120,8 @@ public class App extends Application<Config> {
     @Override
     public void initialize(final Bootstrap<Config> bootstrap) {
         super.initialize(bootstrap);
+
+        actorSystem = new ManagedActorSystem();
 
         auditedQueryBundle =
                 new AuditedJooqDocRefBundle<>(

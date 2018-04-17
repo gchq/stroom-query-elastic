@@ -1,9 +1,9 @@
 package stroom.autoindex.indexing;
 
+import akka.actor.ActorRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.autoindex.app.IndexingConfig;
-import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
 import stroom.query.audit.model.DocRefEntity;
 import stroom.query.audit.security.ServiceUser;
@@ -14,7 +14,6 @@ import java.util.Comparator;
 import java.util.Optional;
 import java.util.TimerTask;
 import java.util.UUID;
-import java.util.function.Consumer;
 
 import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
 
@@ -29,7 +28,7 @@ public class IndexingTimerTask extends TimerTask {
     private final IndexingConfig config;
     private final IndexJobDao indexJobDao;
     private final AutoIndexDocRefServiceImpl autoIndexDocRefService;
-    private final Consumer<IndexJob> taskHandler;
+    private final ActorRef indexJobActor;
 
     private static final ServiceUser INTERNAL = new ServiceUser.Builder()
             .name(IndexJobDaoImpl.class.getName())
@@ -41,11 +40,11 @@ public class IndexingTimerTask extends TimerTask {
                              final IndexJobDao indexJobDao,
                              final AutoIndexDocRefServiceImpl autoIndexDocRefService,
                              @Named(TASK_HANDLER_NAME)
-                             final Consumer<IndexJob> taskHandler) {
+                             final ActorRef indexJobActor) {
         this.config = config;
         this.indexJobDao = indexJobDao;
         this.autoIndexDocRefService = autoIndexDocRefService;
-        this.taskHandler = taskHandler;
+        this.indexJobActor = indexJobActor;
     }
 
     @Override
@@ -61,7 +60,7 @@ public class IndexingTimerTask extends TimerTask {
                     .filter(j -> j.getStartedTimeMillis() == 0)
                     .sorted(Comparator.comparingLong(IndexJob::getCreatedTimeMillis)) // ensure fair rotation
                     .limit(config.getNumberOfTasksPerRun())
-                    .forEach(taskHandler);
+                    .forEach(t -> indexJobActor.tell(t, ActorRef.noSender()));
 
         } catch (final Exception e) {
             LOGGER.error(e.getLocalizedMessage());

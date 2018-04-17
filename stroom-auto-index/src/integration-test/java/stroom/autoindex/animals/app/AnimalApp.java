@@ -11,7 +11,6 @@ import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
-import stroom.query.audit.AuditedQueryBundle;
 import stroom.query.csv.AuditedCsvBundle;
 import stroom.query.csv.CsvConfig;
 import stroom.query.csv.CsvFieldSupplier;

@@ -1,12 +1,8 @@
 package stroom.autoindex.service;
 
+import stroom.query.api.v2.*;
 import stroom.tracking.TimelineTracker;
 import stroom.tracking.TrackerInverter;
-import stroom.query.api.v2.DocRef;
-import stroom.query.api.v2.ExpressionOperator;
-import stroom.query.api.v2.ExpressionTerm;
-import stroom.query.api.v2.Query;
-import stroom.query.api.v2.SearchRequest;
 
 /**
  * Given a search request and a tracker, generates two split search requests to give

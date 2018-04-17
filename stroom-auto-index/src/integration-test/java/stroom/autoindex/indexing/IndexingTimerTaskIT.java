@@ -1,13 +1,16 @@
 package stroom.autoindex.indexing;
 
+import akka.actor.Actor;
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.testkit.javadsl.TestKit;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.TypeLiteral;
+import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import org.jooq.DSLContext;
-import org.junit.Before;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -18,27 +21,20 @@ import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
-import stroom.tracking.TimelineTracker;
-import stroom.tracking.TimelineTrackerDao;
-import stroom.tracking.TimelineTrackerDaoJooqImpl;
-import stroom.tracking.TimelineTrackerService;
-import stroom.tracking.TimelineTrackerServiceImpl;
-import stroom.tracking.TrackerWindow;
 import stroom.query.audit.security.ServiceUser;
+import stroom.tracking.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import javax.inject.Named;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static stroom.autoindex.AutoIndexConstants.INDEX_JOB_POST_HANDLER;
 import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
 
 /**
@@ -58,13 +54,16 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
             .asEnabled()
             .withNumberOfTasksPerRun(3);
 
-    /**
-     * We are only really testing that the integration of the window and job management causes the right tasks to be fired off.
-     */
-    private static TestIndexJobConsumer testIndexJobConsumer;
+    private static ActorSystem actorSystem;
+
+    private static TestKit indexJobPostHandler;
 
     @BeforeClass
     public static void beforeClass() {
+
+        actorSystem = ActorSystem.create();
+
+        indexJobPostHandler = new TestKit(actorSystem);
 
         final Injector testInjector = Guice.createInjector(new AbstractModule() {
             @Override
@@ -73,28 +72,36 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
                 bind(TimelineTrackerDao.class).to(TimelineTrackerDaoJooqImpl.class);
                 bind(TimelineTrackerService.class).to(TimelineTrackerServiceImpl.class);
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
-                bind(new TypeLiteral<Consumer<IndexJob>>(){})
-                        .annotatedWith(Names.named(TASK_HANDLER_NAME))
-                        .to(TestIndexJobConsumer.class)
-                        .asEagerSingleton(); // singleton so that the test receives same instance as the underlying timer task
                 bind(IndexingConfig.class).toInstance(indexingConfig);
                 bind(ServiceUser.class)
                         .annotatedWith(Names.named(AutoIndexConstants.STROOM_SERVICE_USER))
                         .toInstance(serviceUser);
+                bind(ActorSystem.class).toInstance(actorSystem);
+            }
+
+            @Provides
+            @Named(INDEX_JOB_POST_HANDLER)
+            public ActorRef indexJobPostHandler() {
+                return indexJobPostHandler.getRef();
+            }
+
+            @Provides
+            @Named(TASK_HANDLER_NAME)
+            public ActorRef indexJobConsumerActorRef(final TestIndexJobConsumer jobHandler,
+                                                     @Named(INDEX_JOB_POST_HANDLER)
+                                                     final ActorRef postHandler) {
+                return actorSystem.actorOf(IndexJobActor.props(jobHandler, postHandler));
             }
         });
 
-        final Key<Consumer<IndexJob>> taskHandlerKey = Key.get(new TypeLiteral<Consumer<IndexJob>>(){}, Names.named(TASK_HANDLER_NAME));
-        final Object testIndexJobConsumerObj = testInjector.getInstance(taskHandlerKey);
-        assertTrue(testIndexJobConsumerObj instanceof TestIndexJobConsumer);
-        testIndexJobConsumer = (TestIndexJobConsumer) testIndexJobConsumerObj;
         indexingTimerTask = testInjector.getInstance(IndexingTimerTask.class);
         timelineTrackerService = testInjector.getInstance(TimelineTrackerService.class);
     }
 
-    @Before
-    public void beforeTest() {
-        testIndexJobConsumer.clear();
+    @AfterClass
+    public static void afterClass() {
+        TestKit.shutdownActorSystem(actorSystem);
+        actorSystem = null;
     }
 
     @Test
@@ -108,11 +115,9 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
 
         indexingTimerTask.run();
 
-        assertEquals(
-                Collections.singletonList(autoIndex.getEntity()),
-                testIndexJobConsumer.extractJobs().stream()
-                        .map(IndexJob::getAutoIndexDocRefEntity)
-                        .collect(Collectors.toList()));
+        final IndexJob indexJob = indexJobPostHandler.expectMsgClass(IndexJob.class);
+
+        assertEquals(autoIndex.getEntity(), indexJob.getAutoIndexDocRefEntity());
     }
 
     @Test
@@ -144,10 +149,10 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
             final Set<AutoIndexDocRefEntity> jobsToRun = IntStream.range(0, numberCyclesToGetThroughAllIndexesOnce)
                     .mapToObj(i -> {
                         indexingTimerTask.run();
-                        return testIndexJobConsumer.extractJobs();
+                        return IntStream.range(0, indexingConfig.getNumberOfTasksPerRun())
+                                .mapToObj(j -> indexJobPostHandler.expectMsgClass(IndexJob.class));
                     })
-                    .peek(l -> assertEquals(indexingConfig.getNumberOfTasksPerRun(), l.size()))
-                    .flatMap(List::stream)
+                    .flatMap(Function.identity())
                     .peek(j -> jobsByDocRefUuid
                             .computeIfAbsent(j.getAutoIndexDocRefEntity().getUuid(),
                                     u -> new ArrayList<>())

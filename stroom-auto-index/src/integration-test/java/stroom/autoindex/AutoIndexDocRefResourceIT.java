@@ -9,7 +9,6 @@ import stroom.autoindex.app.App;
 import stroom.autoindex.app.Config;
 import stroom.autoindex.indexing.IndexJob;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
-import stroom.tracking.TimelineTracker;
 import stroom.elastic.test.ElasticTestIndexRule;
 import stroom.query.api.v2.DocRef;
 import stroom.query.csv.CsvDocRefEntity;
@@ -18,6 +17,7 @@ import stroom.query.elastic.service.ElasticIndexDocRefServiceImpl;
 import stroom.query.testing.DocRefResourceIT;
 import stroom.query.testing.DropwizardAppWithClientsRule;
 import stroom.query.testing.StroomAuthenticationRule;
+import stroom.tracking.TimelineTracker;
 
 import java.util.HashMap;
 import java.util.Map;

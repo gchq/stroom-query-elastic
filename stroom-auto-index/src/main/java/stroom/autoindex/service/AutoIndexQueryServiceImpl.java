@@ -4,8 +4,6 @@ import org.eclipse.jetty.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.autoindex.QueryClientCache;
-import stroom.tracking.TimelineTracker;
-import stroom.tracking.TimelineTrackerService;
 import stroom.datasource.api.v2.DataSource;
 import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.QueryKey;
@@ -16,6 +14,8 @@ import stroom.query.audit.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.audit.service.QueryApiException;
 import stroom.query.audit.service.QueryService;
+import stroom.tracking.TimelineTracker;
+import stroom.tracking.TimelineTrackerService;
 
 import javax.inject.Inject;
 import javax.ws.rs.core.Response;
