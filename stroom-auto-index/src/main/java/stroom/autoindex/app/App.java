@@ -15,17 +15,19 @@ import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.elasticsearch.client.transport.TransportClient;
 import stroom.autoindex.AutoIndexConstants;
-import stroom.autoindex.QueryClientCache;
 import stroom.autoindex.akka.ManagedActorSystem;
 import stroom.autoindex.indexing.*;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
 import stroom.autoindex.service.AutoIndexQueryServiceImpl;
 import stroom.query.audit.client.DocRefResourceHttpClient;
-import stroom.query.audit.client.QueryResourceHttpClient;
+import stroom.query.audit.client.QueryServiceHttpClient;
+import stroom.query.audit.client.RemoteClientCache;
+import stroom.query.audit.client.RemoteClientModule;
 import stroom.query.audit.rest.DocRefResource;
-import stroom.query.audit.rest.QueryResource;
 import stroom.query.audit.security.ServiceUser;
+import stroom.query.audit.service.QueryService;
+import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 import stroom.query.jooq.AuditedJooqDocRefBundle;
 import stroom.tracking.TimelineTrackerDao;
@@ -78,10 +80,10 @@ public class App extends Application<Config> {
                 bind(TimelineTrackerDao.class).to(TimelineTrackerDaoJooqImpl.class);
                 bind(TimelineTrackerService.class).to(TimelineTrackerServiceImpl.class);
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
-                bind(new TypeLiteral<QueryClientCache<QueryResource>>(){})
-                        .toInstance(new QueryClientCache<>(configuration, QueryResourceHttpClient::new));
-                bind(new TypeLiteral<QueryClientCache<DocRefResource>>(){})
-                        .toInstance(new QueryClientCache<>(configuration, DocRefResourceHttpClient::new));
+//                bind(new TypeLiteral<RemoteClientCache<QueryService>>(){})
+//                        .toInstance(new RemoteClientCache<>(configuration.getQueryResourceUrlsByType()::get, QueryServiceHttpClient::new));
+//                bind(new TypeLiteral<RemoteClientCache<DocRefResource>>(){})
+//                        .toInstance(new RemoteClientCache<>(configuration.getQueryResourceUrlsByType()::get, DocRefResourceHttpClient::new));
                 bind(IndexingConfig.class).toInstance(configuration.getIndexingConfig());
                 bind(IndexWriter.class).to(IndexWriterImpl.class);
                 bind(Config.class).toInstance(configuration);
@@ -117,6 +119,8 @@ public class App extends Application<Config> {
                 return actorSystem.getActorSystem().actorOf(IndexJobActor.props(jobHandler, postHandler));
             }
         },
+                new RemoteClientModule(configuration.getQueryResourceUrlsByType())
+                        .addType(ElasticIndexDocRefEntity.TYPE, ElasticIndexDocRefEntity.class),
                 auditedQueryBundle.getGuiceModule(configuration));
     }
 

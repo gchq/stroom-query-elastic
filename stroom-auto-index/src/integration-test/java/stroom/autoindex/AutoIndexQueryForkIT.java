@@ -2,6 +2,7 @@ package stroom.autoindex;
 
 import com.google.inject.*;
 import com.google.inject.name.Names;
+import com.google.inject.util.Modules;
 import org.eclipse.jetty.http.HttpStatus;
 import org.elasticsearch.client.transport.TransportClient;
 import org.jooq.DSLContext;
@@ -18,11 +19,13 @@ import stroom.autoindex.indexing.*;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.query.api.v2.*;
 import stroom.query.audit.authorisation.DocumentPermission;
-import stroom.query.audit.client.DocRefResourceHttpClient;
-import stroom.query.audit.client.QueryResourceHttpClient;
+import stroom.query.audit.client.*;
 import stroom.query.audit.rest.DocRefResource;
 import stroom.query.audit.rest.QueryResource;
 import stroom.query.audit.security.ServiceUser;
+import stroom.query.audit.service.QueryService;
+import stroom.query.csv.CsvDocRefEntity;
+import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 import stroom.tracking.TimelineTrackerDao;
 import stroom.tracking.TimelineTrackerDaoJooqImpl;
@@ -33,7 +36,6 @@ import javax.ws.rs.core.Response;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Set;
-import java.util.function.Function;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -68,7 +70,7 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
     @BeforeClass
     public static void beforeClass() {
 
-        final Injector testInjector = Guice.createInjector(new AbstractModule() {
+        final Injector testInjector = Guice.createInjector(Modules.combine(new AbstractModule() {
             @Override
             protected void configure() {
                 bind(DSLContext.class).toInstance(initialiseJooqDbRule.withDatabase());
@@ -87,12 +89,11 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
                         .toInstance(serviceUser);
                 bind(TransportClient.class)
                         .toInstance(TransportClientBundle.createTransportClient(autoIndexAppRule.getConfiguration()));
-                bind(new TypeLiteral<QueryClientCache<QueryResource>>(){})
-                        .toInstance(new QueryClientCache<>(autoIndexAppRule.getConfiguration(), QueryResourceHttpClient::new));
-                bind(new TypeLiteral<QueryClientCache<DocRefResource>>(){})
-                        .toInstance(new QueryClientCache<>(autoIndexAppRule.getConfiguration(), DocRefResourceHttpClient::new));
             }
-        });
+        }), new RemoteClientModule(autoIndexAppRule.getConfiguration().getQueryResourceUrlsByType())
+                .addType(ElasticIndexDocRefEntity.TYPE, ElasticIndexDocRefEntity.class)
+                .addType(CsvDocRefEntity.TYPE, CsvDocRefEntity.class)
+        );
 
         final Key<IndexJobHandler> taskHandlerKey = Key.get(IndexJobHandler.class, Names.named(TASK_HANDLER_NAME));
         final Object testIndexJobConsumerObj = testInjector.getInstance(taskHandlerKey);

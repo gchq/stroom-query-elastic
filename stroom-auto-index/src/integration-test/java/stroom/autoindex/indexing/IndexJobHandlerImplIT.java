@@ -2,6 +2,7 @@ package stroom.autoindex.indexing;
 
 import com.google.inject.*;
 import com.google.inject.name.Names;
+import com.google.inject.util.Modules;
 import org.elasticsearch.client.transport.TransportClient;
 import org.jooq.DSLContext;
 import org.junit.BeforeClass;
@@ -10,18 +11,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.autoindex.AbstractAutoIndexIntegrationTest;
 import stroom.autoindex.AutoIndexConstants;
-import stroom.autoindex.QueryClientCache;
 import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.app.Config;
 import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.query.api.v2.SearchResponse;
 import stroom.query.audit.authorisation.DocumentPermission;
-import stroom.query.audit.client.DocRefResourceHttpClient;
-import stroom.query.audit.client.QueryResourceHttpClient;
+import stroom.query.audit.client.*;
 import stroom.query.audit.rest.DocRefResource;
 import stroom.query.audit.rest.QueryResource;
 import stroom.query.audit.security.ServiceUser;
+import stroom.query.audit.service.QueryService;
+import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 import stroom.tracking.TimelineTrackerDao;
 import stroom.tracking.TimelineTrackerDaoJooqImpl;
@@ -30,12 +31,9 @@ import stroom.tracking.TimelineTrackerServiceImpl;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
 import static stroom.autoindex.TestConstants.TEST_SERVICE_USER;
@@ -69,7 +67,7 @@ public class IndexJobHandlerImplIT extends AbstractAutoIndexIntegrationTest {
     @BeforeClass
     public static void beforeClass() {
 
-        final Injector testInjector = Guice.createInjector(new AbstractModule() {
+        final Injector testInjector = Guice.createInjector(Modules.combine(new AbstractModule() {
             @Override
             protected void configure() {
                 bind(DSLContext.class).toInstance(initialiseJooqDbRule.withDatabase());
@@ -88,12 +86,9 @@ public class IndexJobHandlerImplIT extends AbstractAutoIndexIntegrationTest {
                         .toInstance(serviceUser);
                 bind(TransportClient.class)
                         .toInstance(TransportClientBundle.createTransportClient(autoIndexAppRule.getConfiguration()));
-                bind(new TypeLiteral<QueryClientCache<QueryResource>>(){})
-                        .toInstance(new QueryClientCache<>(autoIndexAppRule.getConfiguration(), QueryResourceHttpClient::new));
-                bind(new TypeLiteral<QueryClientCache<DocRefResource>>(){})
-                        .toInstance(new QueryClientCache<>(autoIndexAppRule.getConfiguration(), DocRefResourceHttpClient::new));
             }
-        });
+        }), new RemoteClientModule(autoIndexAppRule.getConfiguration().getQueryResourceUrlsByType())
+                .addType(ElasticIndexDocRefEntity.TYPE, ElasticIndexDocRefEntity.class));
 
         final Key<IndexJobHandler> taskHandlerKey = Key.get(IndexJobHandler.class, Names.named(TASK_HANDLER_NAME));
         final Object testIndexJobConsumerObj = testInjector.getInstance(taskHandlerKey);

@@ -1,21 +1,20 @@
 package stroom.autoindex.indexing;
 
-import org.apache.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.autoindex.AutoIndexConstants;
-import stroom.autoindex.QueryClientCache;
 import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.*;
-import stroom.query.audit.rest.QueryResource;
+import stroom.query.audit.client.RemoteClientCache;
 import stroom.query.audit.security.ServiceUser;
+import stroom.query.audit.service.QueryApiException;
+import stroom.query.audit.service.QueryService;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.ws.rs.core.Response;
 import java.util.UUID;
 import java.util.function.Function;
 
@@ -27,7 +26,7 @@ public class IndexJobHandlerImpl implements IndexJobHandler {
 
     private final IndexingConfig indexingConfig;
 
-    private final QueryClientCache<QueryResource> queryClientCache;
+    private final RemoteClientCache<QueryService> remoteClientCache;
 
     private final ServiceUser serviceUser;
 
@@ -37,30 +36,28 @@ public class IndexJobHandlerImpl implements IndexJobHandler {
         @Override
         public DataSource apply(final DocRef docRef) {
 
-            final QueryResource rawClientOpt = queryClientCache.apply(docRef.getType())
+            final QueryService rawClient = remoteClientCache.apply(docRef.getType())
                     .orElseThrow(() -> new RuntimeException("Could not retrieve query client for " + docRef.getType()));
 
-            final Response response = rawClientOpt.getDataSource(serviceUser, docRef);
-
-            if (response.getStatus() != HttpStatus.SC_OK) {
-                response.close();
-                throw new RuntimeException("Invalid response from Query Data Source " + response.getStatus());
+            try {
+                return rawClient.getDataSource(serviceUser, docRef)
+                        .orElseThrow(() -> new RuntimeException("Could not retrieve datasource " + docRef.getType()));
+            } catch (final QueryApiException e) {
+                throw new RuntimeException("Couldn't retrieve datasource", e);
             }
-
-            return response.readEntity(DataSource.class);
         }
     };
 
     @Inject
     public IndexJobHandlerImpl(final IndexJobDao indexJobDao,
                                final IndexingConfig indexingConfig,
-                               final QueryClientCache<QueryResource> queryClientCache,
+                               final RemoteClientCache<QueryService> remoteClientCache,
                                @Named(AutoIndexConstants.STROOM_SERVICE_USER)
                                final ServiceUser serviceUser,
                                final IndexWriter indexWriter) {
         this.indexJobDao = indexJobDao;
         this.indexingConfig = indexingConfig;
-        this.queryClientCache = queryClientCache;
+        this.remoteClientCache = remoteClientCache;
         this.serviceUser = serviceUser;
         this.indexWriter = indexWriter;
     }
@@ -72,7 +69,8 @@ public class IndexJobHandlerImpl implements IndexJobHandler {
 
         final AutoIndexDocRefEntity autoIndex = indexJob.getAutoIndexDocRefEntity();
         final DocRef docRef = autoIndex.getRawDocRef();
-        final QueryResource rawClientOpt = queryClientCache.apply(docRef.getType())
+
+        final QueryService rawClient = remoteClientCache.apply(docRef.getType())
                 .orElseThrow(() -> new RuntimeException("Could not retrieve query client for " + docRef.getType()));
 
         final String timeBoundTerm = String.format("%d,%d",
@@ -86,13 +84,12 @@ public class IndexJobHandlerImpl implements IndexJobHandler {
         final DataSource dataSource = fieldNamesCache.apply(docRef);
         final SearchRequest searchRequest = getSearchRequest(autoIndex.getRawDocRef(), dataSource, timeBound);
 
-        final Response searchRawResponse = rawClientOpt.search(serviceUser, searchRequest);
-        if (searchRawResponse.getStatus() != HttpStatus.SC_OK) {
-            searchRawResponse.close();
-            throw new RuntimeException("Invalid response from Query Search " + searchRawResponse.getStatus());
+        try {
+            return rawClient.search(serviceUser, searchRequest)
+                    .orElseThrow(() -> new RuntimeException("Could not search " + docRef.getType()));
+        } catch (final QueryApiException e) {
+            throw new RuntimeException("Couldn't search", e);
         }
-
-        return searchRawResponse.readEntity(SearchResponse.class);
     }
 
     @Override

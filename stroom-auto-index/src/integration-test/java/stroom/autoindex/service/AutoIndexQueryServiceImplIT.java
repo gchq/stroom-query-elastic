@@ -10,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.autoindex.AbstractAutoIndexIntegrationTest;
 import stroom.autoindex.AutoIndexConstants;
-import stroom.autoindex.QueryClientCache;
 import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.animals.AnimalsQueryResourceIT;
 import stroom.autoindex.animals.app.AnimalSighting;
@@ -20,12 +19,16 @@ import stroom.autoindex.indexing.*;
 import stroom.query.api.v2.*;
 import stroom.query.audit.authorisation.DocumentPermission;
 import stroom.query.audit.client.DocRefResourceHttpClient;
-import stroom.query.audit.client.QueryResourceHttpClient;
+import stroom.query.audit.client.DocRefServiceHttpClient;
+import stroom.query.audit.client.QueryServiceHttpClient;
+import stroom.query.audit.client.RemoteClientCache;
 import stroom.query.audit.rest.DocRefResource;
-import stroom.query.audit.rest.QueryResource;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
+import stroom.query.audit.service.QueryService;
+import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.transportClient.TransportClientBundle;
+import stroom.query.testing.QueryServiceSpy;
 import stroom.tracking.TimelineTrackerDao;
 import stroom.tracking.TimelineTrackerDaoJooqImpl;
 import stroom.tracking.TimelineTrackerService;
@@ -34,8 +37,9 @@ import stroom.tracking.TimelineTrackerServiceImpl;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
@@ -72,7 +76,7 @@ public class AutoIndexQueryServiceImplIT extends AbstractAutoIndexIntegrationTes
     /**
      * The cache of query resources, should serve up Client Spy's
      */
-    private static QueryClientCache<QueryResource> queryClientCache;
+    private static RemoteClientCache<QueryService> RemoteClientCache;
 
     @BeforeClass
     public static void beforeClass() {
@@ -97,10 +101,28 @@ public class AutoIndexQueryServiceImplIT extends AbstractAutoIndexIntegrationTes
                         .toInstance(serviceUser);
                 bind(TransportClient.class)
                         .toInstance(TransportClientBundle.createTransportClient(autoIndexAppRule.getConfiguration()));
-                bind(new TypeLiteral<QueryClientCache<QueryResource>>(){})
-                        .toInstance(new QueryClientCache<>(autoIndexAppRule.getConfiguration(), u -> QueryResourceClientSpy.wrapping(new QueryResourceHttpClient(u))));
-                bind(new TypeLiteral<QueryClientCache<DocRefResource>>(){})
-                        .toInstance(new QueryClientCache<>(autoIndexAppRule.getConfiguration(), DocRefResourceHttpClient::new));
+                bind(new TypeLiteral<RemoteClientCache<QueryService>>(){})
+                        .toInstance(new RemoteClientCache<>(
+                                autoIndexAppRule.getConfiguration().getQueryResourceUrlsByType()::get,
+                                (t, u) -> QueryServiceSpy.wrapping(new QueryServiceHttpClient(t, u))
+                        ));
+                bind(new TypeLiteral<RemoteClientCache<DocRefResource>>(){})
+                        .toInstance(new RemoteClientCache<>(
+                                autoIndexAppRule.getConfiguration().getQueryResourceUrlsByType()::get,
+                                (t, u) -> new DocRefResourceHttpClient(u))
+                        );
+                bind(new TypeLiteral<RemoteClientCache<DocRefService>>(){})
+                        .toInstance(new RemoteClientCache<>(
+                                autoIndexAppRule.getConfiguration().getQueryResourceUrlsByType()::get,
+                                (t, u) -> {
+                                    switch (t) {
+                                        case ElasticIndexDocRefEntity.TYPE:
+                                            return new DocRefServiceHttpClient<>(t, ElasticIndexDocRefEntity.class, u);
+                                        default:
+                                            throw new RuntimeException("No explicitly typed Doc Ref service provided for " + t);
+                                    }
+                                })
+                        );
             }
         });
 
@@ -111,7 +133,7 @@ public class AutoIndexQueryServiceImplIT extends AbstractAutoIndexIntegrationTes
         indexJobDao = testInjector.getInstance(IndexJobDao.class);
         timelineTrackerService = testInjector.getInstance(TimelineTrackerService.class);
         service = testInjector.getInstance(AutoIndexQueryServiceImpl.class);
-        queryClientCache = testInjector.getInstance(Key.get(new TypeLiteral<QueryClientCache<QueryResource>>(){}));
+        RemoteClientCache = testInjector.getInstance(Key.get(new TypeLiteral<RemoteClientCache<QueryService>>(){}));
     }
 
     @Test
@@ -154,21 +176,21 @@ public class AutoIndexQueryServiceImplIT extends AbstractAutoIndexIntegrationTes
                 .build();
 
         // Get hold of the various client spies for the query resource
-        final QueryResourceClientSpy<QueryResourceHttpClient> rawQueryClient =
-                queryClientCache.apply(autoIndex.getEntity().getRawDocRef().getType())
-                .filter(c -> c instanceof QueryResourceClientSpy)
-                .map(c -> (QueryResourceClientSpy<QueryResourceHttpClient>) c)
+        final QueryServiceSpy<QueryServiceHttpClient> rawQueryClient =
+                RemoteClientCache.apply(autoIndex.getEntity().getRawDocRef().getType())
+                .filter(c -> c instanceof QueryServiceSpy)
+                .map(c -> (QueryServiceSpy<QueryServiceHttpClient>) c)
                 .orElseThrow(() -> new RuntimeException("Could not get query resource client spy (raw)"));
 
-        final QueryResourceClientSpy<QueryResourceHttpClient> indexQueryClient =
-                queryClientCache.apply(autoIndex.getEntity().getIndexDocRef().getType())
-                .filter(c -> c instanceof QueryResourceClientSpy)
-                .map(c -> (QueryResourceClientSpy<QueryResourceHttpClient>) c)
+        final QueryServiceSpy<QueryServiceHttpClient> indexQueryClient =
+                RemoteClientCache.apply(autoIndex.getEntity().getIndexDocRef().getType())
+                .filter(c -> c instanceof QueryServiceSpy)
+                .map(c -> (QueryServiceSpy<QueryServiceHttpClient>) c)
                 .orElseThrow(() -> new RuntimeException("Could not get query resource client spy (index)"));
 
         // Clear any existing intercepted searches
         Stream.of(rawQueryClient, indexQueryClient)
-                .forEach(QueryResourceClientSpy::clearCalls);
+                .forEach(QueryServiceSpy::clearCalls);
 
         // Conduct the search
         final SearchRequest searchRequest = AnimalsQueryResourceIT
@@ -183,14 +205,14 @@ public class AutoIndexQueryServiceImplIT extends AbstractAutoIndexIntegrationTes
         assertTrue("No results seen", searchResponse.getResults().size() > 0);
 
         // Check that the search was forked to both underlying data sources correctly
-        final List<QueryResourceClientSpy.SearchCall> rawSearchCalls = rawQueryClient.getSearchCalls();
-        final List<QueryResourceClientSpy.SearchCall> indexSearchCalls = indexQueryClient.getSearchCalls();
+        final List<QueryServiceSpy.SearchCall> rawSearchCalls = rawQueryClient.getSearchCalls();
+        final List<QueryServiceSpy.SearchCall> indexSearchCalls = indexQueryClient.getSearchCalls();
 
         assertEquals(1, rawSearchCalls.size());
         assertEquals(1, indexSearchCalls.size());
 
-        QueryResourceClientSpy.SearchCall rawSearchCall = rawSearchCalls.get(0);
-        QueryResourceClientSpy.SearchCall indexSearchCall = indexSearchCalls.get(0);
+        QueryServiceSpy.SearchCall rawSearchCall = rawSearchCalls.get(0);
+        QueryServiceSpy.SearchCall indexSearchCall = indexSearchCalls.get(0);
 
         LOGGER.info("Raw Search Call {}", rawSearchCall);
         LOGGER.info("Index Search Call {}", indexSearchCall);

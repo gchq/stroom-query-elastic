@@ -8,19 +8,23 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.autoindex.AutoIndexConstants;
-import stroom.autoindex.QueryClientCache;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.FlatResult;
 import stroom.query.api.v2.SearchResponse;
+import stroom.query.audit.client.RemoteClientCache;
+import stroom.query.audit.model.DocRefEntity;
 import stroom.query.audit.rest.DocRefResource;
 import stroom.query.audit.security.ServiceUser;
+import stroom.query.audit.service.DocRefService;
+import stroom.query.audit.service.QueryApiException;
 import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -30,16 +34,17 @@ public class IndexWriterImpl implements IndexWriter {
     private static final Logger LOGGER = LoggerFactory.getLogger(IndexWriterImpl.class);
 
     private final TransportClient client;
-    private final QueryClientCache<DocRefResource> docRefClientCache;
+    private final DocRefService<ElasticIndexDocRefEntity> elasticDocRefService;
     private final ServiceUser serviceUser;
 
     @Inject
     public IndexWriterImpl(final TransportClient client,
-                           final QueryClientCache<DocRefResource> docRefClientCache,
+                           final RemoteClientCache<DocRefService> docRefServiceCache,
                            @Named(AutoIndexConstants.STROOM_SERVICE_USER)
                            final ServiceUser serviceUser) {
         this.client = client;
-        this.docRefClientCache = docRefClientCache;
+        this.elasticDocRefService = (DocRefService<ElasticIndexDocRefEntity>) docRefServiceCache.apply(ElasticIndexDocRefEntity.TYPE)
+                .orElseThrow(() -> new RuntimeException("Could not get Doc Ref Service"));
         this.serviceUser = serviceUser;
     }
 
@@ -47,21 +52,13 @@ public class IndexWriterImpl implements IndexWriter {
     public void writeResults(final DocRef elasticDocRef,
                              final DataSource dataSource,
                              final SearchResponse searchResponse) {
-
-        final ElasticIndexDocRefEntity elasticIndex =
-                docRefClientCache.apply(elasticDocRef.getType())
-                        .map(client -> client.get(serviceUser, elasticDocRef.getUuid()))
-                        .filter(r -> {
-                            if (r.getStatus() == HttpStatus.SC_OK) {
-                                return true;
-                            } else {
-                                LOGGER.error("Bad response from doc ref client {}", r.getStatus());
-                                r.close();
-                                return false;
-                            }
-                        })
-                        .map(r -> r.readEntity(ElasticIndexDocRefEntity.class))
-                        .orElseThrow(() -> new RuntimeException("Could not get document entity for " + elasticDocRef));
+        final ElasticIndexDocRefEntity elasticIndex;
+        try {
+            elasticIndex = elasticDocRefService.get(serviceUser, elasticDocRef.getUuid())
+                    .orElseThrow(() -> new RuntimeException("Could not get document entity for " + elasticDocRef));
+        } catch (QueryApiException e) {
+            throw new RuntimeException("Could not get document entity for " + elasticDocRef);
+        }
 
         final BulkRequestBuilder bulkRequest = client.prepareBulk();
         final AtomicBoolean resultsFound = new AtomicBoolean(false);

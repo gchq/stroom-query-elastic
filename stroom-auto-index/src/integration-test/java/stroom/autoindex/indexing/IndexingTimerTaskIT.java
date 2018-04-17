@@ -8,6 +8,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
+import com.google.inject.util.Modules;
 import org.jooq.DSLContext;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -20,7 +21,10 @@ import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
+import stroom.query.audit.client.RemoteClientModule;
 import stroom.query.audit.security.ServiceUser;
+import stroom.query.csv.CsvDocRefEntity;
+import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.tracking.*;
 
 import javax.inject.Named;
@@ -64,7 +68,7 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
 
         indexJobPostHandler = new TestKit(actorSystem);
 
-        final Injector testInjector = Guice.createInjector(new AbstractModule() {
+        final Injector testInjector = Guice.createInjector(Modules.combine(new AbstractModule() {
             @Override
             protected void configure() {
                 bind(DSLContext.class).toInstance(initialiseJooqDbRule.withDatabase());
@@ -91,7 +95,7 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
                                                      final ActorRef postHandler) {
                 return actorSystem.actorOf(IndexJobActor.props(jobHandler, postHandler));
             }
-        });
+        }));
 
         indexingTimerTask = testInjector.getInstance(IndexingTimerTask.class);
         timelineTrackerService = testInjector.getInstance(TimelineTrackerService.class);
@@ -104,7 +108,7 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
     }
 
     @Test
-    public void testRunsSingleJob() {
+    public void testRunsSingleIndex() {
         // Create a valid auto index
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
 
@@ -120,7 +124,7 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
     }
 
     @Test
-    public void testRunsMultipleIterations() {
+    public void testRunsMultipleIndexes() {
         final int numberCyclesToGetThroughAllIndexesOnce = 5;
         final int numberOfCyclesPerIndex = 3;
 
