@@ -1,4 +1,4 @@
-package stroom.autoindex.service;
+package stroom.autoindex.search;
 
 import stroom.query.api.v2.SearchResponse;
 
@@ -21,7 +21,7 @@ public class SearchResponseMerger {
         return this;
     }
 
-    final Optional<SearchResponse> merge() {
+    public final Optional<SearchResponse> merge() {
         if (responses.size() > 0) {
             return Optional.of(responses.get(0)); // To be implemented
         } else {

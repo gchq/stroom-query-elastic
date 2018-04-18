@@ -1,10 +1,10 @@
-package stroom.autoindex.service;
+package stroom.autoindex.search;
 
 import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.SearchRequest;
+import stroom.tracking.TrackerWindow;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -13,13 +13,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * It encapsulates the multiple search requests that must be sent to different underlying stores.
  */
 public class SplitSearchRequest {
-    private final Map<DocRef, List<SearchRequest>> requests;
+    private final Map<DocRef, Map<TrackerWindow, SearchRequest>> requests;
 
     private SplitSearchRequest(final Builder builder) {
         this.requests = builder.requests;
     }
 
-    public Map<DocRef, List<SearchRequest>> getRequests() {
+    public Map<DocRef, Map<TrackerWindow, SearchRequest>> getRequests() {
         return requests;
     }
 
@@ -28,17 +28,18 @@ public class SplitSearchRequest {
     }
 
     public static class Builder {
-        private final ConcurrentHashMap<DocRef, List<SearchRequest>> requests;
+        private final ConcurrentHashMap<DocRef, Map<TrackerWindow, SearchRequest>> requests;
 
         private Builder() {
             this.requests = new ConcurrentHashMap<>();
         }
 
         public Builder withRequest(final DocRef docRef,
+                                   final TrackerWindow trackerWindow,
                                    final SearchRequest request) {
             this.requests
-                    .computeIfAbsent(docRef, (d) -> new ArrayList<>())
-                    .add(request);
+                    .computeIfAbsent(docRef, (d) -> new HashMap<>())
+                    .put(trackerWindow, request);
             return this;
         }
 

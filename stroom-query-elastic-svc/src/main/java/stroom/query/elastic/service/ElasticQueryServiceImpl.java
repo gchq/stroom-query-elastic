@@ -44,6 +44,11 @@ public class ElasticQueryServiceImpl implements QueryService {
     }
 
     @Override
+    public String getType() {
+        return service.getType();
+    }
+
+    @Override
     public Optional<DataSource> getDataSource(final ServiceUser user,
                                               final DocRef docRef) throws QueryApiException {
         LOGGER.debug("Getting Data Source for DocRef: " + docRef);

@@ -1,5 +1,6 @@
-package stroom.autoindex.service;
+package stroom.autoindex.search;
 
+import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.query.api.v2.*;
 import stroom.tracking.TimelineTracker;
 import stroom.tracking.TrackerInverter;
@@ -88,7 +89,7 @@ public class SearchRequestSplitter {
             searchRequest.getResultRequests().forEach(partSearchRequestBuilder::addResultRequests);
 
             // The search request is ready to add to the split request
-            splitSearchRequestBuilder.withRequest(docRef, partSearchRequestBuilder.build());
+            splitSearchRequestBuilder.withRequest(docRef, trackerWindow, partSearchRequestBuilder.build());
         });
     }
 }

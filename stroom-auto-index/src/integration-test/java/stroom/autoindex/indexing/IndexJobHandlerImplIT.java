@@ -1,6 +1,9 @@
 package stroom.autoindex.indexing;
 
-import com.google.inject.*;
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 import org.elasticsearch.client.transport.TransportClient;
@@ -17,11 +20,8 @@ import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.query.api.v2.SearchResponse;
 import stroom.query.audit.authorisation.DocumentPermission;
-import stroom.query.audit.client.*;
-import stroom.query.audit.rest.DocRefResource;
-import stroom.query.audit.rest.QueryResource;
+import stroom.query.audit.client.RemoteClientModule;
 import stroom.query.audit.security.ServiceUser;
-import stroom.query.audit.service.QueryService;
 import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 import stroom.tracking.TimelineTrackerDao;

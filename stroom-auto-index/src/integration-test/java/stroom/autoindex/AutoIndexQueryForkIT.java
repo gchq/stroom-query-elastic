@@ -1,11 +1,16 @@
 package stroom.autoindex;
 
-import com.google.inject.*;
+import akka.actor.ActorSystem;
+import akka.testkit.javadsl.TestKit;
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
-import org.eclipse.jetty.http.HttpStatus;
 import org.elasticsearch.client.transport.TransportClient;
 import org.jooq.DSLContext;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -17,13 +22,14 @@ import stroom.autoindex.app.Config;
 import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.indexing.*;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
+import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
+import stroom.autoindex.service.AutoIndexQueryServiceImpl;
 import stroom.query.api.v2.*;
 import stroom.query.audit.authorisation.DocumentPermission;
-import stroom.query.audit.client.*;
-import stroom.query.audit.rest.DocRefResource;
-import stroom.query.audit.rest.QueryResource;
+import stroom.query.audit.client.RemoteClientModule;
 import stroom.query.audit.security.ServiceUser;
-import stroom.query.audit.service.QueryService;
+import stroom.query.audit.service.DocRefService;
+import stroom.query.audit.service.QueryApiException;
 import stroom.query.csv.CsvDocRefEntity;
 import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.transportClient.TransportClientBundle;
@@ -32,12 +38,10 @@ import stroom.tracking.TimelineTrackerDaoJooqImpl;
 import stroom.tracking.TimelineTrackerService;
 import stroom.tracking.TimelineTrackerServiceImpl;
 
-import javax.ws.rs.core.Response;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
 import static stroom.autoindex.TestConstants.TEST_SERVICE_USER;
@@ -49,6 +53,8 @@ import static stroom.autoindex.animals.AnimalsQueryResourceIT.getAnimalSightings
  */
 public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(IndexJobHandlerImplIT.class);
+
+    private static ActorSystem actorSystem;
 
     private static IndexJobDao indexJobDao;
 
@@ -67,8 +73,15 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
      */
     private static TimelineTrackerService timelineTrackerService;
 
+    /**
+     * Run tests on a locally created service
+     */
+    private static AutoIndexQueryServiceImpl autoIndexQueryService;
+
     @BeforeClass
     public static void beforeClass() {
+
+        actorSystem = ActorSystem.create();
 
         final Injector testInjector = Guice.createInjector(Modules.combine(new AbstractModule() {
             @Override
@@ -78,6 +91,7 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
                 bind(TimelineTrackerService.class).to(TimelineTrackerServiceImpl.class);
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
                 bind(IndexWriter.class).to(IndexWriterImpl.class);
+                bind(DocRefService.class).to(AutoIndexDocRefServiceImpl.class);
                 bind(IndexJobHandler.class)
                         .annotatedWith(Names.named(TASK_HANDLER_NAME))
                         .to(IndexJobHandlerImpl.class)
@@ -101,10 +115,17 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
         indexJobHandler = (IndexJobHandlerImpl) testIndexJobConsumerObj;
         indexJobDao = testInjector.getInstance(IndexJobDao.class);
         timelineTrackerService = testInjector.getInstance(TimelineTrackerService.class);
+        autoIndexQueryService = testInjector.getInstance(AutoIndexQueryServiceImpl.class);
+    }
+
+    @AfterClass
+    public static void afterClass() {
+        TestKit.shutdownActorSystem(actorSystem);
+        actorSystem = null;
     }
 
     @Test
-    public void testForkBasedOnSingleRun() {
+    public void testForkBasedOnSingleRun() throws QueryApiException {
         // Create a valid auto index
         final EntityWithDocRef<AutoIndexDocRefEntity> autoIndex = createAutoIndex();
         final String docRefUuid = autoIndex.getDocRef().getUuid();
@@ -146,10 +167,8 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
         final SearchRequest searchRequest = AnimalsQueryResourceIT
                 .getTestSearchRequest(autoIndex.getDocRef(), expressionOperator, offset);
 
-        final Response response = autoIndexQueryClient.search(authRule.adminUser(), searchRequest);
-        assertEquals(HttpStatus.OK_200, response.getStatus());
-
-        final SearchResponse searchResponse = response.readEntity(SearchResponse.class);
+        final SearchResponse searchResponse = autoIndexQueryService.search(authRule.adminUser(), searchRequest)
+                .orElseThrow(() -> new AssertionError("Service failed to provide search response"));
 
         final Set<AnimalSighting> resultsSet = getAnimalSightingsFromResponse(searchResponse);
 

@@ -88,6 +88,7 @@ dependencies {
     compile deps.stroomTestData
     compile project(':stroom-query-elastic-svc')
     compile project(':stroom-window-tracking')
+    compile project(':stroom-query-akka')
 
     compile deps.kafka
     compile deps.dropwizard_core
@@ -112,10 +113,12 @@ dependencies {
     testCompile 'org.apache.directory.studio:org.apache.commons.io:2.4'
     testCompile testDeps.wiremock
     testCompile 'com.typesafe.akka:akka-testkit_2.12:2.5.3'
+    testCompile testDeps.mockito_core
 
     integrationTestCompile project(':elastic-test')
     integrationTestCompile project(':stroom-csv-datasource')
     integrationTestCompile testDeps.stroomQueryTesting
     integrationTestCompile testDeps.dropwizard_testing
     integrationTestCompile testDeps.moshi
+    integrationTestCompile testDeps.mockito_core
 }

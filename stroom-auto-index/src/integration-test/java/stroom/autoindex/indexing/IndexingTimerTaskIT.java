@@ -21,10 +21,7 @@ import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
-import stroom.query.audit.client.RemoteClientModule;
 import stroom.query.audit.security.ServiceUser;
-import stroom.query.csv.CsvDocRefEntity;
-import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.tracking.*;
 
 import javax.inject.Named;

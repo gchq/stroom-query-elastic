@@ -1,4 +1,4 @@
-package stroom.query.akka;
+package stroom.autoindex.search;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -12,10 +12,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import stroom.query.akka.app.TreeSighting;
-import stroom.query.akka.app.TreesFieldSupplier;
-import stroom.query.akka.app.TreesTestData;
+import stroom.autoindex.animals.AnimalTestData;
+import stroom.autoindex.animals.AnimalsQueryResourceIT;
+import stroom.autoindex.animals.app.AnimalFieldSupplier;
+import stroom.autoindex.animals.app.AnimalSighting;
 import stroom.query.api.v2.*;
+import stroom.query.audit.client.RemoteClientCache;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.audit.service.QueryApiException;
@@ -33,17 +35,18 @@ import java.util.UUID;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
-public class TreesQuerySearchActorIT {
-    private static final Logger LOGGER = LoggerFactory.getLogger(TreesQuerySearchActorIT.class);
+public class SearchActorIT {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SearchActorIT.class);
 
     private static ActorSystem system;
 
     private static DocRefService<CsvDocRefEntity> docRefService;
     private static QueryService queryService;
+    private static RemoteClientCache<QueryService> queryServices;
 
     @ClassRule
     public static final FlatFileTestDataRule testDataRule = FlatFileTestDataRule.withTempDirectory()
-            .testDataGenerator(TreesTestData.build())
+            .testDataGenerator(AnimalTestData.build())
             .build();
 
     @BeforeClass
@@ -54,13 +57,14 @@ public class TreesQuerySearchActorIT {
             @Override
             protected void configure() {
                 bind(QueryService.class).to(CsvQueryServiceImpl.class);
-                bind(CsvFieldSupplier.class).to(TreesFieldSupplier.class);
+                bind(CsvFieldSupplier.class).to(AnimalFieldSupplier.class);
                 bind(DocRefService.class).to(CsvDocRefServiceImpl.class);
             }
         });
 
         queryService = injector.getInstance(QueryService.class);
         docRefService = (DocRefService<CsvDocRefEntity>) injector.getInstance(DocRefService.class);
+        queryServices = new RemoteClientCache<>(d -> d, (t, u) -> CsvDocRefEntity.TYPE.equals(t) ? queryService : null);
     }
 
     @AfterClass
@@ -78,11 +82,7 @@ public class TreesQuerySearchActorIT {
                 .jwt(UUID.randomUUID().toString())
                 .build();
         final TestKit testProbe = new TestKit(system);
-        final ActorRef searchActor = system.actorOf(
-                SearchBackendActor.props(CsvDocRefEntity.TYPE,
-                        user,
-                        queryService,
-                        testProbe.getRef()));
+        final ActorRef searchActor = system.actorOf(SearchActor.props(queryServices));
         final CsvDocRefEntity docRefEntity = docRefService.createDocument(user, docRefUuid, "testName")
                 .orElseThrow(() -> new AssertionError("Doc Ref Couldn't be created"));
         docRefEntity.setDataDirectory(testDataRule.getFolder().getAbsolutePath());
@@ -98,19 +98,19 @@ public class TreesQuerySearchActorIT {
                 .length(100L)
                 .offset(0L)
                 .build();
-        final String testSpecies = "redwood";
+        final String testSpecies = "lion";
         final LocalDateTime testMaxDate = LocalDateTime.of(2017, 1, 1, 0, 0, 0);
         final ExpressionOperator expressionOperator = new ExpressionOperator.Builder(ExpressionOperator.Op.AND)
-                .addTerm(TreeSighting.SPECIES, ExpressionTerm.Condition.CONTAINS, testSpecies)
-                .addTerm(TreeSighting.TIME,
+                .addTerm(AnimalSighting.SPECIES, ExpressionTerm.Condition.CONTAINS, testSpecies)
+                .addTerm(AnimalSighting.TIME,
                         ExpressionTerm.Condition.LESS_THAN,
                         testMaxDate.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
                 )
                 .build();
-        final SearchRequest searchRequest = TreesQueryResourceIT.getTestSearchRequest(docRef, expressionOperator, offset);
+        final SearchRequest searchRequest = AnimalsQueryResourceIT.getTestSearchRequest(docRef, expressionOperator, offset);
 
         // When
-        searchActor.tell(new SearchMessages.SearchJob(CsvDocRefEntity.TYPE, searchRequest), ActorRef.noSender());
+        searchActor.tell(SearchMessages.search(user, CsvDocRefEntity.TYPE, searchRequest), testProbe.getRef());
 
         // Then
         final SearchMessages.SearchJobComplete jobComplete = testProbe.expectMsgClass(SearchMessages.SearchJobComplete.class);

@@ -1,6 +1,5 @@
 package stroom.autoindex.indexing;
 
-import org.apache.http.HttpStatus;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.client.transport.TransportClient;
@@ -14,8 +13,6 @@ import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.FlatResult;
 import stroom.query.api.v2.SearchResponse;
 import stroom.query.audit.client.RemoteClientCache;
-import stroom.query.audit.model.DocRefEntity;
-import stroom.query.audit.rest.DocRefResource;
 import stroom.query.audit.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.audit.service.QueryApiException;
@@ -24,7 +21,6 @@ import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import javax.inject.Inject;
 import javax.inject.Named;
 import java.io.IOException;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
