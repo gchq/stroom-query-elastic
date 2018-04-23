@@ -26,8 +26,8 @@ import java.util.stream.IntStream;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
-public class SearchActorTest {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SearchActorTest.class);
+public class QuerySearchActorTest {
+    private static final Logger LOGGER = LoggerFactory.getLogger(QuerySearchActorTest.class);
 
     static ActorSystem system;
 
@@ -57,13 +57,13 @@ public class SearchActorTest {
                 .when(queryService)
                 .search(Mockito.any(), Mockito.any());
         final TestKit testProbe = new TestKit(system);
-        final ActorRef searchActor = system.actorOf(SearchActor.props(queryServices));
+        final ActorRef searchActor = system.actorOf(QuerySearchActor.props(queryServices));
 
         // When
-        searchActor.tell(SearchMessages.search(user, type1, new SearchRequest.Builder().build()), testProbe.getRef());
+        searchActor.tell(QueryApiMessages.search(user, type1, new SearchRequest.Builder().build()), testProbe.getRef());
 
         // Then
-        final SearchMessages.SearchJobComplete jobComplete = testProbe.expectMsgClass(SearchMessages.SearchJobComplete.class);
+        final QueryApiMessages.SearchJobComplete jobComplete = testProbe.expectMsgClass(QueryApiMessages.SearchJobComplete.class);
         assertNotNull(jobComplete.getResponse());
         assertNull(jobComplete.getError());
     }
@@ -83,13 +83,13 @@ public class SearchActorTest {
         final RemoteClientCache<QueryService> queryServices =
                 new RemoteClientCache<>(d -> d, (t, u) -> t.equals(type1) ? queryService : null);
         final TestKit testProbe = new TestKit(system);
-        final ActorRef searchActor = system.actorOf(SearchActor.props(queryServices));
+        final ActorRef searchActor = system.actorOf(QuerySearchActor.props(queryServices));
 
         // When
-        searchActor.tell(SearchMessages.search(user, type1, new SearchRequest.Builder().build()), testProbe.getRef());
+        searchActor.tell(QueryApiMessages.search(user, type1, new SearchRequest.Builder().build()), testProbe.getRef());
 
         // Then
-        final SearchMessages.SearchJobComplete jobComplete = testProbe.expectMsgClass(SearchMessages.SearchJobComplete.class);
+        final QueryApiMessages.SearchJobComplete jobComplete = testProbe.expectMsgClass(QueryApiMessages.SearchJobComplete.class);
         assertNull(jobComplete.getResponse());
         assertNotNull(jobComplete.getError());
 
@@ -112,13 +112,13 @@ public class SearchActorTest {
         final RemoteClientCache<QueryService> queryServices =
                 new RemoteClientCache<>(d -> d, (t, u) -> t.equals(type1) ? queryService : null);
         final TestKit testProbe = new TestKit(system);
-        final ActorRef searchActor1 = system.actorOf(SearchActor.props(queryServices));
+        final ActorRef searchActor1 = system.actorOf(QuerySearchActor.props(queryServices));
 
         // When
-        searchActor1.tell(SearchMessages.search(user, type2, new SearchRequest.Builder().build()), testProbe.getRef());
+        searchActor1.tell(QueryApiMessages.search(user, type2, new SearchRequest.Builder().build()), testProbe.getRef());
 
         // Then
-        final SearchMessages.SearchJobComplete jobComplete = testProbe.expectMsgClass(SearchMessages.SearchJobComplete.class);
+        final QueryApiMessages.SearchJobComplete jobComplete = testProbe.expectMsgClass(QueryApiMessages.SearchJobComplete.class);
         assertNull(jobComplete.getResponse());
         assertNotNull(jobComplete.getError());
 
@@ -140,14 +140,14 @@ public class SearchActorTest {
         final RemoteClientCache<QueryService> queryServices =
                 new RemoteClientCache<>(d -> d, (t, u) -> t.equals(type1) ? queryService : null);
         final TestKit testProbe = new TestKit(system);
-        final ActorRef searchActor = system.actorOf(SearchActor.props(queryServices));
+        final ActorRef searchActor = system.actorOf(QuerySearchActor.props(queryServices));
         final int numberOfJobs = 3;
 
         final long startTime = System.currentTimeMillis();
 
         // When
         IntStream.range(0, numberOfJobs).forEach(i -> {
-            searchActor.tell(SearchMessages.search(user, type1, new SearchRequest.Builder()
+            searchActor.tell(QueryApiMessages.search(user, type1, new SearchRequest.Builder()
                     .key(Integer.toString(i))
                     .build()), testProbe.getRef());
         });
@@ -156,8 +156,8 @@ public class SearchActorTest {
         final List<Object> responses = testProbe.receiveN(numberOfJobs);
 
         responses.stream()
-                .filter(i -> i instanceof SearchMessages.SearchJobComplete)
-                .map(i -> (SearchMessages.SearchJobComplete) i)
+                .filter(i -> i instanceof QueryApiMessages.SearchJobComplete)
+                .map(i -> (QueryApiMessages.SearchJobComplete) i)
                 .forEach(jobComplete -> {
                     LOGGER.info("Job Complete Received {}", jobComplete);
                     assertNotNull(jobComplete.getResponse());

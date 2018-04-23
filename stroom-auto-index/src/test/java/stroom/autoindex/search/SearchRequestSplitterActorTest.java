@@ -87,8 +87,8 @@ public class SearchRequestSplitterActorTest {
         final TestKit testProbe = new TestKit(actorSystem);
         final ActorRef splitter = actorSystem.actorOf(SearchRequestSplitterActor.props(docRefService, timelineTrackerService));
         final SearchRequest searchRequest = SearchRequestSplitterTest.getTestSearchRequest(autoIndexDocRef);
-        final SearchMessages.SearchJob searchJob =
-                SearchMessages.search(user, AutoIndexDocRefEntity.TYPE, searchRequest);
+        final QueryApiMessages.SearchJob searchJob =
+                QueryApiMessages.search(user, AutoIndexDocRefEntity.TYPE, searchRequest);
 
         // mocking the underlying services
         when(docRefService.get(user, autoIndexDocRef.getUuid()))
@@ -100,8 +100,8 @@ public class SearchRequestSplitterActorTest {
         splitter.tell(searchJob, testProbe.getRef());
 
         // Then
-        final SearchMessages.SplitSearchJobComplete jobComplete =
-                testProbe.expectMsgClass(SearchMessages.SplitSearchJobComplete.class);
+        final QueryApiMessages.SplitSearchJobComplete jobComplete =
+                testProbe.expectMsgClass(QueryApiMessages.SplitSearchJobComplete.class);
         assertNull(jobComplete.getError());
         assertEquals(autoIndexDocRef, jobComplete.getDocRef());
         assertEquals(searchJob.getRequest(), jobComplete.getOriginalSearchRequest());

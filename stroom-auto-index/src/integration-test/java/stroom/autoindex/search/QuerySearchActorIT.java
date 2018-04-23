@@ -35,8 +35,8 @@ import java.util.UUID;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
-public class SearchActorIT {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SearchActorIT.class);
+public class QuerySearchActorIT {
+    private static final Logger LOGGER = LoggerFactory.getLogger(QuerySearchActorIT.class);
 
     private static ActorSystem system;
 
@@ -82,7 +82,7 @@ public class SearchActorIT {
                 .jwt(UUID.randomUUID().toString())
                 .build();
         final TestKit testProbe = new TestKit(system);
-        final ActorRef searchActor = system.actorOf(SearchActor.props(queryServices));
+        final ActorRef searchActor = system.actorOf(QuerySearchActor.props(queryServices));
         final CsvDocRefEntity docRefEntity = docRefService.createDocument(user, docRefUuid, "testName")
                 .orElseThrow(() -> new AssertionError("Doc Ref Couldn't be created"));
         docRefEntity.setDataDirectory(testDataRule.getFolder().getAbsolutePath());
@@ -110,10 +110,10 @@ public class SearchActorIT {
         final SearchRequest searchRequest = AnimalsQueryResourceIT.getTestSearchRequest(docRef, expressionOperator, offset);
 
         // When
-        searchActor.tell(SearchMessages.search(user, CsvDocRefEntity.TYPE, searchRequest), testProbe.getRef());
+        searchActor.tell(QueryApiMessages.search(user, CsvDocRefEntity.TYPE, searchRequest), testProbe.getRef());
 
         // Then
-        final SearchMessages.SearchJobComplete jobComplete = testProbe.expectMsgClass(SearchMessages.SearchJobComplete.class);
+        final QueryApiMessages.SearchJobComplete jobComplete = testProbe.expectMsgClass(QueryApiMessages.SearchJobComplete.class);
         LOGGER.info("Job Complete {}", jobComplete);
         assertNotNull(jobComplete.getResponse());
         assertNull(jobComplete.getError());

@@ -47,46 +47,48 @@ public class SearchRequestSplitterActor extends AbstractActor {
     @Override
     public Receive createReceive() {
         return receiveBuilder()
-                .match(SearchMessages.SearchJob.class, searchJob -> {
-                    final SearchRequest searchRequest = searchJob.getRequest();
-                    final ServiceUser user = searchJob.getUser();
-
-                    final CompletableFuture<SearchMessages.SplitSearchJobComplete> result =
-                            CompletableFuture.supplyAsync(() -> {
-                                try {
-                                    // Retrieve the full Auto Index Doc Ref for the request
-                                    final String docRefUuid = searchRequest.getQuery().getDataSource().getUuid();
-                                    final AutoIndexDocRefEntity docRefEntity =
-                                            docRefService.get(user, docRefUuid).orElseThrow(NotFoundException::new);
-
-                                    // Retrieve the tracker for this doc ref
-                                    final TimelineTracker tracker = trackerService.get(docRefUuid);
-
-                                    final SplitSearchRequest splitSearchRequest = SearchRequestSplitter.withSearchRequest(searchRequest)
-                                            .autoIndex(docRefEntity)
-                                            .tracker(tracker)
-                                            .split();
-
-                                    return SearchMessages.splitComplete(user,
-                                            searchRequest,
-                                            new DocRef.Builder()
-                                                    .uuid(docRefUuid)
-                                                    .type(docRefEntity.getType())
-                                                    .name(docRefEntity.getName())
-                                                    .build(),
-                                            splitSearchRequest);
-                                } catch (QueryApiException e) {
-                                    LOGGER.error("Failed to run search", e);
-                                    throw new RuntimeException(e);
-                                } catch (RuntimeException e) {
-                                    LOGGER.error("Failed to run search", e);
-                                    throw e;
-                                }
-                            })
-                                    .exceptionally(e -> SearchMessages.splitFailed(user, searchRequest, e));
-
-                    pipe(result, getContext().dispatcher()).to(getSender());
-                })
+                .match(QueryApiMessages.SearchJob.class, this::handleSearchJob)
                 .build();
+    }
+
+    private void handleSearchJob(final QueryApiMessages.SearchJob searchJob) {
+        final SearchRequest searchRequest = searchJob.getRequest();
+        final ServiceUser user = searchJob.getUser();
+
+        final CompletableFuture<QueryApiMessages.SplitSearchJobComplete> result =
+                CompletableFuture.supplyAsync(() -> {
+                    try {
+                        // Retrieve the full Auto Index Doc Ref for the request
+                        final String docRefUuid = searchRequest.getQuery().getDataSource().getUuid();
+                        final AutoIndexDocRefEntity docRefEntity =
+                                docRefService.get(user, docRefUuid).orElseThrow(NotFoundException::new);
+
+                        // Retrieve the tracker for this doc ref
+                        final TimelineTracker tracker = trackerService.get(docRefUuid);
+
+                        final SplitSearchRequest splitSearchRequest = SearchRequestSplitter.withSearchRequest(searchRequest)
+                                .autoIndex(docRefEntity)
+                                .tracker(tracker)
+                                .split();
+
+                        return QueryApiMessages.splitComplete(user,
+                                searchRequest,
+                                new DocRef.Builder()
+                                        .uuid(docRefUuid)
+                                        .type(docRefEntity.getType())
+                                        .name(docRefEntity.getName())
+                                        .build(),
+                                splitSearchRequest);
+                    } catch (QueryApiException e) {
+                        LOGGER.error("Failed to run search", e);
+                        throw new RuntimeException(e);
+                    } catch (RuntimeException e) {
+                        LOGGER.error("Failed to run search", e);
+                        throw e;
+                    }
+                })
+                        .exceptionally(e -> QueryApiMessages.splitFailed(user, searchRequest, e));
+
+        pipe(result, getContext().dispatcher()).to(getSender());
     }
 }

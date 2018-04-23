@@ -136,11 +136,11 @@ public class SearchRequestSplitterActorIT extends AbstractAutoIndexIntegrationTe
                 .getTestSearchRequest(autoIndex.getDocRef(), expressionOperator, offset);
 
         // Send the message to the splitter
-        splitter.tell(SearchMessages.search(testUser, AutoIndexDocRefEntity.TYPE, searchRequest), testProbe.ref());
+        splitter.tell(QueryApiMessages.search(testUser, AutoIndexDocRefEntity.TYPE, searchRequest), testProbe.ref());
 
         // Then
-        final SearchMessages.SplitSearchJobComplete jobComplete =
-                testProbe.expectMsgClass(SearchMessages.SplitSearchJobComplete.class);
+        final QueryApiMessages.SplitSearchJobComplete jobComplete =
+                testProbe.expectMsgClass(QueryApiMessages.SplitSearchJobComplete.class);
         assertNull(jobComplete.getError());
         assertEquals(autoIndex.getDocRef(), jobComplete.getDocRef());
         assertEquals(searchRequest, jobComplete.getOriginalSearchRequest());

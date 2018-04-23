@@ -15,30 +15,30 @@ import java.util.function.Function;
 
 import static akka.pattern.PatternsCS.pipe;
 
-public class SearchActor extends AbstractActor {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SearchActor.class);
+public class QuerySearchActor extends AbstractActor {
+    private static final Logger LOGGER = LoggerFactory.getLogger(QuerySearchActor.class);
 
     public static Props props(final Function<String, Optional<QueryService>> serviceSupplier) {
-        return Props.create(SearchActor.class,
-                () -> new SearchActor(serviceSupplier));
+        return Props.create(QuerySearchActor.class,
+                () -> new QuerySearchActor(serviceSupplier));
     }
 
     private final Function<String, Optional<QueryService>> serviceSupplier;
 
-    public SearchActor(final Function<String, Optional<QueryService>> serviceSupplier) {
+    public QuerySearchActor(final Function<String, Optional<QueryService>> serviceSupplier) {
         this.serviceSupplier = serviceSupplier;
     }
 
     @Override
     public Receive createReceive() {
-        return receiveBuilder().match(SearchMessages.SearchJob.class,
+        return receiveBuilder().match(QueryApiMessages.SearchJob.class,
                 searchJob -> {
                     final ServiceUser user = searchJob.getUser();
                     final SearchRequest request = searchJob.getRequest();
 
                     LOGGER.debug("Handling Search Request {}", request);
 
-                    final CompletableFuture<SearchMessages.SearchJobComplete> result =
+                    final CompletableFuture<QueryApiMessages.SearchJobComplete> result =
                             CompletableFuture.supplyAsync(() -> {
                                 try {
                                     final QueryService queryService = this.serviceSupplier.apply(searchJob.getDocRefType())
@@ -54,8 +54,8 @@ public class SearchActor extends AbstractActor {
                                     throw e;
                                 }
                             })
-                                    .thenApply(d -> SearchMessages.searchComplete(user, request, d))
-                                    .exceptionally(e -> SearchMessages.searchFailed(user, request, e));
+                                    .thenApply(d -> QueryApiMessages.complete(searchJob, d))
+                                    .exceptionally(e -> QueryApiMessages.failed(searchJob, e));
 
                     pipe(result, getContext().dispatcher()).to(getSender());
                 })
