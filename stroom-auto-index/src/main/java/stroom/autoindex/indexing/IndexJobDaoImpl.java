@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 import stroom.autoindex.AutoIndexConstants;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
-import stroom.query.audit.security.ServiceUser;
+import stroom.security.ServiceUser;
 import stroom.tracking.*;
 
 import javax.inject.Inject;

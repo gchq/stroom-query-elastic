@@ -70,6 +70,15 @@ public class SearchRequestSplitterTest {
                 autoIndexDocRefEntity.getIndexDocRef());
     }
 
+    /**
+     * This function can be used to assert that a particular tracking window has been correctly
+     * included in a split search request.
+     *
+     * @param searchRequest the original search request
+     * @param splitSearchRequest The split search request (output from {@link SearchRequestSplitter})
+     * @param trackerWindow The tracking window expected
+     * @param docRef The doc ref that the tracking window is expected for
+     */
     static void assertSplitPart(final SearchRequest searchRequest,
                                 final SplitSearchRequest splitSearchRequest,
                                 final TrackerWindow trackerWindow,
@@ -88,40 +97,14 @@ public class SearchRequestSplitterTest {
         assertEquals(searchRequest.getQuery().getExpression(), usersExpression);
     }
 
-    static ExpressionTerm extractTimelineExpressionTerm(final ExpressionOperator operator,
-                                                        final TrackerWindow trackerWindow) {
-        assertEquals(ExpressionOperator.Op.AND, operator.getOp());
-        return operator.getChildren().stream()
-                .filter(eItem -> eItem instanceof ExpressionTerm)
-                .map(eItem -> (ExpressionTerm) eItem)
-                .filter(eTerm -> TIMELINE_FIELD_NAME.equals(eTerm.getField()))
-                .filter(eTerm -> ExpressionTerm.Condition.BETWEEN.equals(eTerm.getCondition()))
-                .filter(eTerm -> eTerm.getValue().contains(trackerWindow.getFrom().toString()) &&
-                        eTerm.getValue().contains(trackerWindow.getTo().toString()))
-                .findFirst()
-                .orElseThrow(() -> new AssertionError("Could not find timeline expression in query"));
-    }
-
-    static ExpressionItem extractOtherExpressionTerm(final ExpressionOperator operator,
-                                                     final ExpressionTerm timelineTerm) {
-        assertEquals(2, operator.getChildren().size());
-        return operator.getChildren().stream()
-                .filter(eItem -> !eItem.equals(timelineTerm))
-                .findFirst()
-                .orElseThrow(() -> new AssertionError("Could not find the other expression item in query"));
-    }
-
-    static void assertCommonSearchRequestParts(final SearchRequest searchRequest,
-                                               final SearchRequest other) {
-        assertEquals(searchRequest.getKey(), other.getKey());
-        assertEquals(searchRequest.getDateTimeLocale(), other.getDateTimeLocale());
-        assertEquals(searchRequest.getTimeout(), other.getTimeout());
-        assertEquals(searchRequest.getResultRequests(), other.getResultRequests());
-        assertEquals(searchRequest.getIncremental(), other.getIncremental());
-
-        assertEquals(searchRequest.getQuery().getParams(), other.getQuery().getParams());
-    }
-
+    /**
+     * This function can be used to create a test SearchRequest to hand to the SearchRequestSplitter.
+     * It defines a couple of fields just to give the splitter something to work with but it is not
+     * tied to any real implementation of the query service.
+     *
+     * @param docRef The datasource for the query
+     * @return
+     */
     static SearchRequest getTestSearchRequest(final DocRef docRef) {
         final OffsetRange offset = new OffsetRange.Builder()
                 .length(100L)
@@ -171,5 +154,39 @@ public class SearchRequestSplitterTest {
                                 .build())
                         .build())
                 .build();
+    }
+
+    private static ExpressionTerm extractTimelineExpressionTerm(final ExpressionOperator operator,
+                                                        final TrackerWindow trackerWindow) {
+        assertEquals(ExpressionOperator.Op.AND, operator.getOp());
+        return operator.getChildren().stream()
+                .filter(eItem -> eItem instanceof ExpressionTerm)
+                .map(eItem -> (ExpressionTerm) eItem)
+                .filter(eTerm -> TIMELINE_FIELD_NAME.equals(eTerm.getField()))
+                .filter(eTerm -> ExpressionTerm.Condition.BETWEEN.equals(eTerm.getCondition()))
+                .filter(eTerm -> eTerm.getValue().contains(trackerWindow.getFrom().toString()) &&
+                        eTerm.getValue().contains(trackerWindow.getTo().toString()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Could not find timeline expression in query"));
+    }
+
+    private static ExpressionItem extractOtherExpressionTerm(final ExpressionOperator operator,
+                                                     final ExpressionTerm timelineTerm) {
+        assertEquals(2, operator.getChildren().size());
+        return operator.getChildren().stream()
+                .filter(eItem -> !eItem.equals(timelineTerm))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Could not find the other expression item in query"));
+    }
+
+    private static void assertCommonSearchRequestParts(final SearchRequest searchRequest,
+                                               final SearchRequest other) {
+        assertEquals(searchRequest.getKey(), other.getKey());
+        assertEquals(searchRequest.getDateTimeLocale(), other.getDateTimeLocale());
+        assertEquals(searchRequest.getTimeout(), other.getTimeout());
+        assertEquals(searchRequest.getResultRequests(), other.getResultRequests());
+        assertEquals(searchRequest.getIncremental(), other.getIncremental());
+
+        assertEquals(searchRequest.getQuery().getParams(), other.getQuery().getParams());
     }
 }

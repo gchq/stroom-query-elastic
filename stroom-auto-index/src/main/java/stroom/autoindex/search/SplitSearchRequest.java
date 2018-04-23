@@ -23,6 +23,19 @@ public class SplitSearchRequest {
         return requests;
     }
 
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("SplitSearchRequest{");
+        requests.forEach((k, v) -> {
+            sb.append(k.toString());
+            sb.append(": ");
+            sb.append(v.toString());
+            sb.append("\n");
+        });
+        sb.append('}');
+        return sb.toString();
+    }
+
     public static Builder start() {
         return new Builder();
     }

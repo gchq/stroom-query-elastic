@@ -3,7 +3,7 @@ package stroom.autoindex.search;
 import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.SearchRequest;
 import stroom.query.api.v2.SearchResponse;
-import stroom.query.audit.security.ServiceUser;
+import stroom.security.ServiceUser;
 
 public interface SearchMessages {
 

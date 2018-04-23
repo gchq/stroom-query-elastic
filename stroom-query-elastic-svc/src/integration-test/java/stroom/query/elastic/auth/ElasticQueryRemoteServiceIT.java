@@ -20,7 +20,7 @@ import stroom.query.api.v2.ResultRequest;
 import stroom.query.api.v2.SearchRequest;
 import stroom.query.api.v2.SearchResponse;
 import stroom.query.api.v2.TableSettings;
-import stroom.query.audit.authorisation.DocumentPermission;
+import stroom.authorisation.DocumentPermission;
 import stroom.query.audit.client.NotFoundException;
 import stroom.query.audit.rest.AuditedDocRefResourceImpl;
 import stroom.query.audit.rest.AuditedQueryResourceImpl;

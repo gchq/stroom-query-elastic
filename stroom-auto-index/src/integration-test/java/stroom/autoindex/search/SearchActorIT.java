@@ -18,7 +18,7 @@ import stroom.autoindex.animals.app.AnimalFieldSupplier;
 import stroom.autoindex.animals.app.AnimalSighting;
 import stroom.query.api.v2.*;
 import stroom.query.audit.client.RemoteClientCache;
-import stroom.query.audit.security.ServiceUser;
+import stroom.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.audit.service.QueryApiException;
 import stroom.query.audit.service.QueryService;
@@ -63,7 +63,7 @@ public class SearchActorIT {
         });
 
         queryService = injector.getInstance(QueryService.class);
-        docRefService = (DocRefService<CsvDocRefEntity>) injector.getInstance(DocRefService.class);
+        docRefService = injector.getInstance(DocRefService.class);
         queryServices = new RemoteClientCache<>(d -> d, (t, u) -> CsvDocRefEntity.TYPE.equals(t) ? queryService : null);
     }
 

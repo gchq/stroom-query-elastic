@@ -6,7 +6,6 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import com.codahale.metrics.health.HealthCheck;
 import com.google.inject.*;
-import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 import io.dropwizard.Application;
 import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
@@ -14,14 +13,13 @@ import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.elasticsearch.client.transport.TransportClient;
-import stroom.autoindex.AutoIndexConstants;
 import stroom.autoindex.akka.ManagedActorSystem;
 import stroom.autoindex.indexing.*;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
 import stroom.autoindex.service.AutoIndexQueryServiceImpl;
 import stroom.query.audit.client.RemoteClientModule;
-import stroom.query.audit.security.ServiceUser;
+import stroom.security.ServiceUser;
 import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 import stroom.query.jooq.AuditedJooqDocRefBundle;
@@ -33,8 +31,7 @@ import stroom.tracking.TimelineTrackerServiceImpl;
 import javax.inject.Named;
 import java.util.Timer;
 
-import static stroom.autoindex.AutoIndexConstants.INDEX_JOB_POST_HANDLER;
-import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
+import static stroom.autoindex.AutoIndexConstants.*;
 
 public class App extends Application<Config> {
 
@@ -75,20 +72,20 @@ public class App extends Application<Config> {
                 bind(TimelineTrackerDao.class).to(TimelineTrackerDaoJooqImpl.class);
                 bind(TimelineTrackerService.class).to(TimelineTrackerServiceImpl.class);
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
-//                bind(new TypeLiteral<RemoteClientCache<QueryService>>(){})
-//                        .toInstance(new RemoteClientCache<>(configuration.getQueryResourceUrlsByType()::get, QueryServiceHttpClient::new));
-//                bind(new TypeLiteral<RemoteClientCache<DocRefResource>>(){})
-//                        .toInstance(new RemoteClientCache<>(configuration.getQueryResourceUrlsByType()::get, DocRefResourceHttpClient::new));
                 bind(IndexingConfig.class).toInstance(configuration.getIndexingConfig());
                 bind(IndexWriter.class).to(IndexWriterImpl.class);
                 bind(Config.class).toInstance(configuration);
-                bind(ServiceUser.class).annotatedWith(Names.named(AutoIndexConstants.STROOM_SERVICE_USER))
-                        .toInstance(new ServiceUser.Builder()
-                                .name(configuration.getServiceUser().getName())
-                                .jwt(configuration.getServiceUser().getJwt())
-                                .build());
                 bind(TransportClient.class).toInstance(transportClientBundle.getTransportClient());
                 bind(ActorSystem.class).toInstance(actorSystem.getActorSystem());
+            }
+
+            @Provides
+            @Named(STROOM_SERVICE_USER)
+            public ServiceUser serviceUser() {
+                return new ServiceUser.Builder()
+                        .name(configuration.getServiceUser().getName())
+                        .jwt(configuration.getServiceUser().getJwt())
+                        .build();
             }
 
             @Provides

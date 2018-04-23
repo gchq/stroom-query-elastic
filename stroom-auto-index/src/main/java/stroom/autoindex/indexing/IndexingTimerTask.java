@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
 import stroom.query.audit.model.DocRefEntity;
-import stroom.query.audit.security.ServiceUser;
+import stroom.security.ServiceUser;
 
 import javax.inject.Inject;
 import javax.inject.Named;

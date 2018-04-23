@@ -11,7 +11,7 @@ import stroom.elastic.test.ElasticTestIndexRule;
 import stroom.query.api.v2.*;
 import stroom.query.audit.rest.AuditedDocRefResourceImpl;
 import stroom.query.audit.rest.AuditedQueryResourceImpl;
-import stroom.query.audit.security.NoAuthValueFactoryProvider;
+import stroom.security.NoAuthValueFactoryProvider;
 import stroom.query.elastic.App;
 import stroom.query.elastic.ShakespeareLine;
 import stroom.query.elastic.config.Config;

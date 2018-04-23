@@ -10,7 +10,7 @@ import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.SearchRequest;
 import stroom.query.audit.client.NotFoundException;
-import stroom.query.audit.security.ServiceUser;
+import stroom.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.audit.service.QueryApiException;
 import stroom.tracking.TimelineTracker;

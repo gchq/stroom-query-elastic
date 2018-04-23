@@ -3,22 +3,23 @@ package stroom.autoindex.indexing;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.name.Names;
+import com.google.inject.Provides;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import stroom.autoindex.AbstractAutoIndexIntegrationTest;
-import stroom.autoindex.AutoIndexConstants;
 import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
-import stroom.query.audit.security.ServiceUser;
+import stroom.security.ServiceUser;
 import stroom.tracking.*;
 
+import javax.inject.Named;
 import java.util.Collections;
 import java.util.UUID;
 
 import static org.junit.Assert.*;
+import static stroom.autoindex.AutoIndexConstants.STROOM_SERVICE_USER;
 
 public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
 
@@ -38,9 +39,12 @@ public class IndexJobDaoImplIT extends AbstractAutoIndexIntegrationTest {
                 bind(TimelineTrackerDao.class).to(TimelineTrackerDaoJooqImpl.class);
                 bind(TimelineTrackerService.class).to(TimelineTrackerServiceImpl.class);
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
-                bind(ServiceUser.class)
-                        .annotatedWith(Names.named(AutoIndexConstants.STROOM_SERVICE_USER))
-                        .toInstance(serviceUser);
+            }
+
+            @Provides
+            @Named(STROOM_SERVICE_USER)
+            public ServiceUser serviceUser() {
+                return serviceUser;
             }
         });
 

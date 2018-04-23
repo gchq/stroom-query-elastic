@@ -1,9 +1,6 @@
 package stroom.autoindex.indexing;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Key;
+import com.google.inject.*;
 import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 import org.elasticsearch.client.transport.TransportClient;
@@ -13,15 +10,14 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.autoindex.AbstractAutoIndexIntegrationTest;
-import stroom.autoindex.AutoIndexConstants;
 import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.app.Config;
 import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.query.api.v2.SearchResponse;
-import stroom.query.audit.authorisation.DocumentPermission;
+import stroom.authorisation.DocumentPermission;
 import stroom.query.audit.client.RemoteClientModule;
-import stroom.query.audit.security.ServiceUser;
+import stroom.security.ServiceUser;
 import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 import stroom.tracking.TimelineTrackerDao;
@@ -29,12 +25,14 @@ import stroom.tracking.TimelineTrackerDaoJooqImpl;
 import stroom.tracking.TimelineTrackerService;
 import stroom.tracking.TimelineTrackerServiceImpl;
 
+import javax.inject.Named;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static stroom.autoindex.AutoIndexConstants.STROOM_SERVICE_USER;
 import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
 import static stroom.autoindex.TestConstants.TEST_SERVICE_USER;
 
@@ -81,11 +79,14 @@ public class IndexJobHandlerImplIT extends AbstractAutoIndexIntegrationTest {
                         .asEagerSingleton(); // singleton so that the test receives same instance as the underlying timer task
                 bind(IndexingConfig.class).toInstance(indexingConfig);
                 bind(Config.class).toInstance(autoIndexAppRule.getConfiguration());
-                bind(ServiceUser.class)
-                        .annotatedWith(Names.named(AutoIndexConstants.STROOM_SERVICE_USER))
-                        .toInstance(serviceUser);
                 bind(TransportClient.class)
                         .toInstance(TransportClientBundle.createTransportClient(autoIndexAppRule.getConfiguration()));
+            }
+
+            @Provides
+            @Named(STROOM_SERVICE_USER)
+            public ServiceUser serviceUser() {
+                return serviceUser;
             }
         }), new RemoteClientModule(autoIndexAppRule.getConfiguration().getQueryResourceUrlsByType())
                 .addType(ElasticIndexDocRefEntity.TYPE, ElasticIndexDocRefEntity.class));

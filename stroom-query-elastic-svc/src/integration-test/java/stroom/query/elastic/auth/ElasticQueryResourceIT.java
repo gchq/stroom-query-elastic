@@ -10,7 +10,7 @@ import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.elastic.test.ElasticTestIndexRule;
 import stroom.query.api.v2.*;
-import stroom.query.audit.authorisation.DocumentPermission;
+import stroom.authorisation.DocumentPermission;
 import stroom.query.audit.rest.AuditedDocRefResourceImpl;
 import stroom.query.audit.rest.AuditedQueryResourceImpl;
 import stroom.query.elastic.App;

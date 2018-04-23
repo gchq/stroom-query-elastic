@@ -2,10 +2,7 @@ package stroom.autoindex;
 
 import akka.actor.ActorSystem;
 import akka.testkit.javadsl.TestKit;
-import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Key;
+import com.google.inject.*;
 import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 import org.elasticsearch.client.transport.TransportClient;
@@ -25,9 +22,9 @@ import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
 import stroom.autoindex.service.AutoIndexQueryServiceImpl;
 import stroom.query.api.v2.*;
-import stroom.query.audit.authorisation.DocumentPermission;
+import stroom.authorisation.DocumentPermission;
 import stroom.query.audit.client.RemoteClientModule;
-import stroom.query.audit.security.ServiceUser;
+import stroom.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.audit.service.QueryApiException;
 import stroom.query.csv.CsvDocRefEntity;
@@ -38,11 +35,13 @@ import stroom.tracking.TimelineTrackerDaoJooqImpl;
 import stroom.tracking.TimelineTrackerService;
 import stroom.tracking.TimelineTrackerServiceImpl;
 
+import javax.inject.Named;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Set;
 
 import static org.junit.Assert.assertTrue;
+import static stroom.autoindex.AutoIndexConstants.STROOM_SERVICE_USER;
 import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
 import static stroom.autoindex.TestConstants.TEST_SERVICE_USER;
 import static stroom.autoindex.animals.AnimalsQueryResourceIT.getAnimalSightingsFromResponse;
@@ -98,11 +97,14 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
                         .asEagerSingleton(); // singleton so that the test receives same instance as the underlying timer task
                 bind(IndexingConfig.class).toInstance(indexingConfig);
                 bind(Config.class).toInstance(autoIndexAppRule.getConfiguration());
-                bind(ServiceUser.class)
-                        .annotatedWith(Names.named(AutoIndexConstants.STROOM_SERVICE_USER))
-                        .toInstance(serviceUser);
                 bind(TransportClient.class)
                         .toInstance(TransportClientBundle.createTransportClient(autoIndexAppRule.getConfiguration()));
+            }
+
+            @Provides
+            @Named(STROOM_SERVICE_USER)
+            public ServiceUser serviceUser() {
+                return serviceUser;
             }
         }), new RemoteClientModule(autoIndexAppRule.getConfiguration().getQueryResourceUrlsByType())
                 .addType(ElasticIndexDocRefEntity.TYPE, ElasticIndexDocRefEntity.class)

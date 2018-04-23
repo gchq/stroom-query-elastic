@@ -7,7 +7,6 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
-import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 import org.jooq.DSLContext;
 import org.junit.AfterClass;
@@ -16,12 +15,11 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.autoindex.AbstractAutoIndexIntegrationTest;
-import stroom.autoindex.AutoIndexConstants;
 import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
-import stroom.query.audit.security.ServiceUser;
+import stroom.security.ServiceUser;
 import stroom.tracking.*;
 
 import javax.inject.Named;
@@ -34,8 +32,7 @@ import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static stroom.autoindex.AutoIndexConstants.INDEX_JOB_POST_HANDLER;
-import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
+import static stroom.autoindex.AutoIndexConstants.*;
 
 /**
  * This suite of tests exercises the {@link IndexingTimerTask} and it's integration with
@@ -73,10 +70,13 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
                 bind(TimelineTrackerService.class).to(TimelineTrackerServiceImpl.class);
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
                 bind(IndexingConfig.class).toInstance(indexingConfig);
-                bind(ServiceUser.class)
-                        .annotatedWith(Names.named(AutoIndexConstants.STROOM_SERVICE_USER))
-                        .toInstance(serviceUser);
                 bind(ActorSystem.class).toInstance(actorSystem);
+            }
+
+            @Provides
+            @Named(STROOM_SERVICE_USER)
+            public ServiceUser serviceUser() {
+                return serviceUser;
             }
 
             @Provides
