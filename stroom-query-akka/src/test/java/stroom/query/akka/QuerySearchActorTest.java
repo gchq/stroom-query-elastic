@@ -9,6 +9,8 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import stroom.akka.query.messages.QuerySearchMessages;
+import stroom.akka.query.actors.QuerySearchActor;
 import stroom.query.api.v2.SearchRequest;
 import stroom.query.api.v2.SearchResponse;
 import stroom.query.audit.client.RemoteClientCache;
@@ -60,10 +62,10 @@ public class QuerySearchActorTest {
         final ActorRef searchActor = system.actorOf(QuerySearchActor.props(queryServices));
 
         // When
-        searchActor.tell(QueryApiMessages.search(user, type1, new SearchRequest.Builder().build()), testProbe.getRef());
+        searchActor.tell(QuerySearchMessages.search(user, type1, new SearchRequest.Builder().build()), testProbe.getRef());
 
         // Then
-        final QueryApiMessages.SearchJobComplete jobComplete = testProbe.expectMsgClass(QueryApiMessages.SearchJobComplete.class);
+        final QuerySearchMessages.JobComplete jobComplete = testProbe.expectMsgClass(QuerySearchMessages.JobComplete.class);
         assertNotNull(jobComplete.getResponse());
         assertNull(jobComplete.getError());
     }
@@ -86,10 +88,10 @@ public class QuerySearchActorTest {
         final ActorRef searchActor = system.actorOf(QuerySearchActor.props(queryServices));
 
         // When
-        searchActor.tell(QueryApiMessages.search(user, type1, new SearchRequest.Builder().build()), testProbe.getRef());
+        searchActor.tell(QuerySearchMessages.search(user, type1, new SearchRequest.Builder().build()), testProbe.getRef());
 
         // Then
-        final QueryApiMessages.SearchJobComplete jobComplete = testProbe.expectMsgClass(QueryApiMessages.SearchJobComplete.class);
+        final QuerySearchMessages.JobComplete jobComplete = testProbe.expectMsgClass(QuerySearchMessages.JobComplete.class);
         assertNull(jobComplete.getResponse());
         assertNotNull(jobComplete.getError());
 
@@ -115,10 +117,10 @@ public class QuerySearchActorTest {
         final ActorRef searchActor1 = system.actorOf(QuerySearchActor.props(queryServices));
 
         // When
-        searchActor1.tell(QueryApiMessages.search(user, type2, new SearchRequest.Builder().build()), testProbe.getRef());
+        searchActor1.tell(QuerySearchMessages.search(user, type2, new SearchRequest.Builder().build()), testProbe.getRef());
 
         // Then
-        final QueryApiMessages.SearchJobComplete jobComplete = testProbe.expectMsgClass(QueryApiMessages.SearchJobComplete.class);
+        final QuerySearchMessages.JobComplete jobComplete = testProbe.expectMsgClass(QuerySearchMessages.JobComplete.class);
         assertNull(jobComplete.getResponse());
         assertNotNull(jobComplete.getError());
 
@@ -147,7 +149,7 @@ public class QuerySearchActorTest {
 
         // When
         IntStream.range(0, numberOfJobs).forEach(i -> {
-            searchActor.tell(QueryApiMessages.search(user, type1, new SearchRequest.Builder()
+            searchActor.tell(QuerySearchMessages.search(user, type1, new SearchRequest.Builder()
                     .key(Integer.toString(i))
                     .build()), testProbe.getRef());
         });
@@ -156,8 +158,8 @@ public class QuerySearchActorTest {
         final List<Object> responses = testProbe.receiveN(numberOfJobs);
 
         responses.stream()
-                .filter(i -> i instanceof QueryApiMessages.SearchJobComplete)
-                .map(i -> (QueryApiMessages.SearchJobComplete) i)
+                .filter(i -> i instanceof QuerySearchMessages.JobComplete)
+                .map(i -> (QuerySearchMessages.JobComplete) i)
                 .forEach(jobComplete -> {
                     LOGGER.info("Job Complete Received {}", jobComplete);
                     assertNotNull(jobComplete.getResponse());

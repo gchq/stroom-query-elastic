@@ -7,7 +7,7 @@ import akka.japi.Creator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
-import stroom.query.akka.QueryApiMessages;
+import stroom.akka.query.messages.QuerySearchMessages;
 import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.SearchRequest;
 import stroom.query.audit.client.NotFoundException;
@@ -48,13 +48,13 @@ public class SearchRequestSplitterActor extends AbstractActor {
     @Override
     public Receive createReceive() {
         return receiveBuilder()
-                .match(QueryApiMessages.SearchJob.class, this::handleSearchJob)
+                .match(QuerySearchMessages.Job.class, this::handleSearchJob)
                 .build();
     }
 
-    private void handleSearchJob(final QueryApiMessages.SearchJob searchJob) {
-        final SearchRequest searchRequest = searchJob.getRequest();
-        final ServiceUser user = searchJob.getUser();
+    private void handleSearchJob(final QuerySearchMessages.Job job) {
+        final SearchRequest searchRequest = job.getRequest();
+        final ServiceUser user = job.getUser();
 
         final CompletableFuture<AutoIndexMessages.SplitSearchJobComplete> result =
                 CompletableFuture.supplyAsync(() -> {

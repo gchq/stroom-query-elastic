@@ -20,7 +20,7 @@ import stroom.autoindex.AbstractAutoIndexIntegrationTest;
 import stroom.autoindex.app.Config;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
-import stroom.query.akka.QueryApiMessages;
+import stroom.akka.query.messages.QuerySearchMessages;
 import stroom.query.api.v2.ExpressionOperator;
 import stroom.query.api.v2.ExpressionTerm;
 import stroom.query.api.v2.OffsetRange;
@@ -137,7 +137,7 @@ public class SearchRequestSplitterActorIT extends AbstractAutoIndexIntegrationTe
                 .getTestSearchRequest(autoIndex.getDocRef(), expressionOperator, offset);
 
         // Send the message to the splitter
-        splitter.tell(QueryApiMessages.search(testUser, AutoIndexDocRefEntity.TYPE, searchRequest), testProbe.ref());
+        splitter.tell(QuerySearchMessages.search(testUser, AutoIndexDocRefEntity.TYPE, searchRequest), testProbe.ref());
 
         // Then
         final AutoIndexMessages.SplitSearchJobComplete jobComplete =

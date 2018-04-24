@@ -10,7 +10,7 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
-import stroom.query.akka.QueryApiMessages;
+import stroom.akka.query.messages.QuerySearchMessages;
 import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.SearchRequest;
 import stroom.security.ServiceUser;
@@ -88,8 +88,8 @@ public class SearchRequestSplitterActorTest {
         final TestKit testProbe = new TestKit(actorSystem);
         final ActorRef splitter = actorSystem.actorOf(SearchRequestSplitterActor.props(docRefService, timelineTrackerService));
         final SearchRequest searchRequest = SearchRequestSplitterTest.getTestSearchRequest(autoIndexDocRef);
-        final QueryApiMessages.SearchJob searchJob =
-                QueryApiMessages.search(user, AutoIndexDocRefEntity.TYPE, searchRequest);
+        final QuerySearchMessages.Job job =
+                QuerySearchMessages.search(user, AutoIndexDocRefEntity.TYPE, searchRequest);
 
         // mocking the underlying services
         when(docRefService.get(user, autoIndexDocRef.getUuid()))
@@ -98,14 +98,14 @@ public class SearchRequestSplitterActorTest {
                 .thenReturn(timelineTracker);
 
         // When
-        splitter.tell(searchJob, testProbe.getRef());
+        splitter.tell(job, testProbe.getRef());
 
         // Then
         final AutoIndexMessages.SplitSearchJobComplete jobComplete =
                 testProbe.expectMsgClass(AutoIndexMessages.SplitSearchJobComplete.class);
         assertNull(jobComplete.getError());
         assertEquals(autoIndexDocRef, jobComplete.getDocRef());
-        assertEquals(searchJob.getRequest(), jobComplete.getOriginalSearchRequest());
+        assertEquals(job.getRequest(), jobComplete.getOriginalSearchRequest());
         assertEquals(user, jobComplete.getUser());
 
         // Detailed check of the split request

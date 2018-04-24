@@ -9,7 +9,9 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import stroom.akka.query.messages.QueryDataSourceMessages;
 import stroom.datasource.api.v2.DataSource;
+import stroom.akka.query.actors.QueryDataSourceActor;
 import stroom.query.api.v2.DocRef;
 import stroom.query.audit.client.RemoteClientCache;
 import stroom.query.audit.service.QueryApiException;
@@ -61,10 +63,10 @@ public class QueryDataSourceActorTest {
         final ActorRef searchActor = system.actorOf(QueryDataSourceActor.props(queryServices));
 
         // When
-        searchActor.tell(QueryApiMessages.dataSource(user, docRef1), testProbe.getRef());
+        searchActor.tell(QueryDataSourceMessages.dataSource(user, docRef1), testProbe.getRef());
 
         // Then
-        final QueryApiMessages.DataSourceJobComplete jobComplete = testProbe.expectMsgClass(QueryApiMessages.DataSourceJobComplete.class);
+        final QueryDataSourceMessages.JobComplete jobComplete = testProbe.expectMsgClass(QueryDataSourceMessages.JobComplete.class);
         assertNotNull(jobComplete.getResponse());
         assertNull(jobComplete.getError());
     }
@@ -92,10 +94,10 @@ public class QueryDataSourceActorTest {
         final ActorRef searchActor = system.actorOf(QueryDataSourceActor.props(queryServices));
 
         // When
-        searchActor.tell(QueryApiMessages.dataSource(user, docRef1), testProbe.getRef());
+        searchActor.tell(QueryDataSourceMessages.dataSource(user, docRef1), testProbe.getRef());
 
         // Then
-        final QueryApiMessages.DataSourceJobComplete jobComplete = testProbe.expectMsgClass(QueryApiMessages.DataSourceJobComplete.class);
+        final QueryDataSourceMessages.JobComplete jobComplete = testProbe.expectMsgClass(QueryDataSourceMessages.JobComplete.class);
         assertNull(jobComplete.getResponse());
         assertNotNull(jobComplete.getError());
 
@@ -126,10 +128,10 @@ public class QueryDataSourceActorTest {
         final ActorRef searchActor1 = system.actorOf(QueryDataSourceActor.props(queryServices));
 
         // When
-        searchActor1.tell(QueryApiMessages.dataSource(user, docRef2), testProbe.getRef());
+        searchActor1.tell(QueryDataSourceMessages.dataSource(user, docRef2), testProbe.getRef());
 
         // Then
-        final QueryApiMessages.DataSourceJobComplete jobComplete = testProbe.expectMsgClass(QueryApiMessages.DataSourceJobComplete.class);
+        final QueryDataSourceMessages.JobComplete jobComplete = testProbe.expectMsgClass(QueryDataSourceMessages.JobComplete.class);
         assertNull(jobComplete.getResponse());
         assertNotNull(jobComplete.getError());
 

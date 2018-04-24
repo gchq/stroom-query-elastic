@@ -5,7 +5,7 @@ import akka.actor.Actor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.japi.Creator;
-import stroom.query.akka.QueryApiMessages;
+import stroom.akka.query.messages.QuerySearchMessages;
 
 public class FederatedSearchActor extends AbstractActor {
 
@@ -39,7 +39,7 @@ public class FederatedSearchActor extends AbstractActor {
     @Override
     public Receive createReceive() {
         return receiveBuilder()
-                .match(QueryApiMessages.SearchJob.class, searchJob -> {
+                .match(QuerySearchMessages.Job.class, searchJob -> {
                     searchSplitter.tell(searchJob, getSelf());
                 })
                 .match(AutoIndexMessages.SplitSearchJobComplete.class, splitComplete -> {
@@ -47,16 +47,16 @@ public class FederatedSearchActor extends AbstractActor {
                         splitComplete.getSplitSearchRequest().getRequests()
                                 .forEach((docRef, requestsByTracker) -> {
                             requestsByTracker.forEach((tw, searchRequest) -> {
-                                searchActor.tell(QueryApiMessages.search(splitComplete.getUser(), docRef.getType(), searchRequest), getSelf());
+                                searchActor.tell(QuerySearchMessages.search(splitComplete.getUser(), docRef.getType(), searchRequest), getSelf());
                             });
 
                         });
                     } else if (null != splitComplete.getError()) {
                         final String msg = String.format("Could not split search: %s", splitComplete.getError());
-                        errorHandler.tell(QueryApiMessages.error(msg), getSelf());
+                        // how do we handle this?
                     }
                 })
-                .match(QueryApiMessages.SearchJobComplete.class, searchJobComplete -> {
+                .match(QuerySearchMessages.JobComplete.class, searchJobComplete -> {
 
                 })
                 .build();

@@ -1,4 +1,4 @@
-package stroom.query.akka;
+package stroom.akka.query;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -12,9 +12,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import stroom.akka.query.actors.QueryDataSourceActor;
+import stroom.akka.query.actors.QuerySearchActor;
+import stroom.akka.query.messages.QueryDataSourceMessages;
+import stroom.akka.query.messages.QuerySearchMessages;
 import stroom.query.api.v2.*;
 import stroom.query.audit.client.RemoteClientCache;
-import stroom.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.audit.service.QueryApiException;
 import stroom.query.audit.service.QueryService;
@@ -22,6 +25,7 @@ import stroom.query.csv.CsvDocRefEntity;
 import stroom.query.csv.CsvDocRefServiceImpl;
 import stroom.query.csv.CsvFieldSupplier;
 import stroom.query.csv.CsvQueryServiceImpl;
+import stroom.security.ServiceUser;
 import stroom.test.AnimalFieldSupplier;
 import stroom.test.AnimalSighting;
 import stroom.test.AnimalTestData;
@@ -34,8 +38,8 @@ import java.util.UUID;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
-public class QuerySearchActorIT {
-    private static final Logger LOGGER = LoggerFactory.getLogger(QuerySearchActorIT.class);
+public class QueryDataSourceActorIT {
+    private static final Logger LOGGER = LoggerFactory.getLogger(QueryDataSourceActorIT.class);
 
     private static ActorSystem system;
 
@@ -81,7 +85,7 @@ public class QuerySearchActorIT {
                 .jwt(UUID.randomUUID().toString())
                 .build();
         final TestKit testProbe = new TestKit(system);
-        final ActorRef searchActor = system.actorOf(QuerySearchActor.props(queryServices));
+        final ActorRef searchActor = system.actorOf(QueryDataSourceActor.props(queryServices));
         final CsvDocRefEntity docRefEntity = docRefService.createDocument(user, docRefUuid, "testName")
                 .orElseThrow(() -> new AssertionError("Doc Ref Couldn't be created"));
         docRefEntity.setDataDirectory(testDataRule.getFolder().getAbsolutePath());
@@ -92,30 +96,16 @@ public class QuerySearchActorIT {
                 .type(CsvDocRefEntity.TYPE)
                 .build();
 
-
-        final OffsetRange offset = new OffsetRange.Builder()
-                .length(100L)
-                .offset(0L)
-                .build();
-        final String testSpecies = "lion";
-        final LocalDateTime testMaxDate = LocalDateTime.of(2017, 1, 1, 0, 0, 0);
-        final ExpressionOperator expressionOperator = new ExpressionOperator.Builder(ExpressionOperator.Op.AND)
-                .addTerm(AnimalSighting.SPECIES, ExpressionTerm.Condition.CONTAINS, testSpecies)
-                .addTerm(AnimalSighting.TIME,
-                        ExpressionTerm.Condition.LESS_THAN,
-                        testMaxDate.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                )
-                .build();
-        final SearchRequest searchRequest = AnimalTestData.getTestSearchRequest(docRef, expressionOperator, offset);
-
         // When
-        searchActor.tell(QueryApiMessages.search(user, CsvDocRefEntity.TYPE, searchRequest), testProbe.getRef());
+        searchActor.tell(QueryDataSourceMessages.dataSource(user, docRef), testProbe.getRef());
 
         // Then
-        final QueryApiMessages.SearchJobComplete jobComplete = testProbe.expectMsgClass(QueryApiMessages.SearchJobComplete.class);
+        final QueryDataSourceMessages.JobComplete jobComplete = testProbe.expectMsgClass(QueryDataSourceMessages.JobComplete.class);
         LOGGER.info("Job Complete {}", jobComplete);
         assertNotNull(jobComplete.getResponse());
         assertNull(jobComplete.getError());
+
+        // Now try with 'ask'
 
     }
 }
