@@ -7,6 +7,7 @@ import akka.japi.Creator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
+import stroom.query.akka.QueryApiMessages;
 import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.SearchRequest;
 import stroom.query.audit.client.NotFoundException;
@@ -55,7 +56,7 @@ public class SearchRequestSplitterActor extends AbstractActor {
         final SearchRequest searchRequest = searchJob.getRequest();
         final ServiceUser user = searchJob.getUser();
 
-        final CompletableFuture<QueryApiMessages.SplitSearchJobComplete> result =
+        final CompletableFuture<AutoIndexMessages.SplitSearchJobComplete> result =
                 CompletableFuture.supplyAsync(() -> {
                     try {
                         // Retrieve the full Auto Index Doc Ref for the request
@@ -71,7 +72,7 @@ public class SearchRequestSplitterActor extends AbstractActor {
                                 .tracker(tracker)
                                 .split();
 
-                        return QueryApiMessages.splitComplete(user,
+                        return AutoIndexMessages.complete(user,
                                 searchRequest,
                                 new DocRef.Builder()
                                         .uuid(docRefUuid)
@@ -87,7 +88,7 @@ public class SearchRequestSplitterActor extends AbstractActor {
                         throw e;
                     }
                 })
-                        .exceptionally(e -> QueryApiMessages.splitFailed(user, searchRequest, e));
+                        .exceptionally(e -> AutoIndexMessages.failed(user, searchRequest, e));
 
         pipe(result, getContext().dispatcher()).to(getSender());
     }

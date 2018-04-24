@@ -9,9 +9,9 @@ import org.jooq.impl.DSL;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import stroom.autoindex.AbstractAutoIndexIntegrationTest;
-import stroom.autoindex.animals.AnimalTestData;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.security.ServiceUser;
+import stroom.test.AnimalTestData;
 import stroom.tracking.*;
 
 import javax.inject.Named;

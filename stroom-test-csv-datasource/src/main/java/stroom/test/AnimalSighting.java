@@ -1,4 +1,4 @@
-package stroom.autoindex.animals.app;
+package stroom.test;
 
 import stroom.query.csv.CsvDataRow;
 

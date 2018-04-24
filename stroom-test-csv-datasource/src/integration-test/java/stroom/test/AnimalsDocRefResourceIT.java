@@ -1,9 +1,7 @@
-package stroom.autoindex.animals;
+package stroom.test;
 
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import org.junit.ClassRule;
-import stroom.autoindex.TestConstants;
-import stroom.autoindex.animals.app.AnimalApp;
 import stroom.query.csv.CsvConfig;
 import stroom.query.csv.CsvDocRefEntity;
 import stroom.query.testing.DocRefResourceIT;

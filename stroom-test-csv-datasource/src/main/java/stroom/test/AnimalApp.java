@@ -1,4 +1,4 @@
-package stroom.autoindex.animals.app;
+package stroom.test;
 
 import com.codahale.metrics.health.HealthCheck;
 import com.google.inject.AbstractModule;

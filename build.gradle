@@ -45,6 +45,7 @@ ext.versions = [
     //----------Stroom-Annotations-----
     stroomQueryElastic: getPropertyOrDefault('version', 'SNAPSHOT'),
 
+    akka: '2.5.8',
     curator: '2.12.0',
     dropwizard: '1.2.0',
     elasticSearch: '5.6.3',
@@ -96,27 +97,31 @@ ext.deps = [
     stroomQueryJooq: "stroom:stroom-query-jooq:$versions.stroomQuery",
     stroomTestData: "stroom:stroom-test-data:$versions.stroomTestData",
 
-    elasticSearch: "org.elasticsearch.client:transport:$versions.elasticSearch",
-    dropwizard_core: "io.dropwizard:dropwizard-core:$versions.dropwizard",
-    dropwizard_auth: "io.dropwizard:dropwizard-auth:$versions.dropwizard",
-    dropwizard_auth_jwt: "com.github.toastshaman:dropwizard-auth-jwt:1.0.2-0",
-    flyway_core: "org.flywaydb:flyway-core:4.0.3",
+    //------3rd Party-----------------
+    akka_actor: "com.typesafe.akka:akka-actor_2.12:$versions.akka",
     bcrypt: 'de.svenkubiak:jBCrypt:0.4.1',
-    jose4j: "org.bitbucket.b_c:jose4j:0.5.2",
-    guice: "com.google.inject:guice:4.0",
-    slf4j: "org.slf4j:slf4j-api:1.7.24",
-    shiro_core: "org.apache.shiro:shiro-core:$versions.shiro",
     curator_client: "org.apache.curator:curator-client:$versions.curator",
     curator_framework: "org.apache.curator:curator-framework:$versions.curator",
     curator_recipies: "org.apache.curator:curator-recipes:$versions.curator",
     curator_service_discovery: "org.apache.curator:curator-x-discovery:$versions.curator",
-    simple_java_mail: 'org.simplejavamail:simple-java-mail:4.3.0',
-    mysql_connector_java: "mysql:mysql-connector-java:5.1.40",
+    dropwizard_core: "io.dropwizard:dropwizard-core:$versions.dropwizard",
+    dropwizard_auth: "io.dropwizard:dropwizard-auth:$versions.dropwizard",
+    dropwizard_auth_jwt: "com.github.toastshaman:dropwizard-auth-jwt:1.0.2-0",
+    elasticSearch: "org.elasticsearch.client:transport:$versions.elasticSearch",
+    flyway_core: "org.flywaydb:flyway-core:4.0.3",
+    guice: "com.google.inject:guice:4.0",
+    jose4j: "org.bitbucket.b_c:jose4j:0.5.2",
     kafka: 'org.apache.kafka:kafka-clients:0.10.0.1', //CDH5.10 uses kafka 10.0, Kafka <10.2 is picky about client and server versions.
-    mariadb_connector: 'org.mariadb.jdbc:mariadb-java-client:2.0.2'
+    mysql_connector_java: "mysql:mysql-connector-java:5.1.40",
+    mariadb_connector: 'org.mariadb.jdbc:mariadb-java-client:2.0.2',
+    slf4j: "org.slf4j:slf4j-api:1.7.24",
+    shiro_core: "org.apache.shiro:shiro-core:$versions.shiro",
+    simple_java_mail: 'org.simplejavamail:simple-java-mail:4.3.0'
 ]
 
 ext.testDeps = [
+    akka_test: "com.typesafe.akka:akka-testkit_2.12:$versions.akka",
+    apache_commons: 'org.apache.directory.studio:org.apache.commons.io:2.4',
     junit: "junit:junit:$testVersions.junit",
     assertj: 'org.assertj:assertj-core:3.8.0',
     dropwizard_testing: "io.dropwizard:dropwizard-testing:$versions.dropwizard",

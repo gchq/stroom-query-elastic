@@ -1,10 +1,11 @@
 rootProject.name = 'stroom-query-elastic'
 
+include 'elastic-test'
 include 'stroom-query-elastic-svc'
 include 'stroom-query-elastic-ui'
-include 'stroom-auto-index'
-include 'elastic-test'
-include 'stroom-csv-datasource'
 include 'stroom-query-akka'
-include 'stroom-window-tracking'
+include 'stroom-auto-index'
+include 'stroom-csv-datasource'
+include 'stroom-timeline-tracking'
+include 'stroom-test-csv-datasource'
 

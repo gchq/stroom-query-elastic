@@ -9,14 +9,13 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import stroom.autoindex.animals.AnimalTestData;
-import stroom.autoindex.animals.AnimalsQueryResourceIT;
-import stroom.autoindex.animals.app.AnimalSighting;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.*;
 import stroom.query.audit.rest.AuditedQueryResourceImpl;
+import stroom.test.AnimalSighting;
+import stroom.test.AnimalTestData;
 import stroom.tracking.TimelineTrackerDao;
 import stroom.tracking.TimelineTrackerDaoJooqImpl;
 import stroom.tracking.TimelineTrackerService;
@@ -30,8 +29,8 @@ import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static stroom.autoindex.animals.AnimalsQueryResourceIT.getAnimalSightingsFromResponse;
 import static stroom.query.testing.FifoLogbackRule.containsAllOf;
+import static stroom.test.AnimalTestData.getAnimalSightingsFromResponse;
 
 public class AutoIndexQueryResourceIT extends AbstractAutoIndexIntegrationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(AutoIndexQueryResourceIT.class);
@@ -101,7 +100,7 @@ public class AutoIndexQueryResourceIT extends AbstractAutoIndexIntegrationTest {
                 )
                 .build();
 
-        final SearchRequest searchRequest = AnimalsQueryResourceIT
+        final SearchRequest searchRequest = AnimalTestData
                 .getTestSearchRequest(autoIndex.getDocRef(), expressionOperator, offset);
 
         final Response response = autoIndexQueryClient.search(authRule.adminUser(), searchRequest);

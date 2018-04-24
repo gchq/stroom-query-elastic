@@ -12,9 +12,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import stroom.autoindex.animals.AnimalTestData;
-import stroom.autoindex.animals.AnimalsQueryResourceIT;
-import stroom.autoindex.animals.app.AnimalSighting;
 import stroom.autoindex.app.Config;
 import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.indexing.*;
@@ -30,6 +27,8 @@ import stroom.query.audit.service.QueryApiException;
 import stroom.query.csv.CsvDocRefEntity;
 import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.transportClient.TransportClientBundle;
+import stroom.test.AnimalSighting;
+import stroom.test.AnimalTestData;
 import stroom.tracking.TimelineTrackerDao;
 import stroom.tracking.TimelineTrackerDaoJooqImpl;
 import stroom.tracking.TimelineTrackerService;
@@ -44,7 +43,7 @@ import static org.junit.Assert.assertTrue;
 import static stroom.autoindex.AutoIndexConstants.STROOM_SERVICE_USER;
 import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
 import static stroom.autoindex.TestConstants.TEST_SERVICE_USER;
-import static stroom.autoindex.animals.AnimalsQueryResourceIT.getAnimalSightingsFromResponse;
+import static stroom.test.AnimalTestData.getAnimalSightingsFromResponse;
 
 /**
  * This will run a test that ensures some portion of the data has been indexed
@@ -166,7 +165,7 @@ public class AutoIndexQueryForkIT extends AbstractAutoIndexIntegrationTest {
                 .build();
 
         // Conduct the search
-        final SearchRequest searchRequest = AnimalsQueryResourceIT
+        final SearchRequest searchRequest = AnimalTestData
                 .getTestSearchRequest(autoIndex.getDocRef(), expressionOperator, offset);
 
         final SearchResponse searchResponse = autoIndexQueryService.search(authRule.adminUser(), searchRequest)

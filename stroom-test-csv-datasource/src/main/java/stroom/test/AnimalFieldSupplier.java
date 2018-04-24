@@ -1,4 +1,4 @@
-package stroom.autoindex.animals.app;
+package stroom.test;
 
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.csv.CsvField;

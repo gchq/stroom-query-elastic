@@ -1,4 +1,4 @@
-package stroom.autoindex.search;
+package stroom.query.akka;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -12,10 +12,6 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import stroom.autoindex.animals.AnimalTestData;
-import stroom.autoindex.animals.AnimalsQueryResourceIT;
-import stroom.autoindex.animals.app.AnimalFieldSupplier;
-import stroom.autoindex.animals.app.AnimalSighting;
 import stroom.query.api.v2.*;
 import stroom.query.audit.client.RemoteClientCache;
 import stroom.security.ServiceUser;
@@ -26,6 +22,9 @@ import stroom.query.csv.CsvDocRefEntity;
 import stroom.query.csv.CsvDocRefServiceImpl;
 import stroom.query.csv.CsvFieldSupplier;
 import stroom.query.csv.CsvQueryServiceImpl;
+import stroom.test.AnimalFieldSupplier;
+import stroom.test.AnimalSighting;
+import stroom.test.AnimalTestData;
 import stroom.testdata.FlatFileTestDataRule;
 
 import java.time.LocalDateTime;
@@ -107,7 +106,7 @@ public class QuerySearchActorIT {
                         testMaxDate.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
                 )
                 .build();
-        final SearchRequest searchRequest = AnimalsQueryResourceIT.getTestSearchRequest(docRef, expressionOperator, offset);
+        final SearchRequest searchRequest = AnimalTestData.getTestSearchRequest(docRef, expressionOperator, offset);
 
         // When
         searchActor.tell(QueryApiMessages.search(user, CsvDocRefEntity.TYPE, searchRequest), testProbe.getRef());

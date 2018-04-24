@@ -17,11 +17,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.authorisation.DocumentPermission;
 import stroom.autoindex.AbstractAutoIndexIntegrationTest;
-import stroom.autoindex.animals.AnimalsQueryResourceIT;
-import stroom.autoindex.animals.app.AnimalSighting;
 import stroom.autoindex.app.Config;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
+import stroom.query.akka.QueryApiMessages;
 import stroom.query.api.v2.ExpressionOperator;
 import stroom.query.api.v2.ExpressionTerm;
 import stroom.query.api.v2.OffsetRange;
@@ -29,6 +28,8 @@ import stroom.query.api.v2.SearchRequest;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 import stroom.security.ServiceUser;
+import stroom.test.AnimalSighting;
+import stroom.test.AnimalTestData;
 import stroom.tracking.*;
 
 import javax.inject.Named;
@@ -132,15 +133,15 @@ public class SearchRequestSplitterActorIT extends AbstractAutoIndexIntegrationTe
                         testMinDate.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
                 )
                 .build();
-        final SearchRequest searchRequest = AnimalsQueryResourceIT
+        final SearchRequest searchRequest = AnimalTestData
                 .getTestSearchRequest(autoIndex.getDocRef(), expressionOperator, offset);
 
         // Send the message to the splitter
         splitter.tell(QueryApiMessages.search(testUser, AutoIndexDocRefEntity.TYPE, searchRequest), testProbe.ref());
 
         // Then
-        final QueryApiMessages.SplitSearchJobComplete jobComplete =
-                testProbe.expectMsgClass(QueryApiMessages.SplitSearchJobComplete.class);
+        final AutoIndexMessages.SplitSearchJobComplete jobComplete =
+                testProbe.expectMsgClass(AutoIndexMessages.SplitSearchJobComplete.class);
         assertNull(jobComplete.getError());
         assertEquals(autoIndex.getDocRef(), jobComplete.getDocRef());
         assertEquals(searchRequest, jobComplete.getOriginalSearchRequest());

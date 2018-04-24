@@ -4,7 +4,6 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
-import stroom.autoindex.animals.app.AnimalSighting;
 import stroom.autoindex.app.App;
 import stroom.autoindex.app.Config;
 import stroom.autoindex.indexing.IndexJob;
@@ -17,6 +16,7 @@ import stroom.query.elastic.service.ElasticIndexDocRefServiceImpl;
 import stroom.query.testing.DocRefResourceIT;
 import stroom.query.testing.DropwizardAppWithClientsRule;
 import stroom.query.testing.StroomAuthenticationRule;
+import stroom.test.AnimalSighting;
 import stroom.tracking.TimelineTracker;
 
 import java.util.HashMap;

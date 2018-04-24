@@ -10,6 +10,7 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 import stroom.autoindex.service.AutoIndexDocRefEntity;
+import stroom.query.akka.QueryApiMessages;
 import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.SearchRequest;
 import stroom.security.ServiceUser;
@@ -100,8 +101,8 @@ public class SearchRequestSplitterActorTest {
         splitter.tell(searchJob, testProbe.getRef());
 
         // Then
-        final QueryApiMessages.SplitSearchJobComplete jobComplete =
-                testProbe.expectMsgClass(QueryApiMessages.SplitSearchJobComplete.class);
+        final AutoIndexMessages.SplitSearchJobComplete jobComplete =
+                testProbe.expectMsgClass(AutoIndexMessages.SplitSearchJobComplete.class);
         assertNull(jobComplete.getError());
         assertEquals(autoIndexDocRef, jobComplete.getDocRef());
         assertEquals(searchJob.getRequest(), jobComplete.getOriginalSearchRequest());

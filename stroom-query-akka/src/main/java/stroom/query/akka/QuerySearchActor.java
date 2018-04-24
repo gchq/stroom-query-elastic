@@ -1,4 +1,4 @@
-package stroom.autoindex.search;
+package stroom.query.akka;
 
 import akka.actor.AbstractActor;
 import akka.actor.Props;

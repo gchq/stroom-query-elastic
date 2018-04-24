@@ -1,4 +1,4 @@
-package stroom.autoindex.animals;
+package stroom.test;
 
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import org.eclipse.jetty.http.HttpStatus;
@@ -6,10 +6,6 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import stroom.autoindex.TestConstants;
-import stroom.autoindex.animals.app.AnimalApp;
-import stroom.autoindex.animals.app.AnimalFieldSupplier;
-import stroom.autoindex.animals.app.AnimalSighting;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.*;
@@ -36,6 +32,7 @@ import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static stroom.query.testing.FifoLogbackRule.containsAllOf;
+import static stroom.test.AnimalTestData.getAnimalSightingsFromResponse;
 
 public class AnimalsQueryResourceIT extends QueryResourceIT<CsvDocRefEntity, CsvConfig> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AnimalsQueryResourceIT.class);
@@ -167,28 +164,6 @@ public class AnimalsQueryResourceIT extends QueryResourceIT<CsvDocRefEntity, Csv
                 .containsOrdered(containsAllOf(AuditedQueryResourceImpl.QUERY_SEARCH, docRef.getUuid()));
     }
 
-    public static Set<AnimalSighting> getAnimalSightingsFromResponse(final SearchResponse searchResponse) {
-        final Set<AnimalSighting> resultsSet = new HashSet<>();
-
-        assertTrue("No results seen", searchResponse.getResults().size() > 0);
-        for (final Result result : searchResponse.getResults()) {
-            assertTrue(result instanceof FlatResult);
-
-            final FlatResult flatResult = (FlatResult) result;
-            flatResult.getValues().stream()
-                    .map(o -> {
-                        final CsvDataRow row = new CsvDataRow();
-                        csvFieldSupplier.getFields()
-                                .forEach(f -> row.withField(f, o.get(f.getPosition() + 3))); // skip over 3 std fields
-                        return row;
-                    })
-                    .map(AnimalSighting::new)
-                    .forEach(resultsSet::add);
-        }
-
-        return resultsSet;
-    }
-
     @Override
     protected void assertValidDataSource(final DataSource dataSource) {
         final Set<String> resultFieldNames = dataSource.getFields().stream()
@@ -213,53 +188,6 @@ public class AnimalsQueryResourceIT extends QueryResourceIT<CsvDocRefEntity, Csv
     protected SearchRequest getValidSearchRequest(final DocRef docRef,
                                                   final ExpressionOperator expressionOperator,
                                                   final OffsetRange offsetRange) {
-        return AnimalsQueryResourceIT.getTestSearchRequest(docRef, expressionOperator, offsetRange);
-    }
-
-    public static SearchRequest getTestSearchRequest(final DocRef docRef,
-                                                     final ExpressionOperator expressionOperator,
-                                                     final OffsetRange offsetRange) {
-        final String queryKey = UUID.randomUUID().toString();
-        return new SearchRequest.Builder()
-                .query(new Query.Builder()
-                        .dataSource(docRef)
-                        .expression(expressionOperator)
-                        .build())
-                .key(queryKey)
-                .dateTimeLocale("en-gb")
-                .incremental(true)
-                .addResultRequests(new ResultRequest.Builder()
-                        .fetch(ResultRequest.Fetch.ALL)
-                        .resultStyle(ResultRequest.ResultStyle.FLAT)
-                        .componentId("componentId")
-                        .requestedRange(offsetRange)
-                        .addMappings(new TableSettings.Builder()
-                                .queryId(queryKey)
-                                .extractValues(false)
-                                .showDetail(false)
-                                .addFields(new Field.Builder()
-                                        .name(AnimalSighting.STREAM_ID)
-                                        .expression("${" + AnimalSighting.STREAM_ID + "}")
-                                        .build())
-                                .addFields(new Field.Builder()
-                                        .name(AnimalSighting.SPECIES)
-                                        .expression("${" + AnimalSighting.SPECIES + "}")
-                                        .build())
-                                .addFields(new Field.Builder()
-                                        .name(AnimalSighting.LOCATION)
-                                        .expression("${" + AnimalSighting.LOCATION + "}")
-                                        .build())
-                                .addFields(new Field.Builder()
-                                        .name(AnimalSighting.OBSERVER)
-                                        .expression("${" + AnimalSighting.OBSERVER + "}")
-                                        .build())
-                                .addFields(new Field.Builder()
-                                        .name(AnimalSighting.TIME)
-                                        .expression("${" + AnimalSighting.TIME + "}")
-                                        .build())
-                                .addMaxResults(1000)
-                                .build())
-                        .build())
-                .build();
+        return AnimalTestData.getTestSearchRequest(docRef, expressionOperator, offsetRange);
     }
 }

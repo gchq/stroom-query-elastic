@@ -18,30 +18,6 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '1.2.4'
 }
 
-apply plugin: 'application'
-mainClassName = 'stroom.autoindex.app.App'
-
-jar {
-    manifest {
-        attributes(
-                "Implementation-Title": "Stroom Query Auto Index Service",
-                "Implementation-Version": version,
-                "Main-Class" : "stroom.autoindex.app.App"
-        )
-    }
-
-    archiveName 'stroom-query-autoindex.jar'
-}
-
-
-
-shadowJar {
-    // Allows us to build fat jars with lots of files
-    zip64 true
-    mergeServiceFiles()
-    archiveName 'stroom-query-elastic-all.jar'
-}
-
 sourceSets {
     // This lets us use different directories for our integration tests.
     integrationTest {
@@ -80,9 +56,8 @@ tasks.withType(Test) {
 
 dependencies {
     //---------Internal
-    compile project(':stroom-query-elastic-svc')
+    compile project(':stroom-csv-datasource')
     compile project(':stroom-timeline-tracking')
-    compile project(':stroom-query-akka')
 
     //---------Stroom
     compile deps.eventLogging
@@ -117,9 +92,6 @@ dependencies {
     testCompile testDeps.akka_test
     testCompile testDeps.mockito_core
 
-    integrationTestCompile project(':elastic-test')
-    integrationTestCompile project(':stroom-csv-datasource')
-    integrationTestCompile project(':stroom-test-csv-datasource')
     integrationTestCompile testDeps.stroomQueryTesting
     integrationTestCompile testDeps.dropwizard_testing
     integrationTestCompile testDeps.moshi
