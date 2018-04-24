@@ -89,7 +89,7 @@ public class App extends Application<Config> {
             }
 
             @Provides
-            @Named(INDEX_JOB_POST_HANDLER)
+            @Named(TASK_HANDLER_PARENT)
             public ActorRef indexJobPostHandler() {
                 return actorSystem.getActorSystem().actorOf(Props.create(AbstractActor.class, () -> new AbstractActor() {
                     @Override
@@ -101,14 +101,6 @@ public class App extends Application<Config> {
                                 .build();
                     }
                 }));
-            }
-
-            @Provides
-            @Named(TASK_HANDLER_NAME)
-            public ActorRef indexJobConsumerActorRef(final IndexJobHandlerImpl jobHandler,
-                                                     @Named(INDEX_JOB_POST_HANDLER)
-                                                     final ActorRef postHandler) {
-                return actorSystem.getActorSystem().actorOf(IndexJobActor.props(jobHandler, postHandler));
             }
         },
                 new RemoteClientModule(configuration.getQueryResourceUrlsByType())

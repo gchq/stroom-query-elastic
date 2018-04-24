@@ -6,50 +6,43 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.japi.Creator;
 
-import java.util.concurrent.CompletableFuture;
-
-import static akka.pattern.PatternsCS.pipe;
-
-
 public class IndexJobActor extends AbstractActor {
-    public static Props props(final IndexJobHandler jobHandler,
-                              final ActorRef postJobHandler) {
+
+    public static Props props(final IndexJobHandler indexJobHandler) {
         return Props.create(new Creator<Actor>() {
             @Override
             public Actor create() throws Exception {
-                return new IndexJobActor(jobHandler, postJobHandler);
+                return new IndexJobActor(indexJobHandler);
             }
         });
     }
 
-    private final IndexJobHandler jobHandler;
-    private final ActorRef postJobHandler;
+    private ActorRef sender;
+    private final IndexJobHandler indexJobHandler;
 
-    private IndexJobActor(final IndexJobHandler jobHandler,
-                          final ActorRef postJobHandler) {
-        this.jobHandler = jobHandler;
-        this.postJobHandler = postJobHandler;
+    private IndexJobActor(final IndexJobHandler indexJobHandler) {
+        this.indexJobHandler = indexJobHandler;
+
     }
 
     @Override
     public Receive createReceive() {
         return receiveBuilder()
                 .match(IndexJobMessages.SearchIndexJob.class, indexJob -> {
-
-                    CompletableFuture<IndexJobMessages.WriteIndexJob> result =
-                            CompletableFuture.supplyAsync(() -> jobHandler.search(indexJob.getIndexJob()))
-                            .thenApply(s -> IndexJobMessages.write(indexJob.getIndexJob(), s));
-
-                    pipe(result, getContext().dispatcher()).to(getSelf());
+                    this.sender = getSender();
+                    getContext().actorOf(IndexJobSearchActor.props(this.indexJobHandler))
+                            .tell(indexJob, getSelf());
                 })
-                .match(IndexJobMessages.WriteIndexJob.class, writeJob -> {
+                .match(IndexJobMessages.WriteIndexJob.class, writeJob ->
+                        getContext().actorOf(IndexJobWriteActor.props(this.indexJobHandler))
+                                .tell(writeJob, getSelf())
+                )
+                .match(IndexJob.class, indexJob -> {
+                    this.sender.tell(indexJob, getSelf());
 
-                    CompletableFuture<IndexJob> result =
-                            CompletableFuture.supplyAsync(() -> jobHandler.write(writeJob.getIndexJob(), writeJob.getSearchResponse()));
-
-                    pipe(result, getContext().dispatcher()).to(this.postJobHandler);
+                    // That's us done
+                    getContext().stop(getSelf());
                 })
-
                 .build();
     }
 }

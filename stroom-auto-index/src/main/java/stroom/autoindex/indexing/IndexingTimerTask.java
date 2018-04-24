@@ -1,6 +1,7 @@
 package stroom.autoindex.indexing;
 
 import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.autoindex.app.IndexingConfig;
@@ -15,7 +16,7 @@ import java.util.Optional;
 import java.util.TimerTask;
 import java.util.UUID;
 
-import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
+import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_PARENT;
 
 /**
  * This timer task is in charge of kicking off indexing tasks.
@@ -27,8 +28,10 @@ public class IndexingTimerTask extends TimerTask {
 
     private final IndexingConfig config;
     private final IndexJobDao indexJobDao;
+    private final IndexJobHandler indexJobHandler;
     private final AutoIndexDocRefServiceImpl autoIndexDocRefService;
-    private final ActorRef indexJobActor;
+    private final ActorRef indexJobActorParent;
+    private final ActorSystem actorSystem;
 
     private static final ServiceUser INTERNAL = new ServiceUser.Builder()
             .name(IndexJobDaoImpl.class.getName())
@@ -38,13 +41,18 @@ public class IndexingTimerTask extends TimerTask {
     @Inject
     public IndexingTimerTask(final IndexingConfig config,
                              final IndexJobDao indexJobDao,
+                             final IndexJobHandler indexJobHandler,
                              final AutoIndexDocRefServiceImpl autoIndexDocRefService,
-                             @Named(TASK_HANDLER_NAME)
-                             final ActorRef indexJobActor) {
+                             final ActorSystem actorSystem,
+                             @Named(TASK_HANDLER_PARENT)
+                             final ActorRef indexJobActorParent) {
         this.config = config;
         this.indexJobDao = indexJobDao;
+        this.indexJobHandler = indexJobHandler;
         this.autoIndexDocRefService = autoIndexDocRefService;
-        this.indexJobActor = indexJobActor;
+        this.actorSystem = actorSystem;
+        this.indexJobActorParent = indexJobActorParent;
+        LOGGER.info("Task Handler Parent {}", indexJobActorParent);
     }
 
     @Override
@@ -61,7 +69,11 @@ public class IndexingTimerTask extends TimerTask {
                     .sorted(Comparator.comparingLong(IndexJob::getCreatedTimeMillis)) // ensure fair rotation
                     .limit(config.getNumberOfTasksPerRun())
                     .map(IndexJobMessages::search) // wrap as messages for actor
-                    .forEach(t -> indexJobActor.tell(t, ActorRef.noSender()));
+                    .forEach(t -> {
+                        final ActorRef indexJobActor =
+                                actorSystem.actorOf(IndexJobActor.props(indexJobHandler));
+                        indexJobActor.tell(t, indexJobActorParent);
+                    });
 
         } catch (final Exception e) {
             LOGGER.error(e.getLocalizedMessage());

@@ -1,10 +1,13 @@
 package stroom.autoindex.service;
 
+import akka.actor.ActorSystem;
+import akka.testkit.javadsl.TestKit;
 import com.google.inject.*;
 import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 import org.elasticsearch.client.transport.TransportClient;
 import org.jooq.DSLContext;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -37,12 +40,13 @@ import java.util.Set;
 
 import static org.junit.Assert.assertTrue;
 import static stroom.autoindex.AutoIndexConstants.STROOM_SERVICE_USER;
-import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
 import static stroom.autoindex.TestConstants.TEST_SERVICE_USER;
 import static stroom.test.AnimalTestData.getAnimalSightingsFromResponse;
 
 public class AutoIndexQueryServiceImplIT extends AbstractAutoIndexIntegrationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(AutoIndexQueryServiceImplIT.class);
+
+    private static ActorSystem actorSystem;
 
     private static IndexJobDao indexJobDao;
 
@@ -53,7 +57,7 @@ public class AutoIndexQueryServiceImplIT extends AbstractAutoIndexIntegrationTes
     /**
      * We are only really testing that the integration of the window and job management causes the right tasks to be fired off.
      */
-    private static IndexJobHandlerImpl indexJobHandler;
+    private static IndexJobHandler indexJobHandler;
 
     /**
      * We will use this to manually tell the system that we already have data that runs from 'now' back to
@@ -73,6 +77,7 @@ public class AutoIndexQueryServiceImplIT extends AbstractAutoIndexIntegrationTes
 
     @BeforeClass
     public static void beforeClass() {
+        actorSystem = ActorSystem.create();
 
         final Injector testInjector = Guice.createInjector(Modules.combine(new AbstractModule() {
             @Override
@@ -83,8 +88,8 @@ public class AutoIndexQueryServiceImplIT extends AbstractAutoIndexIntegrationTes
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
                 bind(IndexWriter.class).to(IndexWriterImpl.class);
                 bind(DocRefService.class).to(AutoIndexDocRefServiceImpl.class);
+                bind(ActorSystem.class).toInstance(actorSystem);
                 bind(IndexJobHandler.class)
-                        .annotatedWith(Names.named(TASK_HANDLER_NAME))
                         .to(IndexJobHandlerImpl.class)
                         .asEagerSingleton(); // singleton so that the test receives same instance as the underlying timer task
                 bind(IndexingConfig.class).toInstance(indexingConfig);
@@ -103,14 +108,17 @@ public class AutoIndexQueryServiceImplIT extends AbstractAutoIndexIntegrationTes
                         .addType(ElasticIndexDocRefEntity.TYPE, ElasticIndexDocRefEntity.class)
         );
 
-        final Key<IndexJobHandler> taskHandlerKey = Key.get(IndexJobHandler.class, Names.named(TASK_HANDLER_NAME));
-        final Object testIndexJobConsumerObj = testInjector.getInstance(taskHandlerKey);
-        assertTrue(testIndexJobConsumerObj instanceof IndexJobHandlerImpl);
-        indexJobHandler = (IndexJobHandlerImpl) testIndexJobConsumerObj;
+        indexJobHandler = testInjector.getInstance(IndexJobHandler.class);
         indexJobDao = testInjector.getInstance(IndexJobDao.class);
         timelineTrackerService = testInjector.getInstance(TimelineTrackerService.class);
         service = testInjector.getInstance(AutoIndexQueryServiceImpl.class);
         remoteClientCache = testInjector.getInstance(Key.get(new TypeLiteral<RemoteClientCache<QueryService>>(){}));
+    }
+
+    @AfterClass
+    public static void afterClass() {
+        TestKit.shutdownActorSystem(actorSystem);
+        actorSystem = null;
     }
 
     @Test

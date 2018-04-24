@@ -36,7 +36,7 @@ public interface QueryDataSourceMessages {
         }
     }
 
-    class JobComplete extends stroom.akka.JobComplete {
+    class JobComplete extends stroom.akka.JobComplete<Job, DataSource> {
         private JobComplete(final Job request,
                             final DataSource response,
                             final String error) {

@@ -3,12 +3,14 @@ package stroom.query.akka;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.testkit.javadsl.TestKit;
+import akka.util.Timeout;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.concurrent.duration.FiniteDuration;
 import stroom.akka.query.messages.QuerySearchMessages;
 import stroom.akka.query.actors.QuerySearchActor;
 import stroom.query.api.v2.SearchRequest;
@@ -17,12 +19,15 @@ import stroom.query.audit.client.RemoteClientCache;
 import stroom.security.ServiceUser;
 import stroom.query.audit.service.QueryApiException;
 import stroom.query.audit.service.QueryService;
+import static akka.pattern.PatternsCS.ask;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertNotNull;
@@ -62,12 +67,25 @@ public class QuerySearchActorTest {
         final ActorRef searchActor = system.actorOf(QuerySearchActor.props(queryServices));
 
         // When
-        searchActor.tell(QuerySearchMessages.search(user, type1, new SearchRequest.Builder().build()), testProbe.getRef());
+        final QuerySearchMessages.Job job = QuerySearchMessages.search(user, type1, new SearchRequest.Builder().build());
+        searchActor.tell(job, testProbe.getRef());
 
         // Then
-        final QuerySearchMessages.JobComplete jobComplete = testProbe.expectMsgClass(QuerySearchMessages.JobComplete.class);
-        assertNotNull(jobComplete.getResponse());
-        assertNull(jobComplete.getError());
+        final QuerySearchMessages.JobComplete jobComplete1 = testProbe.expectMsgClass(QuerySearchMessages.JobComplete.class);
+        assertNotNull(jobComplete1.getResponse());
+        assertNull(jobComplete1.getError());
+
+        // Now try same thing using ask
+        final Timeout timeout = Timeout.durationToTimeout(FiniteDuration.apply(5, TimeUnit.SECONDS));
+        CompletionStage<QuerySearchMessages.JobComplete> syncJobComplete =
+                ask(searchActor, job, timeout)
+                        .thenApply((QuerySearchMessages.JobComplete.class::cast));
+
+        syncJobComplete.thenAccept(jobComplete2 -> {
+            LOGGER.info("Job Complete as Synchronous Process {}", jobComplete2);
+            assertNotNull(jobComplete2.getResponse());
+            assertNull(jobComplete2.getError());
+        });
     }
 
     @Test

@@ -33,7 +33,6 @@ import java.util.stream.Collectors;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static stroom.autoindex.AutoIndexConstants.STROOM_SERVICE_USER;
-import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_NAME;
 import static stroom.autoindex.TestConstants.TEST_SERVICE_USER;
 
 /**
@@ -54,7 +53,7 @@ public class IndexJobHandlerImplIT extends AbstractAutoIndexIntegrationTest {
     /**
      * We are only really testing that the integration of the window and job management causes the right tasks to be fired off.
      */
-    private static IndexJobHandlerImpl indexJobHandler;
+    private static IndexJobHandler indexJobHandler;
 
     /**
      * We will use this to manually tell the system that we already have data that runs from 'now' back to
@@ -74,7 +73,6 @@ public class IndexJobHandlerImplIT extends AbstractAutoIndexIntegrationTest {
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
                 bind(IndexWriter.class).to(IndexWriterImpl.class);
                 bind(IndexJobHandler.class)
-                        .annotatedWith(Names.named(TASK_HANDLER_NAME))
                         .to(IndexJobHandlerImpl.class)
                         .asEagerSingleton(); // singleton so that the test receives same instance as the underlying timer task
                 bind(IndexingConfig.class).toInstance(indexingConfig);
@@ -91,10 +89,7 @@ public class IndexJobHandlerImplIT extends AbstractAutoIndexIntegrationTest {
         }), new RemoteClientModule(autoIndexAppRule.getConfiguration().getQueryResourceUrlsByType())
                 .addType(ElasticIndexDocRefEntity.TYPE, ElasticIndexDocRefEntity.class));
 
-        final Key<IndexJobHandler> taskHandlerKey = Key.get(IndexJobHandler.class, Names.named(TASK_HANDLER_NAME));
-        final Object testIndexJobConsumerObj = testInjector.getInstance(taskHandlerKey);
-        assertTrue(testIndexJobConsumerObj instanceof IndexJobHandlerImpl);
-        indexJobHandler = (IndexJobHandlerImpl) testIndexJobConsumerObj;
+        indexJobHandler = testInjector.getInstance(IndexJobHandler.class);
         indexJobDao = testInjector.getInstance(IndexJobDao.class);
         timelineTrackerService = testInjector.getInstance(TimelineTrackerService.class);
     }

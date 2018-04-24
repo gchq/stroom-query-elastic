@@ -12,6 +12,9 @@ import org.jooq.DSLContext;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.runners.MockitoJUnitRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.autoindex.AbstractAutoIndexIntegrationTest;
@@ -70,6 +73,7 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
                 bind(TimelineTrackerService.class).to(TimelineTrackerServiceImpl.class);
                 bind(IndexJobDao.class).to(IndexJobDaoImpl.class);
                 bind(IndexingConfig.class).toInstance(indexingConfig);
+                bind(IndexJobHandler.class).to(TestIndexJobConsumer.class);
                 bind(ActorSystem.class).toInstance(actorSystem);
             }
 
@@ -80,17 +84,11 @@ public class IndexingTimerTaskIT extends AbstractAutoIndexIntegrationTest {
             }
 
             @Provides
-            @Named(INDEX_JOB_POST_HANDLER)
+            @Named(TASK_HANDLER_PARENT)
             public ActorRef indexJobPostHandler() {
-                return indexJobPostHandler.getRef();
-            }
-
-            @Provides
-            @Named(TASK_HANDLER_NAME)
-            public ActorRef indexJobConsumerActorRef(final TestIndexJobConsumer jobHandler,
-                                                     @Named(INDEX_JOB_POST_HANDLER)
-                                                     final ActorRef postHandler) {
-                return actorSystem.actorOf(IndexJobActor.props(jobHandler, postHandler));
+                final ActorRef ar = indexJobPostHandler.getRef();
+                LOGGER.info("Task Handler Parent {}", ar);
+                return ar;
             }
         }));
 
