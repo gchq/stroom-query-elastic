@@ -11,7 +11,6 @@ import stroom.elastic.test.ElasticTestIndexRule;
 import stroom.query.api.v2.*;
 import stroom.query.audit.rest.AuditedDocRefResourceImpl;
 import stroom.query.audit.rest.AuditedQueryResourceImpl;
-import stroom.security.NoAuthValueFactoryProvider;
 import stroom.query.elastic.App;
 import stroom.query.elastic.ShakespeareLine;
 import stroom.query.elastic.config.Config;
@@ -19,6 +18,7 @@ import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.service.ElasticIndexDocRefServiceImpl;
 import stroom.query.testing.DropwizardAppWithClientsRule;
 import stroom.query.testing.QueryResourceNoAuthIT;
+import stroom.security.NoAuthValueFactoryProvider;
 
 import javax.ws.rs.core.Response;
 import java.util.Collection;

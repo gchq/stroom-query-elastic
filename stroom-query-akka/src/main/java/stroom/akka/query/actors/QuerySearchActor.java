@@ -6,27 +6,26 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.akka.query.messages.QuerySearchMessages;
 import stroom.query.api.v2.SearchRequest;
-import stroom.security.ServiceUser;
 import stroom.query.audit.service.QueryApiException;
 import stroom.query.audit.service.QueryService;
+import stroom.query.audit.service.QueryServiceSupplier;
+import stroom.security.ServiceUser;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 import static akka.pattern.PatternsCS.pipe;
 
 public class QuerySearchActor extends AbstractActor {
     private static final Logger LOGGER = LoggerFactory.getLogger(QuerySearchActor.class);
 
-    public static Props props(final Function<String, Optional<QueryService>> serviceSupplier) {
+    public static Props props(final QueryServiceSupplier serviceSupplier) {
         return Props.create(QuerySearchActor.class,
                 () -> new QuerySearchActor(serviceSupplier));
     }
 
-    private final Function<String, Optional<QueryService>> serviceSupplier;
+    private final QueryServiceSupplier serviceSupplier;
 
-    public QuerySearchActor(final Function<String, Optional<QueryService>> serviceSupplier) {
+    public QuerySearchActor(final QueryServiceSupplier serviceSupplier) {
         this.serviceSupplier = serviceSupplier;
     }
 

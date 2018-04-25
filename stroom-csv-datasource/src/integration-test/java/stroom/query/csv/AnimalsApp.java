@@ -11,14 +11,6 @@ import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
-import org.jooq.DSLContext;
-import org.jooq.impl.DSL;
-import stroom.datasource.api.v2.DataSourceField;
-import stroom.query.audit.AuditedQueryBundle;
-
-import java.util.stream.Stream;
-
-import static stroom.query.csv.AnimalSighting.*;
 
 public class AnimalsApp extends Application<CsvConfig> {
     private Injector injector;

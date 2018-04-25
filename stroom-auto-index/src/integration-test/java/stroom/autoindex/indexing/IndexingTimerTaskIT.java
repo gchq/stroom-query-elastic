@@ -12,9 +12,6 @@ import org.jooq.DSLContext;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.autoindex.AbstractAutoIndexIntegrationTest;
@@ -35,7 +32,8 @@ import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static stroom.autoindex.AutoIndexConstants.*;
+import static stroom.autoindex.AutoIndexConstants.STROOM_SERVICE_USER;
+import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_PARENT;
 
 /**
  * This suite of tests exercises the {@link IndexingTimerTask} and it's integration with

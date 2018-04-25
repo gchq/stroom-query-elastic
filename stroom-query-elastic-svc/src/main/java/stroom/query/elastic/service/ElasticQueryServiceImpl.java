@@ -16,13 +16,13 @@ import stroom.dashboard.expression.v1.FieldIndexMap;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.*;
-import stroom.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.audit.service.QueryApiException;
 import stroom.query.audit.service.QueryService;
 import stroom.query.common.v2.*;
 import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.store.ElasticStore;
+import stroom.security.ServiceUser;
 
 import javax.inject.Inject;
 import java.util.*;

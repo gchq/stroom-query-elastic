@@ -6,14 +6,14 @@ import akka.actor.Props;
 import akka.japi.Creator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.akka.query.messages.QuerySearchMessages;
+import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.SearchRequest;
 import stroom.query.audit.client.NotFoundException;
-import stroom.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.audit.service.QueryApiException;
+import stroom.security.ServiceUser;
 import stroom.tracking.TimelineTracker;
 import stroom.tracking.TimelineTrackerService;
 

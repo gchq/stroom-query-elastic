@@ -8,10 +8,10 @@ import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.datasource.api.v2.DataSource;
 import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.*;
-import stroom.query.audit.client.RemoteClientCache;
-import stroom.security.ServiceUser;
 import stroom.query.audit.service.QueryApiException;
 import stroom.query.audit.service.QueryService;
+import stroom.query.audit.service.QueryServiceSupplier;
+import stroom.security.ServiceUser;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -26,7 +26,7 @@ public class IndexJobHandlerImpl implements IndexJobHandler {
 
     private final IndexingConfig indexingConfig;
 
-    private final RemoteClientCache<QueryService> remoteClientCache;
+    private final QueryServiceSupplier queryServiceSupplier;
 
     private final ServiceUser serviceUser;
 
@@ -36,7 +36,7 @@ public class IndexJobHandlerImpl implements IndexJobHandler {
         @Override
         public DataSource apply(final DocRef docRef) {
 
-            final QueryService rawClient = remoteClientCache.apply(docRef.getType())
+            final QueryService rawClient = queryServiceSupplier.apply(docRef.getType())
                     .orElseThrow(() -> new RuntimeException("Could not retrieve query client for " + docRef.getType()));
 
             try {
@@ -51,13 +51,13 @@ public class IndexJobHandlerImpl implements IndexJobHandler {
     @Inject
     public IndexJobHandlerImpl(final IndexJobDao indexJobDao,
                                final IndexingConfig indexingConfig,
-                               final RemoteClientCache<QueryService> remoteClientCache,
+                               final QueryServiceSupplier queryServiceSupplier,
                                @Named(AutoIndexConstants.STROOM_SERVICE_USER)
                                final ServiceUser serviceUser,
                                final IndexWriter indexWriter) {
         this.indexJobDao = indexJobDao;
         this.indexingConfig = indexingConfig;
-        this.remoteClientCache = remoteClientCache;
+        this.queryServiceSupplier = queryServiceSupplier;
         this.serviceUser = serviceUser;
         this.indexWriter = indexWriter;
     }
@@ -70,7 +70,7 @@ public class IndexJobHandlerImpl implements IndexJobHandler {
         final AutoIndexDocRefEntity autoIndex = indexJob.getAutoIndexDocRefEntity();
         final DocRef docRef = autoIndex.getRawDocRef();
 
-        final QueryService rawClient = remoteClientCache.apply(docRef.getType())
+        final QueryService rawClient = queryServiceSupplier.apply(docRef.getType())
                 .orElseThrow(() -> new RuntimeException("Could not retrieve query client for " + docRef.getType()));
 
         final String timeBoundTerm = String.format("%d,%d",

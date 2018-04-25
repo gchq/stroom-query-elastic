@@ -7,13 +7,13 @@ import io.dropwizard.db.DataSourceFactory;
 import io.dropwizard.flyway.FlywayFactory;
 import stroom.authorisation.AuthorisationServiceConfig;
 import stroom.authorisation.HasAuthorisationConfig;
-import stroom.security.HasTokenConfig;
-import stroom.security.TokenConfig;
 import stroom.query.elastic.config.ElasticConfig;
 import stroom.query.elastic.config.HasElasticConfig;
 import stroom.query.jooq.HasDataSourceFactory;
 import stroom.query.jooq.HasFlywayFactory;
 import stroom.query.jooq.HasJooqFactory;
+import stroom.security.HasTokenConfig;
+import stroom.security.TokenConfig;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;

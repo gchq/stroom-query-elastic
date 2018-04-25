@@ -12,11 +12,11 @@ import stroom.datasource.api.v2.DataSourceField;
 import stroom.query.api.v2.DocRef;
 import stroom.query.api.v2.FlatResult;
 import stroom.query.api.v2.SearchResponse;
-import stroom.query.audit.client.RemoteClientCache;
-import stroom.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
+import stroom.query.audit.service.DocRefServiceSupplier;
 import stroom.query.audit.service.QueryApiException;
 import stroom.query.elastic.model.ElasticIndexDocRefEntity;
+import stroom.security.ServiceUser;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -35,11 +35,11 @@ public class IndexWriterImpl implements IndexWriter {
 
     @Inject
     public IndexWriterImpl(final TransportClient client,
-                           final RemoteClientCache<DocRefService> docRefServiceCache,
+                           final DocRefServiceSupplier docRefServiceSupplier,
                            @Named(AutoIndexConstants.STROOM_SERVICE_USER)
                            final ServiceUser serviceUser) {
         this.client = client;
-        this.elasticDocRefService = (DocRefService<ElasticIndexDocRefEntity>) docRefServiceCache.apply(ElasticIndexDocRefEntity.TYPE)
+        this.elasticDocRefService = (DocRefService<ElasticIndexDocRefEntity>) docRefServiceSupplier.apply(ElasticIndexDocRefEntity.TYPE)
                 .orElseThrow(() -> new RuntimeException("Could not get Doc Ref Service"));
         this.serviceUser = serviceUser;
     }

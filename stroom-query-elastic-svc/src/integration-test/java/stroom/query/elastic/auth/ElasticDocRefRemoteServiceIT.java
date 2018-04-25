@@ -8,7 +8,6 @@ import stroom.query.elastic.config.Config;
 import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.service.ElasticIndexDocRefServiceImpl;
 import stroom.query.testing.DocRefRemoteServiceIT;
-import stroom.query.testing.DocRefResourceIT;
 import stroom.query.testing.DropwizardAppWithClientsRule;
 import stroom.query.testing.StroomAuthenticationRule;
 

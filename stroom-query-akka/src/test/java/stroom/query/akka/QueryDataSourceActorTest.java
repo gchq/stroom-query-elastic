@@ -9,13 +9,13 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import stroom.akka.query.actors.QueryDataSourceActor;
 import stroom.akka.query.messages.QueryDataSourceMessages;
 import stroom.datasource.api.v2.DataSource;
-import stroom.akka.query.actors.QueryDataSourceActor;
 import stroom.query.api.v2.DocRef;
-import stroom.query.audit.client.RemoteClientCache;
 import stroom.query.audit.service.QueryApiException;
 import stroom.query.audit.service.QueryService;
+import stroom.query.audit.service.QueryServiceSupplier;
 import stroom.security.ServiceUser;
 
 import java.util.Optional;
@@ -54,8 +54,7 @@ public class QueryDataSourceActorTest {
                 .name(UUID.randomUUID().toString())
                 .build();
         final QueryService queryService = Mockito.mock(QueryService.class);
-        final RemoteClientCache<QueryService> queryServices =
-                new RemoteClientCache<>(d -> d, (t, u) -> t.equals(type1) ? queryService : null);
+        final QueryServiceSupplier queryServices = type -> Optional.of(type).filter(type1::equals).map(t -> queryService);
         Mockito.doReturn(Optional.of(new DataSource.Builder().build()))
                 .when(queryService)
                 .getDataSource(Mockito.any(), Mockito.any());
@@ -88,8 +87,7 @@ public class QueryDataSourceActorTest {
         Mockito.doReturn(Optional.empty())
                 .when(queryService)
                 .getDataSource(Mockito.any(), Mockito.any());
-        final RemoteClientCache<QueryService> queryServices =
-                new RemoteClientCache<>(d -> d, (t, u) -> t.equals(type1) ? queryService : null);
+        final QueryServiceSupplier queryServices = type -> Optional.of(type).filter(type1::equals).map(t -> queryService);
         final TestKit testProbe = new TestKit(system);
         final ActorRef searchActor = system.actorOf(QueryDataSourceActor.props(queryServices));
 
@@ -122,8 +120,7 @@ public class QueryDataSourceActorTest {
         Mockito.doReturn(Optional.of(new DataSource.Builder().build()))
                 .when(queryService)
                 .getDataSource(Mockito.any(), Mockito.any());
-        final RemoteClientCache<QueryService> queryServices =
-                new RemoteClientCache<>(d -> d, (t, u) -> t.equals(type1) ? queryService : null);
+        final QueryServiceSupplier queryServices = type -> Optional.of(type).filter(type1::equals).map(t -> queryService);
         final TestKit testProbe = new TestKit(system);
         final ActorRef searchActor1 = system.actorOf(QueryDataSourceActor.props(queryServices));
 

@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import scala.concurrent.duration.FiniteDuration;
 import stroom.akka.query.actors.QueryDataSourceActor;
 import stroom.akka.query.messages.QueryDataSourceMessages;
-import stroom.akka.query.messages.QuerySearchMessages;
 import stroom.autoindex.search.SearchRequestSplitter;
 import stroom.autoindex.search.SearchResponseMerger;
 import stroom.autoindex.search.SplitSearchRequest;
@@ -18,23 +17,23 @@ import stroom.query.api.v2.QueryKey;
 import stroom.query.api.v2.SearchRequest;
 import stroom.query.api.v2.SearchResponse;
 import stroom.query.audit.client.NotFoundException;
-import stroom.query.audit.client.RemoteClientCache;
-import stroom.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.audit.service.QueryApiException;
 import stroom.query.audit.service.QueryService;
+import stroom.query.audit.service.QueryServiceSupplier;
+import stroom.security.ServiceUser;
 import stroom.tracking.TimelineTracker;
 import stroom.tracking.TimelineTrackerService;
 import stroom.tracking.TrackerWindow;
-import static akka.pattern.PatternsCS.ask;
 
 import javax.inject.Inject;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+
+import static akka.pattern.PatternsCS.ask;
 
 public class AutoIndexQueryServiceImpl implements QueryService {
     private static final Logger LOGGER = LoggerFactory.getLogger(AutoIndexQueryServiceImpl.class);
@@ -43,7 +42,7 @@ public class AutoIndexQueryServiceImpl implements QueryService {
 
     private final TimelineTrackerService trackerService;
 
-    private final RemoteClientCache<QueryService> remoteClientCache;
+    private final QueryServiceSupplier queryServiceSupplier;
 
     private final ActorSystem actorSystem;
 
@@ -51,11 +50,11 @@ public class AutoIndexQueryServiceImpl implements QueryService {
     @SuppressWarnings("unchecked")
     public AutoIndexQueryServiceImpl(final DocRefService docRefService,
                                      final TimelineTrackerService trackerService,
-                                     final RemoteClientCache<QueryService> remoteClientCache,
+                                     final QueryServiceSupplier queryServiceSupplier,
                                      final ActorSystem actorSystem) {
         this.docRefService = docRefService;
         this.trackerService = trackerService;
-        this.remoteClientCache = remoteClientCache;
+        this.queryServiceSupplier = queryServiceSupplier;
         this.actorSystem = actorSystem;
     }
 
@@ -70,7 +69,7 @@ public class AutoIndexQueryServiceImpl implements QueryService {
         final AutoIndexDocRefEntity docRefEntity =
                 docRefService.get(user, docRef.getUuid()).orElseThrow(NotFoundException::new);
 
-        final ActorRef actorRef = actorSystem.actorOf(QueryDataSourceActor.props(remoteClientCache));
+        final ActorRef actorRef = actorSystem.actorOf(QueryDataSourceActor.props(queryServiceSupplier));
 
         final Timeout timeout = Timeout.durationToTimeout(FiniteDuration.apply(5, TimeUnit.SECONDS));
         final CompletableFuture<QueryDataSourceMessages.JobComplete> jobCompleteF =
@@ -112,7 +111,7 @@ public class AutoIndexQueryServiceImpl implements QueryService {
 
         // Work through each split search request, sending it to the appropriate client and collate the results
         for (final Map.Entry<DocRef, Map<TrackerWindow, SearchRequest>> requestEntry : splitSearchRequest.getRequests().entrySet()) {
-            final QueryService client = remoteClientCache.apply(requestEntry.getKey().getType())
+            final QueryService client = queryServiceSupplier.apply(requestEntry.getKey().getType())
                     .orElseThrow(() -> new RuntimeException("Could not get HTTP Client for Query Resource"));
 
             // There may be several requests to send to each client, for fragmented windows.

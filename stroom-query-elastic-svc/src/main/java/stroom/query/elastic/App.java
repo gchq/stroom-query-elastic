@@ -12,7 +12,6 @@ import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.elasticsearch.client.transport.TransportClient;
-import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import stroom.query.audit.AuditedQueryBundle;
 import stroom.query.elastic.config.Config;
 import stroom.query.elastic.health.ElasticHealthCheck;

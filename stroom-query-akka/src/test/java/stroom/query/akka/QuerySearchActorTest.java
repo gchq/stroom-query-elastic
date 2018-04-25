@@ -11,15 +11,14 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.concurrent.duration.FiniteDuration;
-import stroom.akka.query.messages.QuerySearchMessages;
 import stroom.akka.query.actors.QuerySearchActor;
+import stroom.akka.query.messages.QuerySearchMessages;
 import stroom.query.api.v2.SearchRequest;
 import stroom.query.api.v2.SearchResponse;
-import stroom.query.audit.client.RemoteClientCache;
-import stroom.security.ServiceUser;
 import stroom.query.audit.service.QueryApiException;
 import stroom.query.audit.service.QueryService;
-import static akka.pattern.PatternsCS.ask;
+import stroom.query.audit.service.QueryServiceSupplier;
+import stroom.security.ServiceUser;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -30,6 +29,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
+import static akka.pattern.PatternsCS.ask;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
@@ -58,8 +58,7 @@ public class QuerySearchActorTest {
                 .build();
         final String type1 = "typeOne";
         final QueryService queryService = Mockito.mock(QueryService.class);
-        final RemoteClientCache<QueryService> queryServices =
-                new RemoteClientCache<>(d -> d, (t, u) -> t.equals(type1) ? queryService : null);
+        final QueryServiceSupplier queryServices = type -> Optional.of(type).filter(type1::equals).map(t -> queryService);
         Mockito.doReturn(Optional.of(new SearchResponse.FlatResultBuilder().build()))
                 .when(queryService)
                 .search(Mockito.any(), Mockito.any());
@@ -100,8 +99,7 @@ public class QuerySearchActorTest {
         Mockito.doReturn(Optional.empty())
                 .when(queryService)
                 .search(Mockito.any(), Mockito.any());
-        final RemoteClientCache<QueryService> queryServices =
-                new RemoteClientCache<>(d -> d, (t, u) -> t.equals(type1) ? queryService : null);
+        final QueryServiceSupplier queryServices = type -> Optional.of(type).filter(type1::equals).map(t -> queryService);
         final TestKit testProbe = new TestKit(system);
         final ActorRef searchActor = system.actorOf(QuerySearchActor.props(queryServices));
 
@@ -129,8 +127,7 @@ public class QuerySearchActorTest {
         Mockito.doReturn(Optional.of(new SearchResponse.FlatResultBuilder().build()))
                 .when(queryService)
                 .search(Mockito.any(), Mockito.any());
-        final RemoteClientCache<QueryService> queryServices =
-                new RemoteClientCache<>(d -> d, (t, u) -> t.equals(type1) ? queryService : null);
+        final QueryServiceSupplier queryServices = type -> Optional.of(type).filter(type1::equals).map(t -> queryService);
         final TestKit testProbe = new TestKit(system);
         final ActorRef searchActor1 = system.actorOf(QuerySearchActor.props(queryServices));
 
@@ -157,8 +154,7 @@ public class QuerySearchActorTest {
         Mockito.doReturn(Optional.of(new SearchResponse.FlatResultBuilder().build()))
                 .when(queryService)
                 .search(Mockito.any(), Mockito.any());
-        final RemoteClientCache<QueryService> queryServices =
-                new RemoteClientCache<>(d -> d, (t, u) -> t.equals(type1) ? queryService : null);
+        final QueryServiceSupplier queryServices = type -> Optional.of(type).filter(type1::equals).map(t -> queryService);
         final TestKit testProbe = new TestKit(system);
         final ActorRef searchActor = system.actorOf(QuerySearchActor.props(queryServices));
         final int numberOfJobs = 3;

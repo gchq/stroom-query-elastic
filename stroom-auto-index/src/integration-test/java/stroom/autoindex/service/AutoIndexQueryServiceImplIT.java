@@ -2,8 +2,10 @@ package stroom.autoindex.service;
 
 import akka.actor.ActorSystem;
 import akka.testkit.javadsl.TestKit;
-import com.google.inject.*;
-import com.google.inject.name.Names;
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Provides;
 import com.google.inject.util.Modules;
 import org.elasticsearch.client.transport.TransportClient;
 import org.jooq.DSLContext;
@@ -13,19 +15,19 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import stroom.authorisation.DocumentPermission;
 import stroom.autoindex.AbstractAutoIndexIntegrationTest;
 import stroom.autoindex.app.Config;
 import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.indexing.*;
 import stroom.query.api.v2.*;
-import stroom.authorisation.DocumentPermission;
-import stroom.query.audit.client.RemoteClientCache;
-import stroom.security.ServiceUser;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.audit.service.QueryService;
+import stroom.query.audit.service.QueryServiceSupplier;
 import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 import stroom.query.testing.RemoteClientTestingModule;
+import stroom.security.ServiceUser;
 import stroom.test.AnimalSighting;
 import stroom.test.AnimalTestData;
 import stroom.tracking.TimelineTrackerDao;
@@ -73,7 +75,7 @@ public class AutoIndexQueryServiceImplIT extends AbstractAutoIndexIntegrationTes
     /**
      * The cache of query resources, should serve up Client Spy's
      */
-    private static RemoteClientCache<QueryService> remoteClientCache;
+    private static QueryServiceSupplier queryServiceSupplier;
 
     @BeforeClass
     public static void beforeClass() {
@@ -112,7 +114,7 @@ public class AutoIndexQueryServiceImplIT extends AbstractAutoIndexIntegrationTes
         indexJobDao = testInjector.getInstance(IndexJobDao.class);
         timelineTrackerService = testInjector.getInstance(TimelineTrackerService.class);
         service = testInjector.getInstance(AutoIndexQueryServiceImpl.class);
-        remoteClientCache = testInjector.getInstance(Key.get(new TypeLiteral<RemoteClientCache<QueryService>>(){}));
+        queryServiceSupplier = testInjector.getInstance(QueryServiceSupplier.class);
     }
 
     @AfterClass
@@ -162,11 +164,11 @@ public class AutoIndexQueryServiceImplIT extends AbstractAutoIndexIntegrationTes
 
         // Get hold of the various client spies for the query resource
         final QueryService rawQueryClient =
-                remoteClientCache.apply(autoIndex.getEntity().getRawDocRef().getType())
+                queryServiceSupplier.apply(autoIndex.getEntity().getRawDocRef().getType())
                 .orElseThrow(() -> new RuntimeException("Could not get query resource client spy (raw)"));
 
         final QueryService indexQueryClient =
-                remoteClientCache.apply(autoIndex.getEntity().getIndexDocRef().getType())
+                queryServiceSupplier.apply(autoIndex.getEntity().getIndexDocRef().getType())
                 .orElseThrow(() -> new RuntimeException("Could not get query resource client spy (index)"));
 
         // Conduct the search

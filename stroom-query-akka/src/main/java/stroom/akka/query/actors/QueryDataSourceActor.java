@@ -8,25 +8,24 @@ import stroom.akka.query.messages.QueryDataSourceMessages;
 import stroom.query.api.v2.DocRef;
 import stroom.query.audit.service.QueryApiException;
 import stroom.query.audit.service.QueryService;
+import stroom.query.audit.service.QueryServiceSupplier;
 import stroom.security.ServiceUser;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 import static akka.pattern.PatternsCS.pipe;
 
 public class QueryDataSourceActor extends AbstractActor {
     private static final Logger LOGGER = LoggerFactory.getLogger(QueryDataSourceActor.class);
 
-    public static Props props(final Function<String, Optional<QueryService>> serviceSupplier) {
+    public static Props props(final QueryServiceSupplier serviceSupplier) {
         return Props.create(QueryDataSourceActor.class,
                 () -> new QueryDataSourceActor(serviceSupplier));
     }
 
-    private final Function<String, Optional<QueryService>> serviceSupplier;
+    private final QueryServiceSupplier serviceSupplier;
 
-    public QueryDataSourceActor(final Function<String, Optional<QueryService>> serviceSupplier) {
+    public QueryDataSourceActor(final QueryServiceSupplier serviceSupplier) {
         this.serviceSupplier = serviceSupplier;
     }
 

@@ -19,10 +19,10 @@ import stroom.autoindex.service.AutoIndexDocRefEntity;
 import stroom.autoindex.service.AutoIndexDocRefServiceImpl;
 import stroom.autoindex.service.AutoIndexQueryServiceImpl;
 import stroom.query.audit.client.RemoteClientModule;
-import stroom.security.ServiceUser;
 import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 import stroom.query.jooq.AuditedJooqDocRefBundle;
+import stroom.security.ServiceUser;
 import stroom.tracking.TimelineTrackerDao;
 import stroom.tracking.TimelineTrackerDaoJooqImpl;
 import stroom.tracking.TimelineTrackerService;
@@ -31,7 +31,8 @@ import stroom.tracking.TimelineTrackerServiceImpl;
 import javax.inject.Named;
 import java.util.Timer;
 
-import static stroom.autoindex.AutoIndexConstants.*;
+import static stroom.autoindex.AutoIndexConstants.STROOM_SERVICE_USER;
+import static stroom.autoindex.AutoIndexConstants.TASK_HANDLER_PARENT;
 
 public class App extends Application<Config> {
 
