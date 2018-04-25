@@ -25,7 +25,6 @@ public class IndexJobWriteActor extends AbstractActor {
         });
     }
 
-    private ActorRef sender;
     private final IndexJobHandler jobHandler;
 
     private IndexJobWriteActor(final IndexJobHandler jobHandler) {
@@ -36,17 +35,11 @@ public class IndexJobWriteActor extends AbstractActor {
     public Receive createReceive() {
         return receiveBuilder()
                 .match(IndexJobMessages.WriteIndexJob.class, writeJob -> {
-                    sender = getSender();
                     final CompletableFuture<IndexJob> result =
                             CompletableFuture.supplyAsync(() -> jobHandler.write(writeJob.getIndexJob(), writeJob.getSearchResponse()));
 
-                    pipe(result, getContext().dispatcher()).to(getSelf());
+                    pipe(result, getContext().dispatcher()).to(getSender());
                 })
-                .match(IndexJob.class, indexJob -> {
-                    this.sender.tell(indexJob, getSelf());
-                    getContext().stop(getSelf());
-                })
-
                 .build();
     }
 }

@@ -41,7 +41,6 @@ public class QueryDataSourceActorIT {
 
     private static DocRefService<CsvDocRefEntity> docRefService;
     private static QueryService queryService;
-    private static QueryServiceSupplier queryServiceSupplier;
 
     @ClassRule
     public static final FlatFileTestDataRule testDataRule = FlatFileTestDataRule.withTempDirectory()
@@ -63,7 +62,6 @@ public class QueryDataSourceActorIT {
 
         queryService = injector.getInstance(QueryService.class);
         docRefService = injector.getInstance(DocRefService.class);
-        queryServiceSupplier = type -> Optional.of(type).filter(CsvDocRefEntity.TYPE::equals).map(t -> queryService);
     }
 
     @AfterClass
@@ -81,7 +79,7 @@ public class QueryDataSourceActorIT {
                 .jwt(UUID.randomUUID().toString())
                 .build();
         final TestKit testProbe = new TestKit(system);
-        final ActorRef searchActor = system.actorOf(QueryDataSourceActor.props(queryServiceSupplier));
+        final ActorRef searchActor = system.actorOf(QueryDataSourceActor.props(user, queryService));
         final CsvDocRefEntity docRefEntity = docRefService.createDocument(user, docRefUuid, "testName")
                 .orElseThrow(() -> new AssertionError("Doc Ref Couldn't be created"));
         docRefEntity.setDataDirectory(testDataRule.getFolder().getAbsolutePath());
@@ -93,7 +91,7 @@ public class QueryDataSourceActorIT {
                 .build();
 
         // When
-        searchActor.tell(QueryDataSourceMessages.dataSource(user, docRef), testProbe.getRef());
+        searchActor.tell(docRef, testProbe.getRef());
 
         // Then
         final QueryDataSourceMessages.JobComplete jobComplete = testProbe.expectMsgClass(QueryDataSourceMessages.JobComplete.class);

@@ -2,7 +2,7 @@ package stroom.akka;
 
 import java.io.Serializable;
 
-public abstract class JobComplete<REQUEST extends ApiMessage, RESPONSE> implements Serializable {
+public abstract class JobComplete<REQUEST, RESPONSE> implements Serializable {
     private final REQUEST request;
     private final RESPONSE response;
     private final String error;

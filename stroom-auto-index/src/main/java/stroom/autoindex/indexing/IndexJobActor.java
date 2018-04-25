@@ -17,6 +17,8 @@ public class IndexJobActor extends AbstractActor {
         });
     }
 
+    // When the first message comes in, keep record of who sent it so the eventual
+    // result can be returned to them
     private ActorRef sender;
     private final IndexJobHandler indexJobHandler;
 

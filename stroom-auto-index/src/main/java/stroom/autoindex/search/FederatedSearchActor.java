@@ -6,6 +6,7 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.japi.Creator;
 import stroom.akka.query.messages.QuerySearchMessages;
+import stroom.query.api.v2.SearchRequest;
 
 public class FederatedSearchActor extends AbstractActor {
 
@@ -39,15 +40,15 @@ public class FederatedSearchActor extends AbstractActor {
     @Override
     public Receive createReceive() {
         return receiveBuilder()
-                .match(QuerySearchMessages.Job.class, searchJob -> {
+                .match(SearchRequest.class, searchJob -> {
                     searchSplitter.tell(searchJob, getSelf());
                 })
                 .match(AutoIndexMessages.SplitSearchJobComplete.class, splitComplete -> {
                     if (null != splitComplete.getSplitSearchRequest()) {
                         splitComplete.getSplitSearchRequest().getRequests()
                                 .forEach((docRef, requestsByTracker) -> {
-                            requestsByTracker.forEach((tw, searchRequest) -> {
-                                searchActor.tell(QuerySearchMessages.search(splitComplete.getUser(), docRef.getType(), searchRequest), getSelf());
+                            requestsByTracker.forEach((tw, partRequest) -> {
+                                searchActor.tell(partRequest, getSelf());
                             });
 
                         });

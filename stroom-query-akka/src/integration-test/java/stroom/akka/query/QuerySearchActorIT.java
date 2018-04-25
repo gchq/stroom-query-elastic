@@ -18,7 +18,6 @@ import stroom.query.api.v2.*;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.audit.service.QueryApiException;
 import stroom.query.audit.service.QueryService;
-import stroom.query.audit.service.QueryServiceSupplier;
 import stroom.query.csv.CsvDocRefEntity;
 import stroom.query.csv.CsvDocRefServiceImpl;
 import stroom.query.csv.CsvFieldSupplier;
@@ -31,7 +30,6 @@ import stroom.testdata.FlatFileTestDataRule;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.Assert.assertNotNull;
@@ -44,7 +42,6 @@ public class QuerySearchActorIT {
 
     private static DocRefService<CsvDocRefEntity> docRefService;
     private static QueryService queryService;
-    private static QueryServiceSupplier queryServiceSupplier;
 
     @ClassRule
     public static final FlatFileTestDataRule testDataRule = FlatFileTestDataRule.withTempDirectory()
@@ -66,7 +63,6 @@ public class QuerySearchActorIT {
 
         queryService = injector.getInstance(QueryService.class);
         docRefService = injector.getInstance(DocRefService.class);
-        queryServiceSupplier = type -> Optional.of(type).filter(CsvDocRefEntity.TYPE::equals).map(t -> queryService);
     }
 
     @AfterClass
@@ -84,7 +80,7 @@ public class QuerySearchActorIT {
                 .jwt(UUID.randomUUID().toString())
                 .build();
         final TestKit testProbe = new TestKit(system);
-        final ActorRef searchActor = system.actorOf(QuerySearchActor.props(queryServiceSupplier));
+        final ActorRef searchActor = system.actorOf(QuerySearchActor.props(user, queryService));
         final CsvDocRefEntity docRefEntity = docRefService.createDocument(user, docRefUuid, "testName")
                 .orElseThrow(() -> new AssertionError("Doc Ref Couldn't be created"));
         docRefEntity.setDataDirectory(testDataRule.getFolder().getAbsolutePath());
@@ -112,7 +108,7 @@ public class QuerySearchActorIT {
         final SearchRequest searchRequest = AnimalTestData.getTestSearchRequest(docRef, expressionOperator, offset);
 
         // When
-        searchActor.tell(QuerySearchMessages.search(user, CsvDocRefEntity.TYPE, searchRequest), testProbe.getRef());
+        searchActor.tell(searchRequest, testProbe.getRef());
 
         // Then
         final QuerySearchMessages.JobComplete jobComplete = testProbe.expectMsgClass(QuerySearchMessages.JobComplete.class);

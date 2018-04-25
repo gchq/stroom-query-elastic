@@ -117,7 +117,7 @@ public class SearchRequestSplitterActorIT extends AbstractAutoIndexIntegrationTe
                 TrackerWindow.from(filledInStart).to(timelineEnd));
 
         // Construct the actor to test
-        final ActorRef splitter = actorSystem.actorOf(SearchRequestSplitterActor.props(docRefService, timelineTrackerService));
+        final ActorRef splitter = actorSystem.actorOf(SearchRequestSplitterActor.props(testUser, docRefService, timelineTrackerService));
 
         // Now compose a query that covers all time
         final OffsetRange offset = new OffsetRange.Builder()
@@ -137,7 +137,7 @@ public class SearchRequestSplitterActorIT extends AbstractAutoIndexIntegrationTe
                 .getTestSearchRequest(autoIndex.getDocRef(), expressionOperator, offset);
 
         // Send the message to the splitter
-        splitter.tell(QuerySearchMessages.search(testUser, AutoIndexDocRefEntity.TYPE, searchRequest), testProbe.ref());
+        splitter.tell(searchRequest, testProbe.ref());
 
         // Then
         final AutoIndexMessages.SplitSearchJobComplete jobComplete =

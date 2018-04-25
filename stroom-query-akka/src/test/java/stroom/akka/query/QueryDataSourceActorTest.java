@@ -1,4 +1,4 @@
-package stroom.query.akka;
+package stroom.akka.query;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -15,7 +15,6 @@ import stroom.datasource.api.v2.DataSource;
 import stroom.query.api.v2.DocRef;
 import stroom.query.audit.service.QueryApiException;
 import stroom.query.audit.service.QueryService;
-import stroom.query.audit.service.QueryServiceSupplier;
 import stroom.security.ServiceUser;
 
 import java.util.Optional;
@@ -54,15 +53,14 @@ public class QueryDataSourceActorTest {
                 .name(UUID.randomUUID().toString())
                 .build();
         final QueryService queryService = Mockito.mock(QueryService.class);
-        final QueryServiceSupplier queryServices = type -> Optional.of(type).filter(type1::equals).map(t -> queryService);
         Mockito.doReturn(Optional.of(new DataSource.Builder().build()))
                 .when(queryService)
                 .getDataSource(Mockito.any(), Mockito.any());
         final TestKit testProbe = new TestKit(system);
-        final ActorRef searchActor = system.actorOf(QueryDataSourceActor.props(queryServices));
+        final ActorRef searchActor = system.actorOf(QueryDataSourceActor.props(user, queryService));
 
         // When
-        searchActor.tell(QueryDataSourceMessages.dataSource(user, docRef1), testProbe.getRef());
+        searchActor.tell(docRef1, testProbe.getRef());
 
         // Then
         final QueryDataSourceMessages.JobComplete jobComplete = testProbe.expectMsgClass(QueryDataSourceMessages.JobComplete.class);
@@ -87,45 +85,11 @@ public class QueryDataSourceActorTest {
         Mockito.doReturn(Optional.empty())
                 .when(queryService)
                 .getDataSource(Mockito.any(), Mockito.any());
-        final QueryServiceSupplier queryServices = type -> Optional.of(type).filter(type1::equals).map(t -> queryService);
         final TestKit testProbe = new TestKit(system);
-        final ActorRef searchActor = system.actorOf(QueryDataSourceActor.props(queryServices));
+        final ActorRef searchActor = system.actorOf(QueryDataSourceActor.props(user, queryService));
 
         // When
-        searchActor.tell(QueryDataSourceMessages.dataSource(user, docRef1), testProbe.getRef());
-
-        // Then
-        final QueryDataSourceMessages.JobComplete jobComplete = testProbe.expectMsgClass(QueryDataSourceMessages.JobComplete.class);
-        assertNull(jobComplete.getResponse());
-        assertNotNull(jobComplete.getError());
-
-        LOGGER.info("Error Seen correctly {}", jobComplete.getError());
-    }
-
-    @Test
-    public void testDataSourceInvalidType() throws QueryApiException {
-        // Given
-        final ServiceUser user = new ServiceUser.Builder()
-                .name("Me")
-                .jwt(UUID.randomUUID().toString())
-                .build();
-        final String type1 = "typeOne";
-        final String type2 = "typeTwo";
-        final DocRef docRef2 = new DocRef.Builder()
-                .uuid(UUID.randomUUID().toString())
-                .type(type2)
-                .name(UUID.randomUUID().toString())
-                .build();
-        final QueryService queryService = Mockito.mock(QueryService.class);
-        Mockito.doReturn(Optional.of(new DataSource.Builder().build()))
-                .when(queryService)
-                .getDataSource(Mockito.any(), Mockito.any());
-        final QueryServiceSupplier queryServices = type -> Optional.of(type).filter(type1::equals).map(t -> queryService);
-        final TestKit testProbe = new TestKit(system);
-        final ActorRef searchActor1 = system.actorOf(QueryDataSourceActor.props(queryServices));
-
-        // When
-        searchActor1.tell(QueryDataSourceMessages.dataSource(user, docRef2), testProbe.getRef());
+        searchActor.tell(docRef1, testProbe.getRef());
 
         // Then
         final QueryDataSourceMessages.JobComplete jobComplete = testProbe.expectMsgClass(QueryDataSourceMessages.JobComplete.class);

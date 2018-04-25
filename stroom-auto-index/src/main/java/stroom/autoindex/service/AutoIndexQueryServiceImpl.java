@@ -1,13 +1,8 @@
 package stroom.autoindex.service;
 
-import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
-import akka.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.concurrent.duration.FiniteDuration;
-import stroom.akka.query.actors.QueryDataSourceActor;
-import stroom.akka.query.messages.QueryDataSourceMessages;
 import stroom.autoindex.search.SearchRequestSplitter;
 import stroom.autoindex.search.SearchResponseMerger;
 import stroom.autoindex.search.SplitSearchRequest;
@@ -29,11 +24,6 @@ import stroom.tracking.TrackerWindow;
 import javax.inject.Inject;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-
-import static akka.pattern.PatternsCS.ask;
 
 public class AutoIndexQueryServiceImpl implements QueryService {
     private static final Logger LOGGER = LoggerFactory.getLogger(AutoIndexQueryServiceImpl.class);
@@ -69,25 +59,9 @@ public class AutoIndexQueryServiceImpl implements QueryService {
         final AutoIndexDocRefEntity docRefEntity =
                 docRefService.get(user, docRef.getUuid()).orElseThrow(NotFoundException::new);
 
-        final ActorRef actorRef = actorSystem.actorOf(QueryDataSourceActor.props(queryServiceSupplier));
-
-        final Timeout timeout = Timeout.durationToTimeout(FiniteDuration.apply(5, TimeUnit.SECONDS));
-        final CompletableFuture<QueryDataSourceMessages.JobComplete> jobCompleteF =
-                ask(actorRef, QueryDataSourceMessages.dataSource(user, docRefEntity.getRawDocRef()), timeout)
-                        .thenApply((QueryDataSourceMessages.JobComplete.class::cast))
-                        .toCompletableFuture();
-
-        try {
-            final QueryDataSourceMessages.JobComplete jobComplete = jobCompleteF.get();
-
-            if (null != jobComplete.getError()) {
-                throw new QueryApiException(jobComplete.getError());
-            }
-
-            return Optional.ofNullable(jobComplete.getResponse());
-        } catch (final InterruptedException | ExecutionException e) {
-            throw new QueryApiException(e);
-        }
+        return queryServiceSupplier.apply(docRefEntity.getRawDocRef().getType())
+                .orElseThrow(() -> new RuntimeException("Could not get Query Service"))
+                .getDataSource(user, docRefEntity.getRawDocRef());
     }
 
     @Override

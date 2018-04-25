@@ -25,22 +25,27 @@ public class SearchRequestSplitterActor extends AbstractActor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SearchRequestSplitterActor.class);
 
-    public static final Props props(final DocRefService docRefService,
+    public static final Props props(final ServiceUser user,
+                                    final DocRefService docRefService,
                                     final TimelineTrackerService trackerService) {
         return Props.create(new Creator<Actor>() {
             @Override
             public Actor create() throws Exception {
-                return new SearchRequestSplitterActor(docRefService, trackerService);
+                return new SearchRequestSplitterActor(user, docRefService, trackerService);
             }
         });
     }
+
+    private final ServiceUser user;
 
     private final DocRefService<AutoIndexDocRefEntity> docRefService;
 
     private final TimelineTrackerService trackerService;
 
-    public SearchRequestSplitterActor(final DocRefService docRefService,
+    public SearchRequestSplitterActor(final ServiceUser user,
+                                      final DocRefService docRefService,
                                       final TimelineTrackerService trackerService) {
+        this.user = user;
         this.docRefService = docRefService;
         this.trackerService = trackerService;
     }
@@ -48,13 +53,11 @@ public class SearchRequestSplitterActor extends AbstractActor {
     @Override
     public Receive createReceive() {
         return receiveBuilder()
-                .match(QuerySearchMessages.Job.class, this::handleSearchJob)
+                .match(SearchRequest.class, this::handleSearchJob)
                 .build();
     }
 
-    private void handleSearchJob(final QuerySearchMessages.Job job) {
-        final SearchRequest searchRequest = job.getRequest();
-        final ServiceUser user = job.getUser();
+    private void handleSearchJob(final SearchRequest searchRequest) {
 
         final CompletableFuture<AutoIndexMessages.SplitSearchJobComplete> result =
                 CompletableFuture.supplyAsync(() -> {

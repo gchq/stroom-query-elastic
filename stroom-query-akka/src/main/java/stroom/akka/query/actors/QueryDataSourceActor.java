@@ -2,6 +2,8 @@ package stroom.akka.query.actors;
 
 import akka.actor.AbstractActor;
 import akka.actor.Props;
+import akka.event.Logging;
+import akka.event.LoggingAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import stroom.akka.query.messages.QueryDataSourceMessages;
@@ -16,50 +18,50 @@ import java.util.concurrent.CompletableFuture;
 import static akka.pattern.PatternsCS.pipe;
 
 public class QueryDataSourceActor extends AbstractActor {
-    private static final Logger LOGGER = LoggerFactory.getLogger(QueryDataSourceActor.class);
 
-    public static Props props(final QueryServiceSupplier serviceSupplier) {
+    private final LoggingAdapter log = Logging.getLogger(getContext().system(), this);
+
+    public static Props props(final ServiceUser user,
+                              final QueryService service) {
         return Props.create(QueryDataSourceActor.class,
-                () -> new QueryDataSourceActor(serviceSupplier));
+                () -> new QueryDataSourceActor(user, service));
     }
 
-    private final QueryServiceSupplier serviceSupplier;
+    private final ServiceUser user;
+    private final QueryService service;
 
-    public QueryDataSourceActor(final QueryServiceSupplier serviceSupplier) {
-        this.serviceSupplier = serviceSupplier;
+    public QueryDataSourceActor(final ServiceUser user,
+                                final QueryService service) {
+        this.user = user;
+        this.service = service;
     }
 
     @Override
     public Receive createReceive() {
         return receiveBuilder()
-                .match(QueryDataSourceMessages.Job.class, this::handleDataSource)
+                .match(DocRef.class, this::handleDataSource)
                 .build();
     }
 
-    private void handleDataSource(final QueryDataSourceMessages.Job job) {
-        final ServiceUser user = job.getUser();
-        final DocRef docRef = job.getDocRef();
+    private void handleDataSource(final DocRef docRef) {
 
-        LOGGER.debug("Fetching Data Source for {}", docRef);
+        log.debug("Fetching Data Source for {}", docRef);
 
         final CompletableFuture<QueryDataSourceMessages.JobComplete> result =
                 CompletableFuture.supplyAsync(() -> {
                     try {
-                        final QueryService queryService = this.serviceSupplier.apply(docRef.getType())
-                                .orElseThrow(() -> new RuntimeException("Could not find query service for " + docRef.getType()));
-
-                        return queryService.getDataSource(user, docRef)
+                        return service.getDataSource(user, docRef)
                                 .orElseThrow(() -> new QueryApiException("Could not get response"));
                     } catch (QueryApiException e) {
-                        LOGGER.error("Failed to run search", e);
+                        log.error("Failed to run search", e);
                         throw new RuntimeException(e);
                     } catch (RuntimeException e) {
-                        LOGGER.error("Failed to run search", e);
+                        log.error("Failed to run search", e);
                         throw e;
                     }
                 })
-                        .thenApply(d -> QueryDataSourceMessages.complete(job, d))
-                        .exceptionally(e -> QueryDataSourceMessages.failed(job, e));
+                        .thenApply(d -> QueryDataSourceMessages.complete(docRef, d))
+                        .exceptionally(e -> QueryDataSourceMessages.failed(docRef, e));
 
         pipe(result, getContext().dispatcher()).to(getSender());
     }

@@ -65,11 +65,12 @@ dependencies {
     compile deps.stroomTestData
 
     //---------3rd Party
-    compile group: 'com.typesafe.akka', name: 'akka-http_2.12',   version: '10.1.1'
-    compile group: 'com.typesafe.akka', name: 'akka-stream_2.12', version: '2.5.11'
-    compile group: 'com.typesafe.akka', name: 'akka-http-jackson_2.12', version: '10.1.1' // JSON support over HTTP
-
     compile deps.akka_actor
+    compile deps.akka_cluster_tools
+    compile deps.akka_cluster_metrics
+    compile deps.akka_http
+    compile deps.akka_stream
+    compile deps.akka_http_jackson
     compile deps.bcrypt
     compile deps.curator_service_discovery
     compile deps.dropwizard_auth
