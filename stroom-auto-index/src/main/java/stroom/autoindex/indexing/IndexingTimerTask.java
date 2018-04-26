@@ -71,8 +71,8 @@ public class IndexingTimerTask extends TimerTask {
                     .map(IndexJobMessages::search) // wrap as messages for actor
                     .forEach(t -> {
                         final ActorRef indexJobActor =
-                                actorSystem.actorOf(IndexJobActor.props(indexJobHandler));
-                        indexJobActor.tell(t, indexJobActorParent);
+                                actorSystem.actorOf(IndexJobActor.props(indexJobActorParent, indexJobHandler));
+                        indexJobActor.tell(t, ActorRef.noSender());
                     });
 
         } catch (final Exception e) {

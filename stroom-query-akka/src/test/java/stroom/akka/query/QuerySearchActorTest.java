@@ -74,12 +74,11 @@ public class QuerySearchActorTest {
 
         // Now try same thing using ask
         final Timeout timeout = Timeout.durationToTimeout(FiniteDuration.apply(5, TimeUnit.SECONDS));
-        CompletableFuture<QuerySearchMessages.JobComplete> syncJobComplete =
+        QuerySearchMessages.JobComplete jobComplete2 =
                 ask(searchActor, job, timeout)
                         .thenApply((QuerySearchMessages.JobComplete.class::cast))
-                        .toCompletableFuture();
-
-        final QuerySearchMessages.JobComplete jobComplete2 = syncJobComplete.get();
+                        .toCompletableFuture()
+                        .get();
 
         LOGGER.info("Job Complete as Synchronous Process {}", jobComplete2);
         assertNotNull(jobComplete2.getResponse());

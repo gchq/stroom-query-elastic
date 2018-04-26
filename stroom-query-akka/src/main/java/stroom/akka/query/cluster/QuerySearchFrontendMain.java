@@ -3,17 +3,30 @@ package stroom.akka.query.cluster;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.cluster.Cluster;
+import akka.util.Timeout;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import akka.actor.ActorSystem;
 import scala.concurrent.Await;
 import scala.concurrent.duration.Duration;
+import scala.concurrent.duration.FiniteDuration;
 import stroom.akka.query.messages.QuerySearchMessages;
+import stroom.datasource.api.v2.DataSource;
+import stroom.query.api.v2.DocRef;
+import stroom.query.api.v2.QueryKey;
 import stroom.query.api.v2.SearchRequest;
+import stroom.query.api.v2.SearchResponse;
+import stroom.query.audit.service.QueryApiException;
+import stroom.query.audit.service.QueryService;
+import stroom.security.ServiceUser;
 
+import static akka.pattern.PatternsCS.ask;
+
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-public class QuerySearchFrontendMain {
+public class QuerySearchFrontendMain implements QueryService {
     public static final String CLUSTER_SYSTEM_NAME = "QueryClusterSystem";
 
     public static QuerySearchFrontendMain create() {
@@ -21,14 +34,6 @@ public class QuerySearchFrontendMain {
     }
 
     private ActorRef frontendActor;
-
-    public void search(final SearchRequest request) {
-        if (null != frontendActor) {
-            frontendActor.tell(request, ActorRef.noSender());
-        } else {
-            throw new RuntimeException("Search is not available");
-        }
-    }
 
     public void run() {
         final Config config = ConfigFactory.parseString(
@@ -65,23 +70,64 @@ public class QuerySearchFrontendMain {
                 // exit the JVM forcefully anyway.
                 // We must spawn a separate thread to not block current thread,
                 // since that would have blocked the shutdown of the ActorSystem.
-                new Thread() {
-                    @Override public void run(){
-                        try {
-                            Await.ready(system.whenTerminated(), Duration.create(10, TimeUnit.SECONDS));
-                        } catch (Exception e) {
-                            System.exit(-1);
-                        }
-
+                new Thread(() -> {
+                    try {
+                        Await.ready(system.whenTerminated(), Duration.create(10, TimeUnit.SECONDS));
+                    } catch (Exception e) {
+                        System.exit(-1);
                     }
-                }.start();
+
+                }).start();
             }
         });
     }
 
-
     public static void main(String[] args) {
         // Run this cluster frontend
         create().run();
+    }
+
+    @Override
+    public String getType() {
+        return null;
+    }
+
+    @Override
+    public Optional<DataSource> getDataSource(final ServiceUser user,
+                                              final DocRef docRef) throws QueryApiException {
+        return null;
+    }
+
+    @Override
+    public Optional<SearchResponse> search(final ServiceUser user,
+                                           final SearchRequest request) throws QueryApiException {
+        if (null != frontendActor) {
+
+            final Timeout timeout = Timeout.durationToTimeout(FiniteDuration.apply(5, TimeUnit.SECONDS));
+            try {
+                final QuerySearchMessages.JobComplete complete =
+                        ask(frontendActor, request, timeout)
+                                .thenApply((QuerySearchMessages.JobComplete.class::cast))
+                                .toCompletableFuture()
+                                .get();
+
+                return Optional.ofNullable(complete.getResponse());
+            } catch (InterruptedException | ExecutionException e) {
+                throw new QueryApiException(e);
+            }
+        } else {
+            throw new RuntimeException("Search is not available");
+        }
+    }
+
+    @Override
+    public Boolean destroy(final ServiceUser user,
+                           final QueryKey queryKey) throws QueryApiException {
+        return null;
+    }
+
+    @Override
+    public Optional<DocRef> getDocRefForQueryKey(ServiceUser user, QueryKey queryKey) throws QueryApiException {
+        return null;
     }
 }

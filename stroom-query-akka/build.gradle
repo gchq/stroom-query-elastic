@@ -68,9 +68,6 @@ dependencies {
     compile deps.akka_actor
     compile deps.akka_cluster_tools
     compile deps.akka_cluster_metrics
-    compile deps.akka_http
-    compile deps.akka_stream
-    compile deps.akka_http_jackson
     compile deps.bcrypt
     compile deps.curator_service_discovery
     compile deps.dropwizard_auth

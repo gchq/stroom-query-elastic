@@ -15,7 +15,7 @@ public interface QuerySearchMessages {
         return new JobComplete(job, null, exception.getLocalizedMessage());
     }
 
-    class JobComplete extends stroom.akka.JobComplete {
+    class JobComplete extends stroom.akka.JobComplete<SearchRequest, SearchResponse> {
         private JobComplete(final SearchRequest request,
                             final SearchResponse response,
                             final String error) {

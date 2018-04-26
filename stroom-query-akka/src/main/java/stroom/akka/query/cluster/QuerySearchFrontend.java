@@ -5,14 +5,13 @@ import akka.actor.ActorRef;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import akka.routing.FromConfig;
-import stroom.akka.query.messages.QuerySearchMessages;
 import stroom.query.api.v2.SearchRequest;
 
 public class QuerySearchFrontend extends AbstractActor {
 
-    LoggingAdapter log = Logging.getLogger(getContext().system(), this);
+    private final LoggingAdapter log = Logging.getLogger(getContext().system(), this);
 
-    ActorRef backend = getContext().actorOf(FromConfig.getInstance().props(),
+    private final ActorRef backend = getContext().actorOf(FromConfig.getInstance().props(),
             "querySearchBackendRouter");
 
     @Override
@@ -20,10 +19,7 @@ public class QuerySearchFrontend extends AbstractActor {
         return receiveBuilder()
                 .match(SearchRequest.class, j -> {
                     log.info("Forwarding Search job to Backend");
-                    backend.tell(j, getSelf());
-                })
-                .match(QuerySearchMessages.JobComplete.class, c -> {
-                    log.info("Search Response Received {}", c.getResponse());
+                    backend.tell(j, getSender());
                 })
                 .build();
     }

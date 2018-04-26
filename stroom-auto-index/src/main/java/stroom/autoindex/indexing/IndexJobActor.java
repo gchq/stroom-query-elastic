@@ -8,21 +8,24 @@ import akka.japi.Creator;
 
 public class IndexJobActor extends AbstractActor {
 
-    public static Props props(final IndexJobHandler indexJobHandler) {
+    public static Props props(final ActorRef replyTo,
+                              final IndexJobHandler indexJobHandler) {
         return Props.create(new Creator<Actor>() {
             @Override
             public Actor create() throws Exception {
-                return new IndexJobActor(indexJobHandler);
+                return new IndexJobActor(replyTo, indexJobHandler);
             }
         });
     }
 
     // When the first message comes in, keep record of who sent it so the eventual
     // result can be returned to them
-    private ActorRef sender;
+    private final ActorRef replyTo;
     private final IndexJobHandler indexJobHandler;
 
-    private IndexJobActor(final IndexJobHandler indexJobHandler) {
+    private IndexJobActor(final ActorRef replyTo,
+                          final IndexJobHandler indexJobHandler) {
+        this.replyTo = replyTo;
         this.indexJobHandler = indexJobHandler;
 
     }
@@ -31,7 +34,6 @@ public class IndexJobActor extends AbstractActor {
     public Receive createReceive() {
         return receiveBuilder()
                 .match(IndexJobMessages.SearchIndexJob.class, indexJob -> {
-                    this.sender = getSender();
                     getContext().actorOf(IndexJobSearchActor.props(this.indexJobHandler))
                             .tell(indexJob, getSelf());
                 })
@@ -40,7 +42,7 @@ public class IndexJobActor extends AbstractActor {
                                 .tell(writeJob, getSelf())
                 )
                 .match(IndexJob.class, indexJob -> {
-                    this.sender.tell(indexJob, getSelf());
+                    this.replyTo.tell(indexJob, getSelf());
 
                     // That's us done
                     getContext().stop(getSelf());

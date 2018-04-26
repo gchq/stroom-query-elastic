@@ -68,13 +68,8 @@ public class QueryClusterTest {
             e.printStackTrace();
         }
 
-        frontend.search(testRequest);
-
-        try {
-            Thread.sleep(2000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        final SearchResponse response = frontend.search(user, testRequest)
+                .orElseThrow(() -> new AssertionError("No search response given"));
 
         // Then
         verify(queryService).search(user, testRequest);
