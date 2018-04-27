@@ -7,19 +7,25 @@ import org.mockito.runners.MockitoJUnitRunner;
 import stroom.akka.query.cluster.QuerySearchBackendMain;
 import stroom.akka.query.cluster.QuerySearchFrontendMain;
 import stroom.akka.query.messages.QuerySearchMessages;
-import stroom.query.api.v2.Field;
-import stroom.query.api.v2.FlatResult;
-import stroom.query.api.v2.SearchRequest;
-import stroom.query.api.v2.SearchResponse;
+import stroom.datasource.api.v2.DataSource;
+import stroom.datasource.api.v2.DataSourceField;
+import stroom.query.api.v2.*;
 import stroom.query.audit.service.QueryApiException;
 import stroom.query.audit.service.QueryService;
 import stroom.security.ServiceUser;
 
 import java.io.IOException;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
@@ -39,8 +45,23 @@ public class QueryClusterTest {
                 .name("Test User Dude")
                 .jwt(UUID.randomUUID().toString())
                 .build();
+        final DocRef testDocRef = new DocRef.Builder()
+                .uuid(UUID.randomUUID().toString())
+                .type("Test")
+                .name("A test document")
+                .build();
         final SearchRequest testRequest = new SearchRequest.Builder()
                 .key(UUID.randomUUID().toString())
+                .build();
+        final DataSource testDataSource = new DataSource.Builder()
+                .addFields(new DataSourceField.Builder()
+                        .name("SomeID")
+                        .type(DataSourceField.DataSourceFieldType.ID)
+                        .build())
+                .addFields(new DataSourceField.Builder()
+                        .name("SomeName")
+                        .type(DataSourceField.DataSourceFieldType.FIELD)
+                        .build())
                 .build();
         final SearchResponse testResponse = new SearchResponse.FlatResultBuilder()
                 .addResults(new FlatResult.Builder()
@@ -49,6 +70,7 @@ public class QueryClusterTest {
                                 .build())
                         .build())
                 .build();
+        when(queryService.getDataSource(user, testDocRef)).thenReturn(Optional.of(testDataSource));
         when(queryService.search(user, testRequest)).thenReturn(Optional.of(testResponse));
 
         // When
@@ -60,18 +82,25 @@ public class QueryClusterTest {
                 .run());
 
         final QuerySearchFrontendMain frontend = QuerySearchFrontendMain.create();
-        frontend.run();
+        final CompletableFuture<Boolean> clusterReady = frontend.run();
 
         try {
-            Thread.sleep(10000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+            clusterReady.get(10, TimeUnit.SECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            fail(e.getLocalizedMessage());
         }
 
-        final SearchResponse response = frontend.search(user, testRequest)
+        final DataSource dataSourceResponse = frontend.getDataSource(user, testDocRef)
+                .orElseThrow(() -> new AssertionError("No DataSource response given"));
+
+        final SearchResponse searchResponse = frontend.search(user, testRequest)
                 .orElseThrow(() -> new AssertionError("No search response given"));
 
         // Then
         verify(queryService).search(user, testRequest);
+        verify(queryService).getDataSource(user, testDocRef);
+
+        assertEquals(testDataSource, dataSourceResponse);
+        assertEquals(testResponse, searchResponse);
     }
 }

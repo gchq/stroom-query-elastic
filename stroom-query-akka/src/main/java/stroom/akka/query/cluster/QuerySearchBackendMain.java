@@ -3,6 +3,7 @@ package stroom.akka.query.cluster;
 import akka.actor.ActorSystem;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import stroom.akka.query.actors.QueryDataSourceActor;
 import stroom.akka.query.actors.QuerySearchActor;
 import stroom.query.audit.service.QueryService;
 import stroom.security.ServiceUser;
@@ -63,6 +64,6 @@ public class QuerySearchBackendMain {
 
         ActorSystem system = ActorSystem.create(CLUSTER_SYSTEM_NAME, config);
 
-        system.actorOf(QuerySearchActor.props(user, service), "querySearchBackend");
+        system.actorOf(QuerySearchBackend.props(user, service), "querySearchBackend");
     }
 }
