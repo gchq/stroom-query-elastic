@@ -54,7 +54,12 @@ public class AnimalsQueryResourceIT extends QueryResourceIT<CsvDocRefEntity, Csv
     }
 
     @Test
-    public void testQuerySearch() {
+    public void testQueryActor() {
+
+    }
+
+    @Test
+    public void testQueryService() {
         final DocRef docRef = createDocument(new CsvDocRefEntity.Builder()
                 .dataDirectory(testDataRule.getFolder().getAbsolutePath())
                 .build());

@@ -91,6 +91,11 @@ public class AutoIndexQueryServiceImpl implements QueryService {
             // There may be several requests to send to each client, for fragmented windows.
             requestEntry.getValue().forEach((tw, partRequest) -> {
                 try {
+                    System.out.println("Type " + requestEntry.getKey().getType());
+                    System.out.println("Client " + client);
+                    System.out.println("Query Part " + tw);
+                    System.out.println("Request " + partRequest);
+
                     final Optional<SearchResponse> searchResponse = client.search(user, partRequest);
 
                     searchResponse.ifPresent(merger::response);

@@ -21,9 +21,11 @@ import stroom.autoindex.app.Config;
 import stroom.autoindex.app.IndexingConfig;
 import stroom.autoindex.indexing.*;
 import stroom.query.api.v2.*;
+import stroom.query.audit.client.NotFoundException;
 import stroom.query.audit.service.DocRefService;
 import stroom.query.audit.service.QueryService;
 import stroom.query.audit.service.QueryServiceSupplier;
+import stroom.query.csv.CsvDocRefEntity;
 import stroom.query.elastic.model.ElasticIndexDocRefEntity;
 import stroom.query.elastic.transportClient.TransportClientBundle;
 import stroom.query.testing.RemoteClientTestingModule;
@@ -41,6 +43,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.Set;
 
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
 import static stroom.autoindex.AutoIndexConstants.STROOM_SERVICE_USER;
 import static stroom.autoindex.TestConstants.TEST_SERVICE_USER;
 import static stroom.test.AnimalTestData.getAnimalSightingsFromResponse;
@@ -141,11 +145,24 @@ public class AutoIndexQueryServiceImplIT extends AbstractAutoIndexIntegrationTes
                 .permission(DocumentPermission.UPDATE)
                 .done();
 
+        // Get hold of the various client spies for the query resource
+        final QueryService rawQueryClient =
+                queryServiceSupplier.apply(autoIndex.getEntity().getRawDocRef().getType())
+                        .orElseThrow(() -> new RuntimeException("Could not get query resource client spy (raw)"));
+
+        final QueryService indexQueryClient =
+                queryServiceSupplier.apply(autoIndex.getEntity().getIndexDocRef().getType())
+                        .orElseThrow(() -> new RuntimeException("Could not get query resource client spy (index)"));
+
         // Manually force the indexing to occur
         final IndexJob indexJob = indexJobDao.getOrCreate(docRefUuid)
                 .orElseThrow(() -> new AssertionError("Index Job Should exist"));
         final SearchResponse indexingSearchResponse = indexJobHandler.search(indexJob);
         indexJobHandler.write(indexJob, indexingSearchResponse);
+
+        // The raw search will have been called to populate the index
+        Mockito.verify(rawQueryClient).search(Mockito.any(), Mockito.any());
+        reset(rawQueryClient);
 
         // Now compose a query that covers all time
         final OffsetRange offset = new OffsetRange.Builder()
@@ -161,15 +178,6 @@ public class AutoIndexQueryServiceImplIT extends AbstractAutoIndexIntegrationTes
                         testMinDate.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
                 )
                 .build();
-
-        // Get hold of the various client spies for the query resource
-        final QueryService rawQueryClient =
-                queryServiceSupplier.apply(autoIndex.getEntity().getRawDocRef().getType())
-                .orElseThrow(() -> new RuntimeException("Could not get query resource client spy (raw)"));
-
-        final QueryService indexQueryClient =
-                queryServiceSupplier.apply(autoIndex.getEntity().getIndexDocRef().getType())
-                .orElseThrow(() -> new RuntimeException("Could not get query resource client spy (index)"));
 
         // Conduct the search
         final SearchRequest searchRequest = AnimalTestData

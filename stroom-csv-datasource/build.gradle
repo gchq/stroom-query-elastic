@@ -68,6 +68,8 @@ dependencies {
     compile project(':stroom-query-elastic-svc')
     compile project(':stroom-query-akka')
 
+    compile deps.akka_actor
+    compile deps.akka_stream
     compile deps.kafka
     compile deps.dropwizard_core
     compile deps.slf4j

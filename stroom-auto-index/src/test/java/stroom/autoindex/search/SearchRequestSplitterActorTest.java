@@ -67,6 +67,7 @@ public class SearchRequestSplitterActorTest {
         final DocRef autoIndexDocRef = new DocRef.Builder()
                 .uuid(UUID.randomUUID().toString())
                 .type(AutoIndexDocRefEntity.TYPE)
+                .name(UUID.randomUUID().toString())
                 .build();
         final AutoIndexDocRefEntity autoIndexDocRefEntity =
                 new AutoIndexDocRefEntity.Builder()
@@ -74,10 +75,12 @@ public class SearchRequestSplitterActorTest {
                         .indexDocRef(new DocRef.Builder()
                                 .type(UUID.randomUUID().toString())
                                 .uuid(UUID.randomUUID().toString())
+                                .name(UUID.randomUUID().toString())
                                 .build())
                         .rawDocRef(new DocRef.Builder()
                                 .type(UUID.randomUUID().toString())
                                 .uuid(UUID.randomUUID().toString())
+                                .name(UUID.randomUUID().toString())
                                 .build())
                         .timeFieldName(TIMELINE_FIELD_NAME)
                         .indexWindow(100L)
